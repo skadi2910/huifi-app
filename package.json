@@ -1,0 +1,8 @@
+{
+  "name": "huifi-app",
+  "private": true,
+  "workspaces": [
+    "app",
+    "contracts-hui"
+  ]
+}
