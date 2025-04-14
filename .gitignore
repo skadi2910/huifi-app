@@ -1,0 +1,14 @@
+# Top-level ignore
+node_modules/
+.pnpm-store/
+.yarn/
+.bun/
+dist/
+build/
+out/
+.next/
+test-ledger/
+target/
+.DS_Store
+*.log
+.env*
