@@ -12,3 +12,12 @@ target/
 .DS_Store
 *.log
 .env*
+
+# Anchor-specific
+.anchor
+**/*.rs.bk
+
+# Optional: build cache from shared libs
+shared/target/
+
+

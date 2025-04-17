@@ -20,3 +20,7 @@ test-ledger/
 app/.env*
 contracts-hui/.anchor
 shared/dist/
+
+# Anchor-specific
+.anchor
+
