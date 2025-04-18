@@ -6,12 +6,12 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-contracts_hui = "Ak59apPA2FJJrtTRRojeCjWWmPXc1shpzxXrsaKApaFX"
+contracts_hui = "6xBRZCRWt68bW4j4Jf51USyDzutWMwVQY45CYjNA7bt6"
 
 [registry]
 url = "https://api.apr.dev"
 [workspace]
-members = ["contracts/hui"]
+members = ["programs/contracts-hui"]
 [provider]
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
