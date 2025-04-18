@@ -79,7 +79,6 @@ pnpm format
 ### 4. Compile and Test Smart Contract
 
 ```bash
-cd contracts-hui
 anchor build
 anchor test
 ```
@@ -93,13 +92,13 @@ This compiles and runs tests against the local Solana validator.
 After building the contract, you’ll get an IDL file here:
 
 ```bash
-contracts-hui/target/idl/contracts_hui.json
+/target/idl/contracts_hui.json
 ```
 
-To use this in the frontend, copy it into the app folder:
+To use this in the frontend, copy it into the shared folder:
 
 ```bash
-cp contracts-hui/target/idl/contracts_hui.json app/idl/contracts_hui.json
+cp target/idl/contracts_hui.json shared/idl/contracts_hui.json
 ```
 
 ---
@@ -131,13 +130,13 @@ npm install
 bun install
 ```
 
-✅ Each subproject (`app/`, `contracts-hui/`, `shared/`) works independently as well.
+✅ Each subproject (app/, shared/, root-level contracts) works independently as well.
 
 ---
 
 ## 👥 Team Workflow
 
-- All shared logic (e.g., constants, TS types) should go in `shared/`
+- All shared logic (e.g., constants, TS types, IDLs) should go in `shared/`
 - Avoid committing `.env*`, `.anchor`, `node_modules`, `target`, etc.
 - Run `pnpm install` (or your tool of choice) after pulling in case dependencies changed
 
