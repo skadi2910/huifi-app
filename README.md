@@ -13,14 +13,16 @@ This monorepo is structured to support collaborative development across:
 ## 📁 Folder Structure
 
 ```
-huifi-app/
-├── app/             # Frontend (Next.js, TailwindCSS, Solana Wallet Adapter)
-├── contracts-hui/   # Solana smart contract (Anchor)
-├── shared/          # Shared TS types or helpers (imported by app and tests)
-├── pnpm-workspace.yaml # pnpm monorepo setup
+huifi-app/ 
+├── app/ # Frontend (Next.js, TailwindCSS, Solana Wallet Adapter) 
+├── programs/ # Anchor programs directory at root 
+├── shared/ # Shared TS types or IDLs (imported by app and tests) 
+├── tests/ # Anchor integration tests 
+├── Cargo.toml # Rust workspace config for Anchor programs 
+├── Anchor.toml # Anchor configuration 
+├── pnpm-workspace.yaml # pnpm monorepo setup 
 ├── .gitignore
 ```
-
 ---
 
 ## 🚀 Project Goals
