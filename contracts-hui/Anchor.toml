@@ -6,15 +6,17 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-contracts_hui = "Ak59apPA2FJJrtTRRojeCjWWmPXc1shpzxXrsaKApaFX"
+contracts_hui = "9kAiAJYzPBhrxw9VaFW1j583HgjcZYquJCJhNM5p9i2P"
 
 [registry]
 url = "https://api.apr.dev"
-[workspace]
-members = ["contracts/hui"]
+
 [provider]
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
+
+[workspace]
+members = ["programs/contracts-hui"]
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
