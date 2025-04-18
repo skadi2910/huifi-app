@@ -1,393 +1,558 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { ContractsHui } from "../target/types/contracts_hui";
-import { 
-  createMint, 
-  getOrCreateAssociatedTokenAccount,
-  mintTo, 
-  TOKEN_PROGRAM_ID 
-} from '@solana/spl-token';
-import { expect } from 'chai';
-import { BN } from "bn.js";
+import { PublicKey, Keypair, SystemProgram, SYSVAR_RENT_PUBKEY } from "@solana/web3.js";
+import { TOKEN_PROGRAM_ID, createMint, createAccount, mintTo, getTokenAccountBalance } from "@solana/spl-token";
+import { assert } from "chai";
 
 describe("HuiFi Protocol", () => {
-  // Configure the client
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
   const program = anchor.workspace.ContractsHui as Program<ContractsHui>;
-  
-  // Test accounts
-  const admin = anchor.web3.Keypair.generate();
-  const user1 = anchor.web3.Keypair.generate();
-  const user2 = anchor.web3.Keypair.generate();
-  const user3 = anchor.web3.Keypair.generate();
-  const treasuryKeypair = anchor.web3.Keypair.generate();
-  
-  let tokenMint;
-  let adminTokenAccount;
-  let user1TokenAccount;
-  let user2TokenAccount;
-  let user3TokenAccount;
-  let protocolSettingsPDA;
-  let protocolSettingsBump;
-  let groupAccountPDA;
-  let vaultPDA;
-  
-  // Constants
-  const PROTOCOL_SEED = Buffer.from("huifi-protocol");
-  const POOL_SEED = Buffer.from("huifi-pool");
-  const MEMBER_SEED = Buffer.from("huifi-member");
-  const VAULT_SEED = Buffer.from("huifi-vault");
-  
-  const PROTOCOL_FEE_BPS = 200; // 2%
-  const INITIAL_TOKEN_AMOUNT = 10000;
-  const CONTRIBUTION_AMOUNT = 100;
-  const MAX_PARTICIPANTS = 3;
-  const CYCLE_DURATION_SECONDS = 3 * 24 * 60 * 60; // 3 days
-  const PAYOUT_DELAY_SECONDS = 1 * 24 * 60 * 60; // 1 day
-  const EARLY_WITHDRAWAL_FEE_BPS = 200; // 2%
-  const COLLATERAL_REQUIREMENT_BPS = 20000; // 200%
-  
+
+  let mint: PublicKey;
+  let mintAuthority: Keypair;
+  let protocolPda: PublicKey;
+  let protocolBump: number;
+  let treasuryKeypair: Keypair;
+  let creator: Keypair;
+  let creatorTokenAccount: PublicKey;
+  let user1: Keypair;
+  let user1TokenAccount: PublicKey;
+  let user2: Keypair;
+  let user2TokenAccount: PublicKey;
+
+  // Global setup for mint and keypairs
   before(async () => {
-    // Airdrop SOL to all accounts
-    await provider.connection.requestAirdrop(admin.publicKey, 100 * anchor.web3.LAMPORTS_PER_SOL);
-    await provider.connection.requestAirdrop(user1.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL);
-    await provider.connection.requestAirdrop(user2.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL);
-    await provider.connection.requestAirdrop(user3.publicKey, 10 * anchor.web3.LAMPORTS_PER_SOL);
-    await provider.connection.requestAirdrop(treasuryKeypair.publicKey, 1 * anchor.web3.LAMPORTS_PER_SOL);
-    
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Create token mint
-    tokenMint = await createMint(
+    mintAuthority = Keypair.generate();
+    mint = await createMint(
       provider.connection,
-      admin,
-      admin.publicKey,
+      provider.wallet.payer,
+      mintAuthority.publicKey,
       null,
-      6
+      9 // 9 decimals
     );
-    
-    // Create token accounts
-    adminTokenAccount = (await getOrCreateAssociatedTokenAccount(
+
+    [protocolPda, protocolBump] = await PublicKey.findProgramAddress(
+      [Buffer.from("protocol")],
+      program.programId
+    );
+
+    treasuryKeypair = Keypair.generate();
+
+    creator = Keypair.generate();
+    await provider.connection.requestAirdrop(creator.publicKey, 2_000_000_000); // 2 SOL
+    creatorTokenAccount = await createAccount(
       provider.connection,
-      admin,
-      tokenMint,
-      admin.publicKey
-    )).address;
-    
-    user1TokenAccount = (await getOrCreateAssociatedTokenAccount(
+      provider.wallet.payer,
+      mint,
+      creator.publicKey
+    );
+    await mintTo(
       provider.connection,
-      user1,
-      tokenMint,
+      provider.wallet.payer,
+      mint,
+      creatorTokenAccount,
+      mintAuthority,
+      1_000_000_000_000 // 1000 tokens
+    );
+
+    user1 = Keypair.generate();
+    await provider.connection.requestAirdrop(user1.publicKey, 2_000_000_000);
+    user1TokenAccount = await createAccount(
+      provider.connection,
+      provider.wallet.payer,
+      mint,
       user1.publicKey
-    )).address;
-    
-    user2TokenAccount = (await getOrCreateAssociatedTokenAccount(
-      provider.connection,
-      user2,
-      tokenMint,
-      user2.publicKey
-    )).address;
-    
-    user3TokenAccount = (await getOrCreateAssociatedTokenAccount(
-      provider.connection,
-      user3,
-      tokenMint,
-      user3.publicKey
-    )).address;
-    
-    // Mint tokens to users
-    await mintTo(
-      provider.connection,
-      admin,
-      tokenMint,
-      adminTokenAccount,
-      admin.publicKey,
-      INITIAL_TOKEN_AMOUNT * 10
     );
-    
     await mintTo(
       provider.connection,
-      admin,
-      tokenMint,
+      provider.wallet.payer,
+      mint,
       user1TokenAccount,
-      admin.publicKey,
-      INITIAL_TOKEN_AMOUNT
+      mintAuthority,
+      1_000_000_000_000
     );
-    
+
+    user2 = Keypair.generate();
+    await provider.connection.requestAirdrop(user2.publicKey, 2_000_000_000);
+    user2TokenAccount = await createAccount(
+      provider.connection,
+      provider.wallet.payer,
+      mint,
+      user2.publicKey
+    );
     await mintTo(
       provider.connection,
-      admin,
-      tokenMint,
+      provider.wallet.payer,
+      mint,
       user2TokenAccount,
-      admin.publicKey,
-      INITIAL_TOKEN_AMOUNT
+      mintAuthority,
+      1_000_000_000_000
     );
-    
-    await mintTo(
-      provider.connection,
-      admin,
-      tokenMint,
-      user3TokenAccount,
-      admin.publicKey,
-      INITIAL_TOKEN_AMOUNT
-    );
-    
-    // Find PDAs
-    [protocolSettingsPDA, protocolSettingsBump] = 
-      anchor.web3.PublicKey.findProgramAddressSync(
-        [PROTOCOL_SEED],
-        program.programId
-      );
-    
-    console.log("Admin:", admin.publicKey.toString());
-    console.log("Protocol settings PDA:", protocolSettingsPDA.toString());
-    console.log("Token mint:", tokenMint.toString());
-    console.log("Treasury keypair:", treasuryKeypair.publicKey.toString());
   });
-  
+
   it("Initializes the protocol", async () => {
-    try {
-      const tx = await program.methods
-        .initializeProtocol(PROTOCOL_FEE_BPS)
-        .accounts({
-          admin: admin.publicKey,
-          protocolSettings: protocolSettingsPDA,
-          treasury: treasuryKeypair.publicKey,
-          tokenMint: tokenMint,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        })
-        .signers([admin, treasuryKeypair])
-        .rpc();
-      
-      console.log("Protocol initialized:", tx);
-      
-      // Verify protocol settings
-      const protocolSettings = await program.account.protocolSettings.fetch(protocolSettingsPDA);
-      console.log("Protocol settings:", protocolSettings);
-      
-      expect(protocolSettings.authority.toString()).to.equal(admin.publicKey.toString());
-      expect(protocolSettings.treasury.toString()).to.equal(treasuryKeypair.publicKey.toString());
-      expect(protocolSettings.feeBps).to.equal(PROTOCOL_FEE_BPS);
-      
-      // Wait for confirmation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    } catch (error) {
-      console.error("Error initializing protocol:", error);
-      throw error;
-    }
+    await program.methods
+      .initializeProtocol(100) // 1% fee
+      .accounts({
+        admin: provider.wallet.publicKey,
+        protocolSettings: protocolPda,
+        treasury: treasuryKeypair.publicKey,
+        tokenMint: mint,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([treasuryKeypair])
+      .rpc();
+
+    const protocolAccount = await program.account.protocolSettings.fetch(protocolPda);
+    assert.equal(protocolAccount.authority.toBase58(), provider.wallet.publicKey.toBase58(), "Authority should match admin");
+    assert.equal(protocolAccount.treasury.toBase58(), treasuryKeypair.publicKey.toBase58(), "Treasury should match");
+    assert.equal(protocolAccount.feeBps, 100, "Fee should be 1%");
+    assert.equal(protocolAccount.totalFeesCollected, 0, "Total fees collected should be 0");
+    assert.equal(protocolAccount.yieldGenerated, 0, "Yield generated should be 0");
+    assert.equal(protocolAccount.reserveBuffer, 0, "Reserve buffer should be 0");
+    assert.equal(protocolAccount.bump, protocolBump, "Bump should match");
   });
-  
-  it("Creates a new pool", async () => {
-    try {
-      // Find group account PDA
-      [groupAccountPDA] = 
-        anchor.web3.PublicKey.findProgramAddressSync(
-          [
-            POOL_SEED,
-            tokenMint.toBuffer(),
-            user1.publicKey.toBuffer(), 
-            Buffer.from([MAX_PARTICIPANTS])
-          ],
-          program.programId
-        );
-      
-      // Find vault PDA
-      [vaultPDA] = anchor.web3.PublicKey.findProgramAddressSync(
-        [VAULT_SEED, groupAccountPDA.toBuffer()],
-        program.programId
-      );
-      
-      console.log("Group account PDA:", groupAccountPDA.toString());
-      console.log("Vault PDA:", vaultPDA.toString());
-      
-      // Pool configuration
-      const poolConfig = {
-        maxParticipants: MAX_PARTICIPANTS,
-        contributionAmount: new BN(CONTRIBUTION_AMOUNT),
-        cycleDurationSeconds: new BN(CYCLE_DURATION_SECONDS),
-        payoutDelaySeconds: new BN(PAYOUT_DELAY_SECONDS),
-        earlyWithdrawalFeeBps: EARLY_WITHDRAWAL_FEE_BPS,
-        collateralRequirementBps: COLLATERAL_REQUIREMENT_BPS,
-        yieldStrategy: { none: {} }
-      };
-      
-      // Create pool
-      const tx = await program.methods
-        .createPool(poolConfig)
-        .accounts({
-          creator: user1.publicKey,
-          groupAccount: groupAccountPDA,
-          tokenMint: tokenMint,
-          vault: vaultPDA,
-          protocolSettings: protocolSettingsPDA,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        })
-        .signers([user1])
-        .rpc();
-        
-      console.log("Pool created:", tx);
-      
-      // Verify pool creation
-      const groupAccount = await program.account.groupAccount.fetch(groupAccountPDA);
-      console.log("Group account:", groupAccount);
-      
-      // Wait for confirmation
-      await new Promise(resolve => setTimeout(resolve, 2000));
-    } catch (error) {
-      console.error("Error creating pool:", error);
-      throw error;
-    }
+
+  it("Creates a pool", async () => {
+    const poolConfig = {
+      maxParticipants: 3,
+      contributionAmount: new anchor.BN(100_000_000_000), // 100 tokens
+      cycleDurationSeconds: new anchor.BN(10), // 10 seconds for testing
+      payoutDelaySeconds: new anchor.BN(5), // 5 seconds
+      earlyWithdrawalFeeBps: 200, // 2%
+      collateralRequirementBps: 20000, // 200%
+      yieldStrategy: { none: {} },
+    };
+
+    const [groupAccountPda, groupBump] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from("pool"),
+        mint.toBuffer(),
+        creator.publicKey.toBuffer(),
+        new anchor.BN(poolConfig.maxParticipants).toBuffer("le", 1),
+      ],
+      program.programId
+    );
+
+    const [vaultPda] = await PublicKey.findProgramAddress(
+      [Buffer.from("vault"), groupAccountPda.toBuffer()],
+      program.programId
+    );
+
+    await program.methods
+      .createPool(poolConfig)
+      .accounts({
+        creator: creator.publicKey,
+        groupAccount: groupAccountPda,
+        tokenMint: mint,
+        vault: vaultPda,
+        protocolSettings: protocolPda,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([creator])
+      .rpc();
+
+    const groupAccount = await program.account.groupAccount.fetch(groupAccountPda);
+    assert.equal(groupAccount.creator.toBase58(), creator.publicKey.toBase58(), "Creator should match");
+    assert.equal(groupAccount.tokenMint.toBase58(), mint.toBase58(), "Token mint should match");
+    assert.equal(groupAccount.vault.toBase58(), vaultPda.toBase58(), "Vault should match");
+    assert.equal(groupAccount.config.maxParticipants, 3, "Max participants should be 3");
+    assert.equal(groupAccount.memberAddresses.length, 1, "Should have 1 member (creator)");
+    assert.equal(groupAccount.memberAddresses[0].toBase58(), creator.publicKey.toBase58(), "Creator should be first member");
+    assert.deepEqual(groupAccount.status, { initializing: {} }, "Status should be Initializing");
   });
-  
-  it("Allows users to join the pool", async () => {
-    try {
-      // Find member account PDA for user2
-      const [user2MemberPDA] = 
-        anchor.web3.PublicKey.findProgramAddressSync(
-          [MEMBER_SEED, groupAccountPDA.toBuffer(), user2.publicKey.toBuffer()],
-          program.programId
-        );
-        
-      console.log("User2 member PDA:", user2MemberPDA.toString());
-      
-      // User2 joins the pool
-      const tx = await program.methods
-        .joinPool()
-        .accounts({
-          user: user2.publicKey,
-          groupAccount: groupAccountPDA,
-          memberAccount: user2MemberPDA,
-          userTokenAccount: user2TokenAccount,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        })
-        .signers([user2])
-        .rpc();
-        
-      console.log("User2 joined pool:", tx);
-      
-      // Wait for the account to be confirmed
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Find member account PDA for user3
-      const [user3MemberPDA] = 
-        anchor.web3.PublicKey.findProgramAddressSync(
-          [MEMBER_SEED, groupAccountPDA.toBuffer(), user3.publicKey.toBuffer()],
-          program.programId
-        );
-        
-      console.log("User3 member PDA:", user3MemberPDA.toString());
-      
-      // User3 joins the pool (last member, will activate the pool)
-      const tx2 = await program.methods
-        .joinPool()
-        .accounts({
-          user: user3.publicKey,
-          groupAccount: groupAccountPDA,
-          memberAccount: user3MemberPDA,
-          userTokenAccount: user3TokenAccount,
-          systemProgram: anchor.web3.SystemProgram.programId,
-          rent: anchor.web3.SYSVAR_RENT_PUBKEY,
-        })
-        .signers([user3])
-        .rpc();
-        
-      console.log("User3 joined pool:", tx2);
-      
-      // Wait for the account to be confirmed
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-    } catch (error) {
-      console.error("Error joining pool:", error);
-      throw error;
-    }
+
+  it("Joins the pool", async () => {
+    const poolConfig = {
+      maxParticipants: 3,
+      contributionAmount: new anchor.BN(100_000_000_000),
+      cycleDurationSeconds: new anchor.BN(10),
+      payoutDelaySeconds: new anchor.BN(5),
+      earlyWithdrawalFeeBps: 200,
+      collateralRequirementBps: 20000,
+      yieldStrategy: { none: {} },
+    };
+
+    const [groupAccountPda] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from("pool"),
+        mint.toBuffer(),
+        creator.publicKey.toBuffer(),
+        new anchor.BN(poolConfig.maxParticipants).toBuffer("le", 1),
+      ],
+      program.programId
+    );
+
+    const [vaultPda] = await PublicKey.findProgramAddress(
+      [Buffer.from("vault"), groupAccountPda.toBuffer()],
+      program.programId
+    );
+
+    await program.methods
+      .createPool(poolConfig)
+      .accounts({
+        creator: creator.publicKey,
+        groupAccount: groupAccountPda,
+        tokenMint: mint,
+        vault: vaultPda,
+        protocolSettings: protocolPda,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([creator])
+      .rpc();
+
+    const [memberAccountPda1] = await PublicKey.findProgramAddress(
+      [Buffer.from("member"), groupAccountPda.toBuffer(), user1.publicKey.toBuffer()],
+      program.programId
+    );
+
+    await program.methods
+      .joinPool()
+      .accounts({
+        user: user1.publicKey,
+        groupAccount: groupAccountPda,
+        memberAccount: memberAccountPda1,
+        userTokenAccount: user1TokenAccount,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([user1])
+      .rpc();
+
+    const [memberAccountPda2] = await PublicKey.findProgramAddress(
+      [Buffer.from("member"), groupAccountPda.toBuffer(), user2.publicKey.toBuffer()],
+      program.programId
+    );
+
+    await program.methods
+      .joinPool()
+      .accounts({
+        user: user2.publicKey,
+        groupAccount: groupAccountPda,
+        memberAccount: memberAccountPda2,
+        userTokenAccount: user2TokenAccount,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([user2])
+      .rpc();
+
+    const groupAccount = await program.account.groupAccount.fetch(groupAccountPda);
+    assert.equal(groupAccount.memberAddresses.length, 3, "Should have 3 members");
+    assert.deepEqual(groupAccount.status, { active: {} }, "Status should be Active");
+    assert.deepEqual(
+      groupAccount.payoutOrder.map(pk => pk.toBase58()),
+      groupAccount.memberAddresses.map(pk => pk.toBase58()),
+      "Payout order should match member addresses"
+    );
+
+    const memberAccount1 = await program.account.memberAccount.fetch(memberAccountPda1);
+    assert.equal(memberAccount1.owner.toBase58(), user1.publicKey.toBase58(), "Member 1 owner should match");
+    assert.equal(memberAccount1.contributionsMade, 0, "Member 1 contributions should be 0");
+    assert.deepEqual(memberAccount1.status, { active: {} }, "Member 1 status should be Active");
   });
-  
-  it("Allows users to contribute to the pool", async () => {
-    try {
-      // Find member account PDA for user1
-      const [user1MemberPDA] = 
-        anchor.web3.PublicKey.findProgramAddressSync(
-          [MEMBER_SEED, groupAccountPDA.toBuffer(), user1.publicKey.toBuffer()],
-          program.programId
-        );
-        
-      console.log("User1 member PDA:", user1MemberPDA.toString());
-      
-      // User1 contributes to the pool
-      const tx = await program.methods
-        .contribute(new BN(CONTRIBUTION_AMOUNT))
-        .accounts({
-          contributor: user1.publicKey,
-          groupAccount: groupAccountPDA,
-          memberAccount: user1MemberPDA,
-          contributorTokenAccount: user1TokenAccount,
-          vault: vaultPDA,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .signers([user1])
-        .rpc();
-        
-      console.log("User1 contributed to pool:", tx);
-      
-      // Wait for the transaction to be confirmed
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // User2 contributes to the pool
-      const [user2MemberPDA] = 
-        anchor.web3.PublicKey.findProgramAddressSync(
-          [MEMBER_SEED, groupAccountPDA.toBuffer(), user2.publicKey.toBuffer()],
-          program.programId
-        );
-      
-      const tx2 = await program.methods
-        .contribute(new BN(CONTRIBUTION_AMOUNT))
-        .accounts({
-          contributor: user2.publicKey,
-          groupAccount: groupAccountPDA,
-          memberAccount: user2MemberPDA,
-          contributorTokenAccount: user2TokenAccount,
-          vault: vaultPDA,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .signers([user2])
-        .rpc();
-        
-      console.log("User2 contributed to pool:", tx2);
-      
-      // Wait for the transaction to be confirmed
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // User3 contributes to the pool
-      const [user3MemberPDA] = 
-        anchor.web3.PublicKey.findProgramAddressSync(
-          [MEMBER_SEED, groupAccountPDA.toBuffer(), user3.publicKey.toBuffer()],
-          program.programId
-        );
-      
-      const tx3 = await program.methods
-        .contribute(new BN(CONTRIBUTION_AMOUNT))
-        .accounts({
-          contributor: user3.publicKey,
-          groupAccount: groupAccountPDA,
-          memberAccount: user3MemberPDA,
-          contributorTokenAccount: user3TokenAccount,
-          vault: vaultPDA,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        })
-        .signers([user3])
-        .rpc();
-        
-      console.log("User3 contributed to pool:", tx3);
-      
-    } catch (error) {
-      console.error("Error contributing to pool:", error);
-      throw error;
-    }
+
+  it("Contributes to the pool", async () => {
+    const poolConfig = {
+      maxParticipants: 3,
+      contributionAmount: new anchor.BN(100_000_000_000),
+      cycleDurationSeconds: new anchor.BN(10),
+      payoutDelaySeconds: new anchor.BN(5),
+      earlyWithdrawalFeeBps: 200,
+      collateralRequirementBps: 20000,
+      yieldStrategy: { none: {} },
+    };
+
+    const [groupAccountPda] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from("pool"),
+        mint.toBuffer(),
+        creator.publicKey.toBuffer(),
+        new anchor.BN(poolConfig.maxParticipants).toBuffer("le", 1),
+      ],
+      program.programId
+    );
+
+    const [vaultPda] = await PublicKey.findProgramAddress(
+      [Buffer.from("vault"), groupAccountPda.toBuffer()],
+      program.programId
+    );
+
+    await program.methods
+      .createPool(poolConfig)
+      .accounts({
+        creator: creator.publicKey,
+        groupAccount: groupAccountPda,
+        tokenMint: mint,
+        vault: vaultPda,
+        protocolSettings: protocolPda,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([creator])
+      .rpc();
+
+    const [memberAccountPdaCreator] = await PublicKey.findProgramAddress(
+      [Buffer.from("member"), groupAccountPda.toBuffer(), creator.publicKey.toBuffer()],
+      program.programId
+    );
+    const [memberAccountPda1] = await PublicKey.findProgramAddress(
+      [Buffer.from("member"), groupAccountPda.toBuffer(), user1.publicKey.toBuffer()],
+      program.programId
+    );
+    const [memberAccountPda2] = await PublicKey.findProgramAddress(
+      [Buffer.from("member"), groupAccountPda.toBuffer(), user2.publicKey.toBuffer()],
+      program.programId
+    );
+
+    await program.methods
+      .joinPool()
+      .accounts({
+        user: user1.publicKey,
+        groupAccount: groupAccountPda,
+        memberAccount: memberAccountPda1,
+        userTokenAccount: user1TokenAccount,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([user1])
+      .rpc();
+
+    await program.methods
+      .joinPool()
+      .accounts({
+        user: user2.publicKey,
+        groupAccount: groupAccountPda,
+        memberAccount: memberAccountPda2,
+        userTokenAccount: user2TokenAccount,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([user2])
+      .rpc();
+
+    await program.methods
+      .contribute(new anchor.BN(100_000_000_000))
+      .accounts({
+        contributor: creator.publicKey,
+        groupAccount: groupAccountPda,
+        memberAccount: memberAccountPdaCreator,
+        contributorTokenAccount: creatorTokenAccount,
+        vault: vaultPda,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([creator])
+      .rpc();
+
+    await program.methods
+      .contribute(new anchor.BN(100_000_000_000))
+      .accounts({
+        contributor: user1.publicKey,
+        groupAccount: groupAccountPda,
+        memberAccount: memberAccountPda1,
+        contributorTokenAccount: user1TokenAccount,
+        vault: vaultPda,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([user1])
+      .rpc();
+
+    await program.methods
+      .contribute(new anchor.BN(100_000_000_000))
+      .accounts({
+        contributor: user2.publicKey,
+        groupAccount: groupAccountPda,
+        memberAccount: memberAccountPda2,
+        contributorTokenAccount: user2TokenAccount,
+        vault: vaultPda,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([user2])
+      .rpc();
+
+    const vaultBalance = await getTokenAccountBalance(provider.connection, vaultPda);
+    assert.equal(vaultBalance.value.uiAmount, 300, "Vault should have 300 tokens");
+
+    const memberAccountCreator = await program.account.memberAccount.fetch(memberAccountPdaCreator);
+    assert.equal(memberAccountCreator.contributionsMade, 1, "Creator contributions should be 1");
+  });
+
+  it("Requests and processes early payout", async () => {
+    const poolConfig = {
+      maxParticipants: 3,
+      contributionAmount: new anchor.BN(100_000_000_000),
+      cycleDurationSeconds: new anchor.BN(10),
+      payoutDelaySeconds: new anchor.BN(5),
+      earlyWithdrawalFeeBps: 200,
+      collateralRequirementBps: 20000,
+      yieldStrategy: { none: {} },
+    };
+
+    const [groupAccountPda] = await PublicKey.findProgramAddress(
+      [
+        Buffer.from("pool"),
+        mint.toBuffer(),
+        creator.publicKey.toBuffer(),
+        new anchor.BN(poolConfig.maxParticipants).toBuffer("le", 1),
+      ],
+      program.programId
+    );
+
+    const [vaultPda] = await PublicKey.findProgramAddress(
+      [Buffer.from("vault"), groupAccountPda.toBuffer()],
+      program.programId
+    );
+
+    await program.methods
+      .createPool(poolConfig)
+      .accounts({
+        creator: creator.publicKey,
+        groupAccount: groupAccountPda,
+        tokenMint: mint,
+        vault: vaultPda,
+        protocolSettings: protocolPda,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([creator])
+      .rpc();
+
+    const [memberAccountPdaCreator] = await PublicKey.findProgramAddress(
+      [Buffer.from("member"), groupAccountPda.toBuffer(), creator.publicKey.toBuffer()],
+      program.programId
+    );
+    const [memberAccountPda1] = await PublicKey.findProgramAddress(
+      [Buffer.from("member"), groupAccountPda.toBuffer(), user1.publicKey.toBuffer()],
+      program.programId
+    );
+    const [memberAccountPda2] = await PublicKey.findProgramAddress(
+      [Buffer.from("member"), groupAccountPda.toBuffer(), user2.publicKey.toBuffer()],
+      program.programId
+    );
+
+    await program.methods
+      .joinPool()
+      .accounts({
+        user: user1.publicKey,
+        groupAccount: groupAccountPda,
+        memberAccount: memberAccountPda1,
+        userTokenAccount: user1TokenAccount,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([user1])
+      .rpc();
+
+    await program.methods
+      .joinPool()
+      .accounts({
+        user: user2.publicKey,
+        groupAccount: groupAccountPda,
+        memberAccount: memberAccountPda2,
+        userTokenAccount: user2TokenAccount,
+        systemProgram: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([user2])
+      .rpc();
+
+    await program.methods
+      .contribute(new anchor.BN(100_000_000_000))
+      .accounts({
+        contributor: creator.publicKey,
+        groupAccount: groupAccountPda,
+        memberAccount: memberAccountPdaCreator,
+        contributorTokenAccount: creatorTokenAccount,
+        vault: vaultPda,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([creator])
+      .rpc();
+
+    await program.methods
+      .contribute(new anchor.BN(100_000_000_000))
+      .accounts({
+        contributor: user1.publicKey,
+        groupAccount: groupAccountPda,
+        memberAccount: memberAccountPda1,
+        contributorTokenAccount: user1TokenAccount,
+        vault: vaultPda,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([user1])
+      .rpc();
+
+    await program.methods
+      .contribute(new anchor.BN(100_000_000_000))
+      .accounts({
+        contributor: user2.publicKey,
+        groupAccount: groupAccountPda,
+        memberAccount: memberAccountPda2,
+        contributorTokenAccount: user2TokenAccount,
+        vault: vaultPda,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      })
+      .signers([user2])
+      .rpc();
+
+    const initialBalance = (await getTokenAccountBalance(provider.connection, creatorTokenAccount)).value.uiAmount;
+
+    await program.methods
+      .requestEarlyPayout()
+      .accounts({
+        member: creator.publicKey,
+        groupAccount: groupAccountPda,
+        memberAccount: memberAccountPdaCreator,
+        memberTokenAccount: creatorTokenAccount,
+        collateralTokenAccount: creatorTokenAccount,
+        vault: vaultPda,
+        protocolSettings: protocolPda,
+        protocolTreasury: treasuryKeypair.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([creator])
+      .rpc();
+
+    const memberAccountBefore = await program.account.memberAccount.fetch(memberAccountPdaCreator);
+    assert.deepEqual(memberAccountBefore.status, { receivedPayout: {} }, "Status should be ReceivedPayout");
+
+    await new Promise(resolve => setTimeout(resolve, 6000)); // Wait 6 seconds for payout delay
+
+    await program.methods
+      .processPayout()
+      .accounts({
+        user: provider.wallet.publicKey,
+        groupAccount: groupAccountPda,
+        recipientAccount: memberAccountPdaCreator,
+        recipient: creator.publicKey,
+        recipientTokenAccount: creatorTokenAccount,
+        collateralTokenAccount: creatorTokenAccount,
+        vault: vaultPda,
+        protocolSettings: protocolPda,
+        protocolTreasury: treasuryKeypair.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([])
+      .rpc();
+
+    const finalBalance = (await getTokenAccountBalance(provider.connection, creatorTokenAccount)).value.uiAmount;
+    const payoutAmount = 300 - (300 * 0.02); // 300 tokens - 2% fee
+    const collateralAmount = 300 * 2; // 200% collateral
+    assert.approximately(finalBalance - initialBalance, payoutAmount - collateralAmount, 0.1, "Balance should reflect payout minus collateral");
+
+    const groupAccount = await program.account.groupAccount.fetch(groupAccountPda);
+    assert.equal(groupAccount.currentCycle, 1, "Current cycle should increment");
   });
 });

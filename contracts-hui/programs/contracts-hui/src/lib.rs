@@ -1,4 +1,9 @@
+#[allow(unused_imports)]
 use anchor_lang::prelude::*;
+use instructions::*;
+use state::*;
+use errors::*;
+use constants::*;
 
 declare_id!("6xBRZCRWt68bW4j4Jf51USyDzutWMwVQY45CYjNA7bt6");
 
@@ -8,11 +13,10 @@ pub mod state;
 pub mod errors;
 pub mod constants;
 
-// Import everything from instructions
-#[allow(unused_imports)]
-use crate::instructions::*;
-use crate::state::*;
-use crate::errors::*;
+// // Import everything from instructions
+// use crate::instructions::*;
+// use crate::state::*;
+// use crate::errors::*;
 
 #[program]
 pub mod contracts_hui {
