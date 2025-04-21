@@ -1,8 +1,20 @@
 import { PublicKey, Transaction, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js';
-import { BN, Program } from '@project-serum/anchor';
+import { BN, Program, AnchorProvider } from '@project-serum/anchor';
 import { findPoolAddress, findUserAccountAddress, findBidAddress, findRoundResultAddress, findVaultAddress, findProtocolSettingsAddress } from './pda';
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from '@solana/spl-token';
 import { USDC_MINT } from './constants';
+
+// Update the PoolConfig interface to match the Solana program exactly
+export interface PoolConfig {
+  maxParticipants: number;
+  contributionAmount: BN;
+  cycleDurationSeconds: BN;
+  payoutDelaySeconds: BN;
+  earlyWithdrawalFeeBps: number;
+  collateralRequirementBps: number;
+  yieldStrategy: { none: {} } | { jitoSol: {} };
+  isPrivate: boolean; // This will be handled separately, not part of the on-chain struct
+}
 
 // Create pool function
 export const createPool = async (
@@ -10,58 +22,74 @@ export const createPool = async (
   creator: PublicKey,
   name: string,
   description: string,
-  maxParticipants: number,
-  contributionAmount: number,
-  cycleDurationSeconds: number,
-  payoutDelaySeconds: number,
-  earlyWithdrawalFeeBps: number,
-  collateralRequirementBps: number,
-  yieldStrategy: number,
-  isPrivate: boolean,
+  poolConfig: PoolConfig,
+  tokenMint: PublicKey
 ) => {
-  // Use USDC as default token mint
-  const tokenMint = new PublicKey(USDC_MINT);
-  
   // Find PDAs with bump seeds
-  const [poolAddress, poolBump] = findPoolAddress(tokenMint, creator, maxParticipants);
+  const [poolAddress, poolBump] = findPoolAddress(
+    tokenMint, 
+    creator, 
+    poolConfig.maxParticipants
+  );
+  
   const [vaultAddress] = findVaultAddress(poolAddress);
   
-  // Protocol settings address 
-  const [protocolSettingsAddress] = findProtocolSettingsAddress();
-  
-  const poolConfig = {
-    name,
-    description,
-    maxParticipants,
-    contributionAmount: new BN(contributionAmount),
-    cycleDurationSeconds: new BN(cycleDurationSeconds),
-    payoutDelaySeconds: new BN(payoutDelaySeconds),
-    earlyWithdrawalFeeBps,
-    collateralRequirementBps,
-    yieldStrategy,
-    isPrivate
-  };
-  
   try {
-    // Create the transaction with proper PDA handling
+    // Create a formatted pool config that exactly matches the Solana program's expected structure
+    const formattedPoolConfig = {
+      max_participants: poolConfig.maxParticipants,
+      contribution_amount: poolConfig.contributionAmount,
+      cycle_duration_seconds: poolConfig.cycleDurationSeconds,
+      payout_delay_seconds: poolConfig.payoutDelaySeconds,
+      early_withdrawal_fee_bps: Math.min(poolConfig.earlyWithdrawalFeeBps, 10000),
+      collateral_requirement_bps: Math.min(poolConfig.collateralRequirementBps, 65535),
+      yield_strategy: { none: {} }
+    };
+
+    // Debug log to check values
+    console.log("Creating pool with config:", {
+      maxParticipants: formattedPoolConfig.max_participants,
+      contributionAmount: formattedPoolConfig.contribution_amount.toString(),
+      cycleDurationSeconds: formattedPoolConfig.cycle_duration_seconds.toString(),
+      payoutDelaySeconds: formattedPoolConfig.payout_delay_seconds.toString(),
+      earlyWithdrawalFeeBps: formattedPoolConfig.early_withdrawal_fee_bps,
+      collateralRequirementBps: formattedPoolConfig.collateral_requirement_bps,
+      yieldStrategy: "none",
+      isPrivate: poolConfig.isPrivate // Only for logging
+    });
+    
+    // Get the protocol settings account
+    const [protocolSettingsAddress] = findProtocolSettingsAddress();
+    
+    // Fix: Rename groupAccount to pool as expected by the Anchor program
     const tx = await program.methods
-      .createPool(poolConfig)
+      .createPool(
+        formattedPoolConfig,
+        name,
+        description
+      )
       .accounts({
         creator: creator,
-        pool: poolAddress,  
-        tokenMint: tokenMint,
+        pool: poolAddress, // Changed from 'groupAccount' to 'pool'
+        tokenMint: tokenMint,       
         vault: vaultAddress,
         protocolSettings: protocolSettingsAddress,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId,
+        tokenProgram: TOKEN_PROGRAM_ID, 
+        systemProgram: SystemProgram.programId, 
         rent: SYSVAR_RENT_PUBKEY,
       })
-      // Add this option to skip preflight checks which can help with some PDA validation issues
-      .rpc({ skipPreflight: true });
+      .rpc();
       
     return tx;
   } catch (error) {
     console.error("Error in createPool transaction:", error);
+    // Enhanced error logging
+    if (error instanceof Error) {
+      console.error("Error details:", error.message);
+      if ('logs' in error) {
+        console.error("Program logs:", (error as any).logs);
+      }
+    }
     throw error;
   }
 };
@@ -79,9 +107,9 @@ export const joinPool = async (
     const tx = await program.methods
       .joinPool()
       .accounts({
-        pool: poolAddress,
+        groupAccount: poolAddress,
         user: user,
-        userAccount: userAccountAddress,
+        userAccount: userAccountAddress, 
         systemProgram: SystemProgram.programId,
       })
       .rpc();
@@ -103,7 +131,7 @@ export const joinPool = async (
       const joinTx = await program.methods
         .joinPool()
         .accounts({
-          pool: poolAddress,
+          groupAccount: poolAddress,
           user: user,
           userAccount: userAccountAddress,
           systemProgram: SystemProgram.programId,
@@ -145,7 +173,7 @@ export const contributeToPool = async (
   const tx = await program.methods
     .contribute(amount)
     .accounts({
-      pool: poolAddress,
+      groupAccount: poolAddress,
       user: user,
       userAccount: userAccountAddress,
       tokenProgram: TOKEN_PROGRAM_ID,
@@ -184,7 +212,7 @@ export const placeBid = async (
     .placeBid(round, new BN(amount))
     .accounts({
       bid: bidAddress,
-      pool: poolAddress,
+      groupAccount: poolAddress,
       bidder: bidder,
       bidderTokenAccount: bidderTokenAccount,
       poolTokenAccount: poolTokenAccount,
@@ -222,7 +250,7 @@ export const claimJackpot = async (
   const tx = await program.methods
     .claimJackpot(round)
     .accounts({
-      pool: poolAddress,
+      groupAccount: poolAddress,
       roundResult: roundResultAddress,
       winner: winner,
       winnerTokenAccount: winnerTokenAccount,

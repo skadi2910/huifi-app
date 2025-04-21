@@ -1,20 +1,23 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Coins, Trophy, Calendar, Users, Zap, ChevronRight, InfoIcon, ArrowLeftIcon, CheckCircleIcon } from 'lucide-react';
+import { Coins, Trophy, Calendar, Users, Zap, ChevronRight, InfoIcon, ArrowLeftIcon, CheckCircleIcon, Loader2 } from 'lucide-react';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletButton } from '@/components/solana/solana-provider';
 import { useTransactionToast } from '@/components/ui/ui-layout';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { useHuifiProgram } from '@/hooks/useHuifiProgram';
 import { useHuifiPoolCreation } from '@/hooks/useHuifiPoolCreation';
 
 export default function CreatePoolPage() {
   const [step, setStep] = useState(1);
+  const program = useHuifiProgram();
   const { publicKey } = useWallet();
   const transactionToast = useTransactionToast();
   const router = useRouter();
   const { createPoolMutation } = useHuifiPoolCreation();
+  const [isCreating, setIsCreating] = useState(false);
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -44,19 +47,40 @@ export default function CreatePoolPage() {
   };
 
   const handleCreateGame = async () => {
-    console.log("Create game button clicked");
-    console.log("Form data:", formData);
-    console.log("Public key:", publicKey?.toString());
     if (!publicKey) {
       toast.error('Please connect your wallet first.');
+      return;
+    }
+    if (!program) {
+      toast.error('Program not loaded. Please refresh the page.');
       return;
     }
     if (!formData.agreeTerms) {
       toast.error('Please agree to the terms and conditions.');
       return;
     }
-
+    if (!formData.name || !formData.maxPlayers || !formData.entryFee) {
+      toast.error('Please fill in all required fields.');
+      return;
+    }
+    
+    setIsCreating(true);
+  
     try {
+      console.log("Starting pool creation with data:", {
+        name: formData.name,
+        description: formData.description,
+        maxPlayers: parseInt(formData.maxPlayers),
+        frequency: formData.frequency,
+        entryFee: parseFloat(formData.entryFee),
+        currency: formData.currency,
+        payoutMethod: formData.payoutMethod,
+        latePenalty: formData.latePenalty,
+        privacy: formData.privacy,
+        creator: publicKey.toString(),
+        program: program ? "Program loaded" : "Program not loaded"
+      });
+      
       const signature = await createPoolMutation.mutateAsync({
         name: formData.name,
         description: formData.description,
@@ -69,36 +93,20 @@ export default function CreatePoolPage() {
         privacy: formData.privacy as 'public' | 'private',
         creator: publicKey,
       });
-
-      // Show transaction notification
+  
+      console.log("Pool creation successful, signature:", signature);
       transactionToast(signature);
-      
-      // Show success message
-      toast.success("Game created successfully!");
-      
-      // Redirect to pools page after a short delay
-      setTimeout(() => {
-        router.push('/app/pools');
-      }, 2000);
-      
-      // Reset form and step
-      setFormData({
-        name: '',
-        description: '',
-        maxPlayers: '',
-        frequency: 'daily',
-        entryFee: '',
-        currency: 'USDC',
-        payoutMethod: 'predetermined',
-        latePenalty: 'none',
-        privacy: 'public',
-        agreeTerms: false,
-      });
-      setStep(1);
-      
+      toast.success('Game created successfully!');
+      router.push('/app/pools');
     } catch (error) {
-      console.error("Failed to create game:", error);
-      toast.error(`Failed to create game: ${error instanceof Error ? error.message : "Unknown error"}`);
+      console.error('Error creating game:', error);
+      if (error instanceof Error) {
+        toast.error(`Failed to create game: ${error.message}`);
+      } else {
+        toast.error('Failed to create game: Unknown error');
+      }
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -151,7 +159,7 @@ export default function CreatePoolPage() {
                 <div className="space-y-6">
                   {/* Game Name */}
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-[#f8e555] mb-2">Game Name</label>
+                    <label htmlFor="name" className="block text-sm font-medium text-[#f8e555] mb-2">Game Name <span className="text-red-500">*</span></label>
                     <input id="name" name="name" type="text" value={formData.name} onChange={handleInputChange} placeholder="Give your game a catchy title" className="w-full px-4 py-2 border border-[#e6ce04]/30 rounded-lg bg-[#252520] text-[#f8e555] focus:ring-2 focus:ring-[#e6ce04] focus:border-transparent placeholder-[#f8e555]/50" />
                   </div>
                   {/* Description */}
@@ -162,7 +170,7 @@ export default function CreatePoolPage() {
                   {/* Max Players & Frequency */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="maxPlayers" className="block text-sm font-medium text-[#f8e555] mb-2 flex items-center"><Users className="w-4 h-4 mr-1" /> Maximum Players</label>
+                      <label htmlFor="maxPlayers" className="block text-sm font-medium text-[#f8e555] mb-2 flex items-center"><Users className="w-4 h-4 mr-1" /> Maximum Players <span className="text-red-500">*</span></label>
                       <input id="maxPlayers" name="maxPlayers" type="number" value={formData.maxPlayers} onChange={handleInputChange} placeholder="Enter a number" min="2" max="50" className="w-full px-4 py-2 border border-[#e6ce04]/30 rounded-lg bg-[#252520] text-[#f8e555] focus:ring-2 focus:ring-[#e6ce04] focus:border-transparent placeholder-[#f8e555]/50" />
                     </div>
                     <div>
@@ -178,7 +186,7 @@ export default function CreatePoolPage() {
                   {/* Entry Fee & Currency */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="entryFee" className="block text-sm font-medium text-[#f8e555] mb-2 flex items-center"><Coins className="w-4 h-4 mr-1" /> Entry Fee</label>
+                      <label htmlFor="entryFee" className="block text-sm font-medium text-[#f8e555] mb-2 flex items-center"><Coins className="w-4 h-4 mr-1" /> Entry Fee <span className="text-red-500">*</span></label>
                       <input id="entryFee" name="entryFee" type="number" value={formData.entryFee} onChange={handleInputChange} placeholder="0.00" className="w-full px-4 py-2 border border-[#e6ce04]/30 rounded-lg bg-[#252520] text-[#f8e555] focus:ring-2 focus:ring-[#e6ce04] focus:border-transparent placeholder-[#f8e555]/50" />
                     </div>
                     <div>
@@ -278,7 +286,7 @@ export default function CreatePoolPage() {
                       <div className="flex justify-between py-2 border-b border-[#e6ce04]/10"><span className="text-[#f8e555]/70">Payout Method</span><span className="font-medium text-[#f8e555] capitalize">{formData.payoutMethod}</span></div>
                       <div className="flex justify-between py-2 border-b border-[#e6ce04]/10"><span className="text-[#f8e555]/70">Privacy</span><span className="font-medium text-[#f8e555] capitalize">{formData.privacy}</span></div>
                       {/* Calculate Max Jackpot and APY based on inputs */}
-                      <div className="flex justify-between py-2 border-b border-[#e6ce04]/10"><span className="text-[#f8e555]/70">Max Jackpot</span><span className="font-medium text-[#e6ce04]">{(parseFloat(formData.entryFee) * parseInt(formData.maxPlayers)) || '0.00'} {formData.currency}</span></div>
+                      <div className="flex justify-between py-2 border-b border-[#e6ce04]/10"><span className="text-[#f8e555]/70">Max Jackpot</span><span className="font-medium text-[#e6ce04]">{(parseFloat(formData.entryFee || '0') * parseInt(formData.maxPlayers || '0')) || '0.00'} {formData.currency}</span></div>
                       <div className="flex justify-between py-2 border-b border-[#e6ce04]/10"><span className="text-[#f8e555]/70">Estimated APY</span><span className="font-medium text-[#e6ce04]">~12.4%</span></div>
                     </div>
                   </div>
@@ -287,7 +295,7 @@ export default function CreatePoolPage() {
                      <h3 className="text-[#e6ce04] font-medium mb-3">Gas & Fees</h3>
                      <div className="space-y-2 text-sm">
                        <div className="flex justify-between"><span className="text-[#f8e555]/70">Smart Contract Deployment</span><span className="text-[#f8e555]">~0.012 SOL</span></div>
-                       <div className="flex justify-between"><span className="text-[#f8e555]/70">Platform Fee (1%)</span><span className="text-[#f8e555]">{(parseFloat(formData.entryFee) * parseInt(formData.maxPlayers) * 0.01) || '0.00'} {formData.currency}</span></div>
+                       <div className="flex justify-between"><span className="text-[#f8e555]/70">Platform Fee (1%)</span><span className="text-[#f8e555]">{(parseFloat(formData.entryFee || '0') * parseInt(formData.maxPlayers || '0') * 0.01) || '0.00'} {formData.currency}</span></div>
                      </div>
                    </div>
                   {/* Info Box */}
@@ -315,10 +323,18 @@ export default function CreatePoolPage() {
               ) : (
                 <button
                   onClick={handleCreateGame}
-                  disabled={createPoolMutation.isPending || !formData.agreeTerms}
+                  disabled={isCreating || !formData.agreeTerms || !formData.name || !formData.maxPlayers || !formData.entryFee}
                   className={`px-6 py-2 bg-[#e6ce04] hover:bg-[#f8e555] text-[#010200] rounded-lg font-medium transition duration-300 flex items-center disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  {createPoolMutation.isPending ? 'Creating...' : 'Create Game'} <Trophy className="w-4 h-4 ml-2" />
+                  {isCreating ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Creating...
+                    </>
+                  ) : (
+                    <>
+                      Create Game <Trophy className="w-4 h-4 ml-2" />
+                    </>
+                  )}
                 </button>
               )}
             </div>

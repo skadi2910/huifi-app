@@ -1,13 +1,13 @@
 import { PublicKey } from '@solana/web3.js';
 
 // The actual deployed program ID from your Anchor.toml or deployment
-export const HUIFI_PROGRAM_ID = new PublicKey('6xBRZCRWt68bW4j4Jf51USyDzutWMwVQY45CYjNA7bt6');
+export const HUIFI_PROGRAM_ID = new PublicKey('5S8b4n1VwN3wasBcheSdUKSMyvVPLMgMe9FLxWLfBT8t');
 
 // USDC token mint on devnet (for testing)
 export const USDC_MINT = new PublicKey('Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr');
 
 // Default RPC endpoints
-export const DEFAULT_RPC_ENDPOINT = 'https://api.devnet.solana.com';
+export const DEFAULT_RPC_ENDPOINT = 'http://localhost:8899';
 
 // Pool constants
 export const MIN_PARTICIPANTS = 3;

@@ -5,6 +5,18 @@ import { useHuifiProgram } from './useHuifiProgram';
 import { PublicKey } from '@solana/web3.js';
 import { createPool } from '@/lib/huifi-data-access';
 import { findPoolAddress } from '@/lib/pda';
+import * as anchor from '@coral-xyz/anchor';
+import { BN } from '@coral-xyz/anchor';
+
+// Protocol constants defined to mirror smart contract requirements
+const MIN_PARTICIPANTS = 3;
+const MAX_PARTICIPANTS = 20;
+const MIN_CONTRIBUTION_AMOUNT = 1_000_000; // 1 USDC (in raw units)
+const MAX_CONTRIBUTION_AMOUNT = 1_000_000_000; // 1000 USDC (in raw units)
+const MIN_CYCLE_DURATION = 24 * 60 * 60; // 1 day in seconds
+const MAX_CYCLE_DURATION = 30 * 24 * 60 * 60; // 30 days in seconds
+const MIN_COLLATERAL_REQUIREMENT_BPS = 10000; // 100%
+const MAX_EARLY_WITHDRAWAL_FEE_BPS = 1000; // 10%
 
 // Mapping from UI frequency options to seconds
 const frequencyToSeconds = {
@@ -17,7 +29,7 @@ const frequencyToSeconds = {
 // Mapping from UI payout methods to contract configurations
 const payoutMethodToConfig = {
   predetermined: {
-    collateralRequirementBps: 0, // No collateral needed for predetermined
+    collateralRequirementBps: MIN_COLLATERAL_REQUIREMENT_BPS, // Updated to meet minimum requirement
   },
   bidding: {
     collateralRequirementBps: 20000, // 200% collateral requirement
@@ -65,50 +77,80 @@ export function useHuifiPoolCreation() {
         throw new Error("Invalid arguments: name not provided");
       }
       
-      if (!params.maxPlayers || params.maxPlayers < 2) {
-        throw new Error("Invalid arguments: maxPlayers must be at least 2");
+      // Updated validation to match contract requirements
+      if (!params.maxPlayers || params.maxPlayers < MIN_PARTICIPANTS || params.maxPlayers > MAX_PARTICIPANTS) {
+        throw new Error(`Invalid arguments: maxPlayers must be between ${MIN_PARTICIPANTS} and ${MAX_PARTICIPANTS}`);
       }
       
-      if (!params.entryFee || params.entryFee <= 0) {
-        throw new Error("Invalid arguments: entryFee must be positive");
+      // Validate entry fee
+      const rawContributionAmount = params.entryFee * 1_000_000; // Convert to USDC's 6 decimals
+      if (!params.entryFee || rawContributionAmount < MIN_CONTRIBUTION_AMOUNT || rawContributionAmount > MAX_CONTRIBUTION_AMOUNT) {
+        throw new Error(`Invalid arguments: entryFee must be between ${MIN_CONTRIBUTION_AMOUNT / 1_000_000} and ${MAX_CONTRIBUTION_AMOUNT / 1_000_000} USDC`);
       }
       
       // Use USDC as default token mint
       const tokenMint = new PublicKey(USDC_MINT);
       
       // Convert UI parameters to contract parameters
-      const contributionAmount = params.entryFee * 1_000_000; // Convert to USDC's 6 decimals
+       const contributionAmount = Math.floor(rawContributionAmount);
       const cycleDurationSeconds = frequencyToSeconds[params.frequency];
+      
+      // Ensure cycle duration is within bounds
+      if (cycleDurationSeconds < MIN_CYCLE_DURATION || cycleDurationSeconds > MAX_CYCLE_DURATION) {
+        throw new Error("Invalid frequency: cycle duration must be between 1 and 30 days");
+      }
+      
       const payoutDelaySeconds = 24 * 60 * 60; // 1 day delay by default
-      const earlyWithdrawalFeeBps = penaltyToBps[params.latePenalty];
-      const collateralRequirementBps = payoutMethodToConfig[params.payoutMethod].collateralRequirementBps;
-      const yieldStrategy = 0; // No yield strategy by default (0 = None)
+      
+      // Ensure these values are within acceptable ranges (typically u16 max = 65535)
+      const earlyWithdrawalFeeBps = Math.min(penaltyToBps[params.latePenalty], MAX_EARLY_WITHDRAWAL_FEE_BPS);
+      
+      // Ensure collateral requirement meets the minimum but doesn't exceed u16 max
+      const collateralRequirementBps = Math.min(
+        Math.max(
+          payoutMethodToConfig[params.payoutMethod].collateralRequirementBps,
+          MIN_COLLATERAL_REQUIREMENT_BPS
+        ),
+        65535
+      );
+      
       const isPrivate = params.privacy === 'private';
 
       try {
-        // Calculate the pool address using findPoolAddress from pda.ts
         const [poolAddress] = findPoolAddress(
           tokenMint,
           publicKey,
           params.maxPlayers
         );
-
-        // Use the existing createPool function from huifi-data-access.ts with the added poolAddress
+      
+        // Create a properly structured pool_config object matching the IDL definition
+        const poolConfig = {
+          maxParticipants: params.maxPlayers,
+          contributionAmount: new BN(contributionAmount),
+          cycleDurationSeconds: new BN(cycleDurationSeconds),
+          payoutDelaySeconds: new BN(payoutDelaySeconds),
+          earlyWithdrawalFeeBps: earlyWithdrawalFeeBps,
+          collateralRequirementBps: collateralRequirementBps,
+          yieldStrategy: { none: {} },
+          isPrivate: isPrivate
+        };
+      
+        console.log("Pool config before passing to createPool:", {
+          ...poolConfig,
+          contributionAmount: poolConfig.contributionAmount.toString(),
+          cycleDurationSeconds: poolConfig.cycleDurationSeconds.toString(),
+          payoutDelaySeconds: poolConfig.payoutDelaySeconds.toString(),
+        });
+      
         const tx = await createPool(
           program,
           publicKey,
           params.name,
           params.description,
-          params.maxPlayers,
-          contributionAmount,
-          cycleDurationSeconds,
-          payoutDelaySeconds,
-          earlyWithdrawalFeeBps,
-          collateralRequirementBps,
-          yieldStrategy,
-          isPrivate,
+          poolConfig,
+          tokenMint
         );
-
+      
         return tx;
       } catch (error) {
         console.error("Error creating pool:", error);
