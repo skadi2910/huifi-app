@@ -1,7 +1,22 @@
-.anchor
+# Ignore dependencies
+node_modules/
+.pnpm/
+.yarn/
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+target/
+test-ledger/
+
+# IDE and system files
 .DS_Store
-target
-node_modules
-dist
-build
-test-ledger
+*.log
+
+# Generated/managed files
+*.tsbuildinfo
+app/.env*
+contracts-hui/.anchor
+shared/dist/

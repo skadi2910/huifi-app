@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useWallet, useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
+import BN from 'bn.js';
 import {
   Users,
   Calendar,
@@ -17,135 +18,48 @@ import {
   Coins
 } from 'lucide-react';
 import Link from 'next/link';
-// Assuming you have hooks to interact with your specific Huifi program
-// import { useHuifiProgram, useHuifiPoolAccount } from '@/hooks/use-huifi-program';
-import { WalletButton, useAnchorProvider } from '@/components/solana/solana-provider';
+import { WalletButton } from '@/components/solana/solana-provider';
 import { ExplorerLink } from '@/components/cluster/cluster-ui';
 import { useTransactionToast, AppHero, ellipsify } from '@/components/ui/ui-layout';
 import toast from 'react-hot-toast';
+import { useHuifiPoolAccount } from '@/hooks/useHuifiPoolAccount'; 
+import { usePoolTransactionHistory } from '@/hooks/usePoolTransactionHistory';
+import { USDC_MINT } from '@/lib/constants';
+import { useHuifiProgram } from '@/hooks/useHuifiProgram';
+import { HuifiPool } from '@/lib/types/program-types';
 
-// Define types for your pool data structure from the program
-interface PoolAccountData {
-  name: string;
-  description: string;
-  maxParticipants: number;
-  currentParticipants: number;
-  contributionAmount: bigint; // Use bigint for lamports or token amounts
-  totalValue: bigint;
-  frequency: number; // e.g., seconds per round
-  status: number; // Enum for Active, Filling, Completed
-  currentRound: number;
-  totalRounds: number;
-  yieldBasisPoints: number; // Basis points for yield
-  nextPayoutTimestamp: bigint;
-  creator: PublicKey;
-  creationTimestamp: bigint;
-  participants: { publicKey: PublicKey; round: number; status: number }[]; // Simplified example
-  // Add other fields from your program's account structure
+// Extend the HuifiPool type with additional fields needed for UI
+interface ExtendedHuifiPool extends HuifiPool {
+  totalRounds?: number; // Optional property
 }
 
-// Placeholder types until actual program types are defined
-type ParticipantStatus = 'Winner' | 'Next' | 'Waiting' | 'Confirmed';
-type ContributionStatus = 'pending' | 'processing' | 'confirmed';
-
-interface Participant {
-  id: number; // May need adjustment based on how participants are stored
-  address: PublicKey;
-  status: ParticipantStatus;
+// Define types for participants that might not exist in HuifiPool
+interface PoolParticipant {
+  publicKey: PublicKey;
   round: number;
-  xp: number; // Assuming XP is tracked off-chain or in a separate account
+  status: number;
 }
 
-interface Transaction { // Likely fetched from Solana history, not stored in pool account
+// Type for transactions from history
+interface Transaction {
   signature: string;
   blockTime: number;
-  type: string; // Parsed from transaction details
+  type: string;
   amount: string;
   user: PublicKey;
-  status: string; // e.g., 'Confirmed', 'Failed'
-  xpChange?: string; // If tracked
+  status: string;
+  xpChange?: string;
 }
 
-// Mock hook - replace with your actual program interaction hook
-const useHuifiPoolAccount = ({ poolId }: { poolId: PublicKey | undefined }) => {
-  // Replace with actual useQuery fetching data from your program
-  const mockData: PoolAccountData | null = poolId ? {
-    name: "Golden Jackpot #42",
-    description: "A daily contribution game with 20 players. Each member contributes 100 USDC daily, with one player winning the entire pot each day!",
-    maxParticipants: 20,
-    currentParticipants: 18,
-    contributionAmount: BigInt(100 * 10**6), // Assuming 6 decimals for USDC
-    totalValue: BigInt(2000 * 10**6),
-    frequency: 86400, // Daily
-    status: 0, // Active
-    currentRound: 8,
-    totalRounds: 20,
-    yieldBasisPoints: 1240, // 12.4%
-    nextPayoutTimestamp: BigInt(Date.now() / 1000 + 16 * 3600), // 16 hours from now
-    creator: new PublicKey('CREAToRpubkey111111111111111111111111111111'),
-    creationTimestamp: BigInt(Date.parse("April 1, 2025") / 1000),
-    participants: [
-      { publicKey: new PublicKey('PART1pubkey11111111111111111111111111111111'), round: 2, status: 0 }, // Winner
-      { publicKey: new PublicKey('PART2pubkey11111111111111111111111111111111'), round: 4, status: 0 }, // Winner
-      { publicKey: new PublicKey('PART3pubkey11111111111111111111111111111111'), round: 8, status: 1 }, // Next
-      { publicKey: new PublicKey('PART4pubkey11111111111111111111111111111111'), round: 9, status: 2 }, // Waiting
-    ],
-  } : null;
-
-  // Replace with actual mutations calling your program's instructions
-  const contributeMutation = {
-    mutateAsync: async () => {
-      console.log("Simulating contribute transaction...");
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      return "dummy_contribute_signature_" + Math.random().toString(36).substring(7);
-    },
-    isPending: false,
-  };
-
-  const placeBidMutation = {
-    mutateAsync: async (/* { amount, round } */) => {
-      console.log("Simulating place bid transaction...");
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      return "dummy_bid_signature_" + Math.random().toString(36).substring(7);
-    },
-    isPending: false,
-  };
-
-
-  return {
-    accountQuery: {
-      data: mockData,
-      isLoading: false,
-      isError: false,
-      error: null,
-    },
-    contributeMutation,
-    placeBidMutation,
-    // Add other mutations (e.g., claim jackpot)
-  };
-};
-
-// Mock hook for transaction history - replace with useGetSignatures or similar
-const usePoolTransactionHistory = ({ poolId }: { poolId: PublicKey | undefined }) => {
-  const mockTransactions: Transaction[] = poolId ? [
-    { signature: "sig1...", blockTime: Date.parse("Apr 13, 2025") / 1000, type: "Contribution", amount: "100 USDC", user: new PublicKey('PART1pubkey11111111111111111111111111111111'), status: "Confirmed", xpChange: "+15" },
-    { signature: "sig2...", blockTime: Date.parse("Apr 12, 2025") / 1000, type: "Jackpot", amount: "2,000 USDC", user: new PublicKey('PART2pubkey11111111111111111111111111111111'), status: "Confirmed", xpChange: "+100" },
-    { signature: "sig3...", blockTime: Date.parse("Apr 12, 2025") / 1000, type: "Contribution", amount: "100 USDC", user: new PublicKey('PART1pubkey11111111111111111111111111111111'), status: "Confirmed", xpChange: "+15" },
-  ] : [];
-
-  return {
-    data: mockTransactions,
-    isLoading: false,
-    isError: false,
-  };
-};
-
+type ContributionStatus = 'pending' | 'processing' | 'confirmed';
+type ParticipantStatus = 'Winner' | 'Next' | 'Waiting' | 'Confirmed';
 
 const PoolDetailPage = () => {
   const params = useParams();
-  const { publicKey } = useWallet();
-  // const provider = useAnchorProvider(); // Use if needed for direct program calls
+  const router = useRouter();
+  const { publicKey, connected } = useWallet();
   const transactionToast = useTransactionToast();
+  const program = useHuifiProgram();
 
   const poolId = useMemo(() => {
     try {
@@ -157,9 +71,10 @@ const PoolDetailPage = () => {
   }, [params?.id]);
 
   const { accountQuery, contributeMutation, placeBidMutation } = useHuifiPoolAccount({ poolId });
-  const historyQuery = usePoolTransactionHistory({ poolId }); // Fetch transaction history
+  const historyQuery = usePoolTransactionHistory({ poolId });
 
-  const poolData = accountQuery.data;
+  // Cast the pool data to our extended type
+  const poolData = accountQuery.data as ExtendedHuifiPool | undefined;
 
   const [activeTab, setActiveTab] = useState<'overview' | 'participants' | 'transactions' | 'terms'>('overview');
   const [contributionStatus, setContributionStatus] = useState<ContributionStatus>('pending');
@@ -169,13 +84,33 @@ const PoolDetailPage = () => {
   const [showConfetti, setShowConfetti] = useState<boolean>(false);
   const [targetBidRound, setTargetBidRound] = useState<number>(0);
 
+  // Mock data for participants if not available in poolData
+  const poolParticipants = useMemo<PoolParticipant[]>(() => {
+    if (!poolData) return [];
+    
+    // If pool data has participants array, use it
+    if ('participants' in poolData && Array.isArray(poolData.participants)) {
+      return poolData.participants;
+    }
+    
+    // Otherwise return empty array
+    return [];
+  }, [poolData]);
+
+  // Mock total rounds if not available
+  const totalRounds = useMemo(() => {
+    if (!poolData) return 0;
+    return poolData.totalRounds || poolData.maxParticipants || 0;
+  }, [poolData]);
+
   // Calculate time remaining until next payout
   useEffect(() => {
     if (poolData?.nextPayoutTimestamp) {
       const updateTimer = () => {
-        const now = BigInt(Math.floor(Date.now() / 1000));
-        const remaining = poolData.nextPayoutTimestamp - now;
-        setTimeRemaining(remaining > 0 ? Number(remaining) : 0);
+        const now = Math.floor(Date.now() / 1000);
+        const nextTimestamp = poolData.nextPayoutTimestamp.toNumber();
+        const remaining = Math.max(0, nextTimestamp - now);
+        setTimeRemaining(remaining);
       };
       updateTimer();
       const interval = setInterval(updateTimer, 1000);
@@ -191,44 +126,62 @@ const PoolDetailPage = () => {
   };
 
   const handleContribute = async () => {
-    if (!publicKey || !poolId) {
-      toast.error("Wallet not connected or pool ID missing");
+    if (!connected) {
+      toast.error("Please connect your wallet first");
       return;
     }
+    
     setContributionStatus('processing');
     try {
-      const signature = await contributeMutation.mutateAsync(/* pass necessary args */);
-      transactionToast(signature);
+      const tx = await contributeMutation.mutateAsync();
+      transactionToast(tx);
       setContributionStatus('confirmed');
       setShowConfetti(true);
-      // accountQuery.refetch(); // Refetch pool data after contribution
+      
+      // Refresh data after contribution
+      accountQuery.refetch();
+      historyQuery.refetch();
       setTimeout(() => setShowConfetti(false), 3000);
-    } catch (error: any) {
-      toast.error(`Contribution failed: ${error?.message}`);
+    } catch (err) {
+      console.error("Contribution failed:", err);
       setContributionStatus('pending');
+      // Fix the error here - ensure err is properly typed and access message safely
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      toast.error("Failed to contribute: " + errorMessage);
     }
   };
-
+  
+  // Similarly in the handlePlaceBid function:
   const handlePlaceBid = async () => {
-     if (!publicKey || !poolId || !bidAmount || !targetBidRound) {
-       toast.error("Missing required bid information or wallet connection");
-       return;
-     }
-     // Add validation for bidAmount (numeric, positive)
-     try {
-       const signature = await placeBidMutation.mutateAsync({
-         // amount: parseFloat(bidAmount), // Convert to correct format/units
-         // round: targetBidRound,
-         // poolAccount: poolId,
-       });
-       transactionToast(signature);
-       setIsBidding(false);
-       setBidAmount('');
-       // accountQuery.refetch(); // Refetch pool data after bid
-     } catch (error: any) {
-       toast.error(`Bid failed: ${error?.message}`);
-     }
-   };
+    if (!connected) {
+      toast.error("Please connect your wallet first");
+      return;
+    }
+    
+    if (!bidAmount || parseFloat(bidAmount) <= 0) {
+      toast.error("Please enter a valid bid amount");
+      return;
+    }
+    
+    try {
+      // Call the real mutation
+      const tx = await placeBidMutation.mutateAsync({
+        round: targetBidRound || (poolData?.currentRound || 0),
+        amount: parseFloat(bidAmount) * 1000000 // Convert to USDC with 6 decimals
+      });
+      
+      transactionToast(tx);
+      setBidAmount('');
+      setIsBidding(false);
+      
+      accountQuery.refetch();
+      historyQuery.refetch();
+    } catch (err) {
+      console.error("Bid failed:", err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      toast.error("Failed to place bid: " + errorMessage);
+    }
+  };
 
   // --- Mappers to convert program data to UI display ---
   const mapFrequency = (seconds: number): string => {
@@ -257,13 +210,18 @@ const PoolDetailPage = () => {
      }
    };
 
-  const formatAmount = (amount: bigint, decimals: number): string => {
-    // Basic formatting, consider using a library for precision
+  const formatAmount = (amount: BN | undefined | bigint, decimals: number = 6): string => {
+    if (!amount) return "0.00";
+    
+    if (amount instanceof BN) {
+      return (amount.toNumber() / (10**decimals)).toFixed(2);
+    }
+    
+    // Handle bigint
     return (Number(amount) / (10**decimals)).toFixed(2);
   };
 
   const getStatusBadge = (status: ParticipantStatus | string) => {
-    // ... (keep existing badge logic or adapt)
     switch (status) {
       case 'Winner':
         return <span className="px-2 py-1 text-xs rounded-full bg-[#e6ce04]/20 text-[#e6ce04] border border-[#e6ce04]/50 flex items-center"><Trophy className="w-3 h-3 mr-1" /> Winner</span>;
@@ -289,21 +247,32 @@ const PoolDetailPage = () => {
 
   if (accountQuery.isError || !poolData) {
     return (
-      <AppHero title="Error" subtitle={`Failed to load pool data for ID: ${params?.id}. ${accountQuery.error?.message || 'Pool not found.'}`} />
+      <AppHero 
+        title="Error" 
+        subtitle={`Failed to load pool data for ID: ${params?.id}. ${
+          accountQuery.error 
+            ? (typeof accountQuery.error === 'object' && accountQuery.error !== null && 'message' in accountQuery.error)
+              ? (accountQuery.error as {message: string}).message 
+              : typeof accountQuery.error === 'string'
+                ? accountQuery.error
+                : 'Unknown error'
+            : 'Pool not found.'
+        }`} 
+      />
     );
   }
 
   // --- Render Pool Details ---
-  const contributionAmountStr = formatAmount(poolData.contributionAmount, 6); // Assuming 6 decimals for USDC
-  const totalValueStr = formatAmount(poolData.totalValue, 6);
+  const contributionAmountStr = formatAmount(poolData.contributionAmount);
+  const totalValueStr = formatAmount(poolData.totalValue);
   const yieldStr = (poolData.yieldBasisPoints / 100).toFixed(2) + "%";
-  const frequencyStr = mapFrequency(poolData.frequency);
+  const frequencyStr = poolData.frequency ? mapFrequency(poolData.frequency.toNumber()) : "Weekly";
   const statusStr = mapStatus(poolData.status);
-  const nextPayoutParticipant = poolData.participants.find(p => p.status === 1); // Find 'Next' participant
+  const nextPayoutParticipant = poolParticipants.find(p => p.status === 1); // Find 'Next' participant
 
   // Assuming XP and Level are fetched separately based on publicKey
-  const userLevel = 3; // Placeholder
-  const userXP = 125; // Placeholder
+  const userLevel = 3; // Placeholder - replace with actual user level from your system
+  const userXP = 125; // Placeholder - replace with actual user XP from your system
 
   return (
     <main className="min-h-screen pt-24 pb-16 bg-[#010200]">
@@ -371,7 +340,6 @@ const PoolDetailPage = () => {
 
               {/* Tabs */}
               <div className="flex flex-wrap gap-2 mb-6">
-                 {/* ... Tab buttons ... */}
                  <button
                    onClick={() => setActiveTab('overview')}
                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
@@ -424,10 +392,19 @@ const PoolDetailPage = () => {
                       <div className="flex items-center">
                         <p className="text-xl font-semibold text-[#e6ce04]">{poolData.currentRound}</p>
                         <span className="mx-2 text-[#f8e555]/50">of</span>
-                        <p className="text-lg text-[#f8e555]">{poolData.totalRounds}</p>
+                        <p className="text-lg text-[#f8e555]">{totalRounds}</p>
                         <div className="ml-auto">
                           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" className="text-[#e6ce04]/30">
-                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeDasharray={`${poolData.currentRound / poolData.totalRounds * 62.83} 62.83`} strokeLinecap="round" transform="rotate(-90 12 12)" />
+                            <circle 
+                              cx="12" 
+                              cy="12" 
+                              r="10" 
+                              stroke="currentColor" 
+                              strokeWidth="2" 
+                              strokeDasharray={`${(poolData.currentRound / totalRounds) * 62.83} 62.83`} 
+                              strokeLinecap="round" 
+                              transform="rotate(-90 12 12)" 
+                            />
                           </svg>
                         </div>
                       </div>
@@ -466,11 +443,11 @@ const PoolDetailPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 relative z-10">
                       <div className="flex justify-between py-2 border-b border-[#e6ce04]/10">
                         <span className="text-[#f8e555]/70">Game Creator</span>
-                        <ExplorerLink path={`account/${poolData.creator.toString()}`} label={ellipsify(poolData.creator.toString())} className="font-medium text-[#f8e555] hover:text-[#e6ce04]" />
+                        <ExplorerLink path={`account/${poolData.admin.toString()}`} label={ellipsify(poolData.admin.toString())} className="font-medium text-[#f8e555] hover:text-[#e6ce04]" />
                       </div>
                       <div className="flex justify-between py-2 border-b border-[#e6ce04]/10">
                         <span className="text-[#f8e555]/70">Created On</span>
-                        <span className="font-medium text-[#f8e555]">{new Date(Number(poolData.creationTimestamp) * 1000).toLocaleDateString()}</span>
+                        <span className="font-medium text-[#f8e555]">{new Date(poolData.creationTimestamp.toNumber() * 1000).toLocaleDateString()}</span>
                       </div>
                       <div className="flex justify-between py-2 border-b border-[#e6ce04]/10">
                         <span className="text-[#f8e555]/70">Entry Fee</span>
@@ -514,16 +491,15 @@ const PoolDetailPage = () => {
                          <th className="py-3 px-4 text-left text-xs font-medium text-[#f8e555]/70 uppercase tracking-wider">Player</th>
                          <th className="py-3 px-4 text-left text-xs font-medium text-[#f8e555]/70 uppercase tracking-wider">Jackpot Round</th>
                          <th className="py-3 px-4 text-left text-xs font-medium text-[#f8e555]/70 uppercase tracking-wider">Status</th>
-                         {/* <th className="py-3 px-4 text-left text-xs font-medium text-[#f8e555]/70 uppercase tracking-wider">XP</th> */}
                        </tr>
                      </thead>
                      <tbody className="divide-y divide-[#e6ce04]/10">
-                       {poolData.participants.map((participant, index) => (
+                       {poolParticipants.map((participant: PoolParticipant, index: number) => (
                          <tr key={participant.publicKey.toString()} className="hover:bg-[#252520] transition-colors duration-150">
                            <td className="py-3 px-4 text-sm text-[#f8e555]">
                              <div className="flex items-center">
                                <div className="w-6 h-6 rounded-full bg-[#252520] border border-[#e6ce04]/20 flex items-center justify-center mr-2 text-xs">
-                                 {index + 1} {/* Rank might need adjustment based on sorting */}
+                                 {index + 1}
                                </div>
                              </div>
                            </td>
@@ -532,7 +508,6 @@ const PoolDetailPage = () => {
                            </td>
                            <td className="py-3 px-4 text-sm text-[#f8e555]/70">Round {participant.round}</td>
                            <td className="py-3 px-4 text-sm">{getStatusBadge(mapParticipantStatus(participant.status))}</td>
-                           {/* <td className="py-3 px-4 text-sm text-[#e6ce04]">{participant.xp} XP</td> */}
                          </tr>
                        ))}
                      </tbody>
@@ -555,11 +530,10 @@ const PoolDetailPage = () => {
                            <th className="py-3 px-4 text-left text-xs font-medium text-[#f8e555]/70 uppercase tracking-wider">Amount</th>
                            <th className="py-3 px-4 text-left text-xs font-medium text-[#f8e555]/70 uppercase tracking-wider">Player</th>
                            <th className="py-3 px-4 text-left text-xs font-medium text-[#f8e555]/70 uppercase tracking-wider">Tx</th>
-                           {/* <th className="py-3 px-4 text-left text-xs font-medium text-[#f8e555]/70 uppercase tracking-wider">Reward</th> */}
                          </tr>
                        </thead>
                        <tbody className="divide-y divide-[#e6ce04]/10">
-                         {historyQuery.data?.map((tx) => (
+                         {(historyQuery.data || []).map((tx: Transaction) => (
                            <tr key={tx.signature} className="hover:bg-[#252520] transition-colors duration-150">
                              <td className="py-3 px-4 text-sm text-[#f8e555]/70">{new Date(tx.blockTime * 1000).toLocaleString()}</td>
                              <td className="py-3 px-4 text-sm font-medium text-[#e6ce04]">{tx.type}</td>
@@ -570,7 +544,6 @@ const PoolDetailPage = () => {
                              <td className="py-3 px-4 text-sm">
                                <ExplorerLink path={`tx/${tx.signature}`} label={ellipsify(tx.signature)} />
                              </td>
-                             {/* <td className="py-3 px-4 text-sm font-medium text-[#e6ce04]">{tx.xpChange}</td> */}
                            </tr>
                          ))}
                        </tbody>
@@ -581,7 +554,6 @@ const PoolDetailPage = () => {
 
               {activeTab === 'terms' && (
                 <div className="space-y-6">
-                  {/* ... Rules content ... */}
                   <div>
                      <h3 className="text-lg font-semibold mb-3 text-[#e6ce04]">Game Rules</h3>
                      <p className="text-[#f8e555]/70 mb-3">
@@ -596,7 +568,6 @@ const PoolDetailPage = () => {
                        <li>Players earn XP for each successful contribution and bonus XP for completing a full cycle (XP logic may be off-chain).</li>
                      </ul>
                    </div>
-                   {/* ... Rewards & Benefits ... */}
                    <div>
                      <h3 className="text-lg font-semibold mb-3 text-[#e6ce04]">Rewards & Benefits</h3>
                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -614,7 +585,6 @@ const PoolDetailPage = () => {
                        </div>
                      </div>
                    </div>
-                   {/* Smart Contract Link */}
                    <div>
                      <h3 className="text-lg font-semibold mb-3 text-[#e6ce04]">Smart Contract</h3>
                      <div className="flex items-center justify-between bg-[#252520] p-3 rounded-lg border border-[#e6ce04]/10">
@@ -649,7 +619,11 @@ const PoolDetailPage = () => {
                   <div className="w-full bg-[#252520] rounded-full h-2.5 border border-[#e6ce04]/10">
                     <div
                       className="bg-[#e6ce04] h-2 rounded-full animate-progress"
-                      style={{ width: `${Math.max(0, 1 - timeRemaining / poolData.frequency) * 100}%` }}
+                      style={{ 
+                        width: poolData.frequency && typeof poolData.frequency.toNumber === 'function' 
+                          ? `${Math.max(0, 1 - timeRemaining / poolData.frequency.toNumber()) * 100}%` 
+                          : '0%' 
+                      }}
                     ></div>
                   </div>
                 </div>
@@ -673,7 +647,7 @@ const PoolDetailPage = () => {
                 </div>
 
                 {/* Contribution Button Logic */}
-                {!publicKey ? (
+                {!connected ? (
                   <WalletButton />
                 ) : contributionStatus === 'pending' ? (
                   <button
@@ -714,7 +688,7 @@ const PoolDetailPage = () => {
             </div>
 
             {/* Bidding Section */}
-            {statusStr === 'Active' && publicKey && !isBidding && (
+            {statusStr === 'Active' && connected && !isBidding && (
               <div className="bg-[#1a1a18] rounded-xl p-6 shadow-[0_4px_20px_rgba(230,206,4,0.15)] border border-[#e6ce04]/20 relative overflow-hidden">
                 {/* ... background effect ... */}
                 <div className="relative z-10">
@@ -738,7 +712,7 @@ const PoolDetailPage = () => {
               </div>
             )}
 
-            {isBidding && publicKey && (
+            {isBidding && connected && (
               <div className="bg-[#1a1a18] rounded-xl p-6 shadow-[0_4px_20px_rgba(230,206,4,0.15)] border border-[#e6ce04]/20">
                 <h3 className="text-lg font-semibold mb-4 text-[#e6ce04] flex items-center">
                   <Zap className="w-5 h-5 mr-2" />
@@ -769,8 +743,8 @@ const PoolDetailPage = () => {
                     className="w-full px-4 py-2 border border-[#e6ce04]/30 rounded-lg bg-[#252520] text-[#f8e555] focus:ring-2 focus:ring-[#e6ce04] focus:border-transparent"
                   >
                     <option value="" disabled>Select Round</option>
-                    {Array.from({ length: poolData.totalRounds - poolData.currentRound }, (_, i) => poolData.currentRound + i + 1)
-                      .filter(round => !poolData.participants.some(p => p.round === round && p.status !== 2)) // Filter out already assigned/won rounds
+                    {Array.from({ length: totalRounds - (poolData.currentRound || 0) }, (_, i) => (poolData.currentRound || 0) + i + 1)
+                      .filter(round => !poolParticipants.some(p => p.round === round && p.status !== 2)) // Filter out already assigned/won rounds
                       .map(round => (
                         <option key={round} value={round}>
                           Round {round}
@@ -798,11 +772,11 @@ const PoolDetailPage = () => {
             )}
 
             {/* Level progression teaser */}
-            {publicKey && (
+            {connected && (
               <div className="mt-6 p-4 bg-[#252520] rounded-lg border border-[#e6ce04]/10">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-medium text-[#e6ce04]">Level Progress</h3>
-                  <span className="text-xs text-[#f8e555]/70">{userXP}/250 XP</span> {/* Adjust max XP per level */}
+                  <span className="text-xs text-[#f8e555]/70">{userXP}/250 XP</span>
                 </div>
                 <div className="w-full h-2 bg-[#1a1a18] rounded-full">
                   <div className="h-full bg-[#e6ce04] rounded-full" style={{ width: `${(userXP / 250) * 100}%` }}></div>

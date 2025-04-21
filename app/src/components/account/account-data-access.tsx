@@ -16,12 +16,19 @@ import toast from 'react-hot-toast'
 import { useTransactionToast } from '../ui/ui-layout'
 
 export function useGetBalance({ address }: { address: PublicKey }) {
-  const { connection } = useConnection()
+  const { connection } = useConnection();
 
   return useQuery({
-    queryKey: ['get-balance', { endpoint: connection.rpcEndpoint, address }],
-    queryFn: () => connection.getBalance(address),
-  })
+    queryKey: ['getBalance', address.toString()],
+    queryFn: async () => {
+      try {
+        return await connection.getBalance(address);
+      } catch (error) {
+        console.error('Error getting balance:', error);
+        throw new Error('Failed to fetch balance. Please check your network or RPC endpoint.');
+      }
+    },
+  });
 }
 
 export function useGetSignatures({ address }: { address: PublicKey }) {

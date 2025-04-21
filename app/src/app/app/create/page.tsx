@@ -1,21 +1,22 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Coins, Trophy, Calendar, Users, Zap, ChevronRight, InfoIcon } from 'lucide-react';
-import { useWallet } from '@solana/wallet-adapter-react'; // Import useWallet
-import { WalletButton } from '@/components/solana/solana-provider'; // Import WalletButton
-// Import necessary hooks for program interaction (replace with your actual hooks)
-// import { useHuifiProgram } from '@/components/huifi/huifi-data-access';
-import { useTransactionToast } from '@/components/ui/ui-layout'; // Import toast
+import { Coins, Trophy, Calendar, Users, Zap, ChevronRight, InfoIcon, ArrowLeftIcon, CheckCircleIcon } from 'lucide-react';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { WalletButton } from '@/components/solana/solana-provider';
+import { useTransactionToast } from '@/components/ui/ui-layout';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import { useHuifiPoolCreation } from '@/hooks/useHuifiPoolCreation';
 
 export default function CreatePoolPage() {
   const [step, setStep] = useState(1);
-  const { publicKey } = useWallet(); // Get wallet public key
+  const { publicKey } = useWallet();
   const transactionToast = useTransactionToast();
-  // Placeholder for program interaction hook
-  // const { createGameMutation } = useHuifiProgram();
+  const router = useRouter();
+  const { createPoolMutation } = useHuifiPoolCreation();
 
-  // Add state to hold form data
+  // Form data state
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -23,9 +24,9 @@ export default function CreatePoolPage() {
     frequency: 'daily',
     entryFee: '',
     currency: 'USDC',
-    payoutMethod: 'predetermined', // Default or manage selection state
-    latePenalty: 'none', // Default or manage selection state
-    privacy: 'public', // Default or manage selection state
+    payoutMethod: 'predetermined',
+    latePenalty: 'none',
+    privacy: 'public',
     agreeTerms: false,
   });
 
@@ -37,46 +38,68 @@ export default function CreatePoolPage() {
     setFormData(prev => ({ ...prev, [name]: isCheckbox ? e.target.checked : value }));
   };
 
-   const handleRadioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-     const { name, id } = e.target;
-     setFormData(prev => ({ ...prev, [name]: id }));
-   };
+  const handleRadioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, id } = e.target;
+    setFormData(prev => ({ ...prev, [name]: id }));
+  };
 
   const handleCreateGame = async () => {
+    console.log("Create game button clicked");
+    console.log("Form data:", formData);
+    console.log("Public key:", publicKey?.toString());
     if (!publicKey) {
-      // Should ideally be handled by disabling the button or showing WalletButton
-      alert('Please connect your wallet first.');
+      toast.error('Please connect your wallet first.');
       return;
     }
     if (!formData.agreeTerms) {
-      alert('Please agree to the terms and conditions.');
+      toast.error('Please agree to the terms and conditions.');
       return;
     }
 
-    console.log("Creating game with data:", formData);
-    // Replace with actual contract call using mutation
-    // try {
-    //   const signature = await createGameMutation.mutateAsync({
-    //     name: formData.name,
-    //     description: formData.description,
-    //     maxPlayers: parseInt(formData.maxPlayers),
-    //     frequency: formData.frequency,
-    //     entryFee: parseFloat(formData.entryFee), // Ensure correct type (e.g., BN)
-    //     currency: formData.currency, // May need mapping to token mint address
-    //     payoutMethod: formData.payoutMethod,
-    //     latePenalty: formData.latePenalty,
-    //     privacy: formData.privacy,
-    //     creator: publicKey,
-    //   });
-    //   transactionToast(signature);
-    //   // Optionally redirect or reset form
-    //   setStep(1);
-    //   // Reset form data if needed
-    // } catch (error) {
-    //   console.error("Failed to create game:", error);
-    //   alert(`Failed to create game: ${error}`); // Show error to user
-    // }
-    alert("Game creation logic placeholder. Implement contract interaction."); // Placeholder
+    try {
+      const signature = await createPoolMutation.mutateAsync({
+        name: formData.name,
+        description: formData.description,
+        maxPlayers: parseInt(formData.maxPlayers),
+        frequency: formData.frequency as 'daily' | 'weekly' | 'biweekly' | 'monthly',
+        entryFee: parseFloat(formData.entryFee),
+        currency: formData.currency,
+        payoutMethod: formData.payoutMethod as 'predetermined' | 'bidding',
+        latePenalty: formData.latePenalty as 'none' | 'low' | 'medium' | 'high',
+        privacy: formData.privacy as 'public' | 'private',
+        creator: publicKey,
+      });
+
+      // Show transaction notification
+      transactionToast(signature);
+      
+      // Show success message
+      toast.success("Game created successfully!");
+      
+      // Redirect to pools page after a short delay
+      setTimeout(() => {
+        router.push('/app/pools');
+      }, 2000);
+      
+      // Reset form and step
+      setFormData({
+        name: '',
+        description: '',
+        maxPlayers: '',
+        frequency: 'daily',
+        entryFee: '',
+        currency: 'USDC',
+        payoutMethod: 'predetermined',
+        latePenalty: 'none',
+        privacy: 'public',
+        agreeTerms: false,
+      });
+      setStep(1);
+      
+    } catch (error) {
+      console.error("Failed to create game:", error);
+      toast.error(`Failed to create game: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
   };
 
   // Show connect button if wallet not connected
@@ -91,11 +114,9 @@ export default function CreatePoolPage() {
   }
 
   return (
-    // Use main layout provided by src/app/layout.tsx
-    // The <main> tag might be redundant if UiLayout provides it
-    <div className="container mx-auto px-4"> {/* Removed min-h-screen, pt, pb, bg */}
+    <div className="container mx-auto px-4">
       <div className="max-w-3xl mx-auto">
-        {/* ... Header and Progress Steps ... */}
+        {/* Header and Progress Steps */}
          <div className="flex items-center mb-6">
            <div className="w-10 h-10 bg-[#e6ce04] rounded-full flex items-center justify-center mr-3">
              <Coins className="w-5 h-5 text-[#010200]" />
@@ -105,7 +126,6 @@ export default function CreatePoolPage() {
 
          {/* Progress Steps */}
          <div className="flex items-center mb-8">
-           {/* ... Step indicators ... */}
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-[#e6ce04] text-[#010200]' : 'bg-[#252520] text-[#f8e555]/70'}`}>1</div>
             <div className={`h-0.5 w-12 ${step >= 2 ? 'bg-[#e6ce04]' : 'bg-[#252520]'}`}></div>
             <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-[#e6ce04] text-[#010200]' : 'bg-[#252520] text-[#f8e555]/70'}`}>2</div>
@@ -114,14 +134,14 @@ export default function CreatePoolPage() {
          </div>
 
         <div className="bg-[#1a1a18] rounded-xl shadow-lg p-6 border border-[#e6ce04]/20 relative overflow-hidden">
-          {/* ... Background decorative elements ... */}
+          {/* Background decorative elements */}
             <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full bg-[#e6ce04]/5 blur-2xl"></div>
             <div className="absolute -left-12 -bottom-12 w-40 h-40 rounded-full bg-[#e6ce04]/5 blur-2xl"></div>
 
           <div className="relative z-10">
             {step === 1 && (
               <div className="mb-8">
-                {/* ... Step 1 Header ... */}
+                {/* Step 1 Header */}
                  <div className="flex items-center justify-between mb-6">
                    <h2 className="text-xl font-semibold text-[#e6ce04] flex items-center">
                      <Trophy className="w-5 h-5 mr-2" /> Game Details
@@ -165,14 +185,13 @@ export default function CreatePoolPage() {
                       <label htmlFor="currency" className="block text-sm font-medium text-[#f8e555] mb-2">Currency</label>
                       <select id="currency" name="currency" value={formData.currency} onChange={handleInputChange} className="w-full px-4 py-2 border border-[#e6ce04]/30 rounded-lg bg-[#252520] text-[#f8e555] focus:ring-2 focus:ring-[#e6ce04] focus:border-transparent">
                         <option>USDC</option>
-                        <option>ETH</option> {/* Consider if ETH is directly supported or wrapped */}
+                        <option>ETH</option>
                         <option>DAI</option>
                         <option>USDT</option>
                       </select>
                     </div>
                   </div>
-                  {/* XP Rewards (Static display) */}
-                  {/* ...existing code... */}
+                  {/* XP Rewards */}
                    <div className="bg-[#252520] p-4 rounded-lg border border-[#e6ce04]/10">
                      <h3 className="text-[#e6ce04] font-medium mb-2 flex items-center"><Zap className="w-4 h-4 mr-1" /> XP & Rewards</h3>
                      <div className="space-y-3 text-sm text-[#f8e555]/70">
@@ -187,7 +206,7 @@ export default function CreatePoolPage() {
 
             {step === 2 && (
               <div className="mb-8">
-                {/* ... Step 2 Header ... */}
+                {/* Step 2 Header */}
                  <div className="flex items-center justify-between mb-6">
                    <h2 className="text-xl font-semibold text-[#e6ce04] flex items-center"><Trophy className="w-5 h-5 mr-2" /> Game Rules</h2>
                    <span className="text-sm bg-[#e6ce04]/10 text-[#e6ce04] px-3 py-1 rounded-full border border-[#e6ce04]/30">Step 2 of 3</span>
@@ -197,7 +216,6 @@ export default function CreatePoolPage() {
                   <div>
                     <label className="block text-sm font-medium text-[#f8e555] mb-2">Payout Method</label>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                       {/* Add onClick handlers and manage selected state */}
                       <div onClick={() => setFormData(prev => ({ ...prev, payoutMethod: 'predetermined' }))} className={`bg-[#252520] p-4 rounded-lg border hover:border-[#e6ce04]/50 cursor-pointer transition-all ${formData.payoutMethod === 'predetermined' ? 'border-[#e6ce04]' : 'border-[#e6ce04]/20'}`}>
                         <h3 className="text-[#e6ce04] font-medium mb-2">Predetermined Order</h3>
                         <p className="text-sm text-[#f8e555]/70">Set the jackpot order at creation time. Each player gets their turn according to the fixed schedule.</p>
@@ -233,7 +251,6 @@ export default function CreatePoolPage() {
                     </div>
                   </div>
                   {/* Info Box */}
-                  {/* ...existing code... */}
                    <div className="flex items-center p-4 bg-[#e6ce04]/10 border border-[#e6ce04]/20 rounded-lg">
                      <InfoIcon className="w-5 h-5 text-[#e6ce04] mr-3 flex-shrink-0" />
                      <p className="text-sm text-[#f8e555]">All game rules are encoded in the smart contract and cannot be changed after creation. Choose wisely!</p>
@@ -244,13 +261,13 @@ export default function CreatePoolPage() {
 
             {step === 3 && (
               <div className="mb-8">
-                {/* ... Step 3 Header ... */}
+                {/* Step 3 Header */}
                  <div className="flex items-center justify-between mb-6">
                    <h2 className="text-xl font-semibold text-[#e6ce04] flex items-center"><Trophy className="w-5 h-5 mr-2" /> Game Review</h2>
                    <span className="text-sm bg-[#e6ce04]/10 text-[#e6ce04] px-3 py-1 rounded-full border border-[#e6ce04]/30">Step 3 of 3</span>
                  </div>
                 <div className="space-y-6">
-                  {/* Game Summary - Use formData */}
+                  {/* Game Summary */}
                   <div className="bg-[#252520] p-5 rounded-lg border border-[#e6ce04]/10">
                     <h3 className="text-lg font-semibold mb-4 text-[#e6ce04]">Game Summary</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
@@ -261,21 +278,19 @@ export default function CreatePoolPage() {
                       <div className="flex justify-between py-2 border-b border-[#e6ce04]/10"><span className="text-[#f8e555]/70">Payout Method</span><span className="font-medium text-[#f8e555] capitalize">{formData.payoutMethod}</span></div>
                       <div className="flex justify-between py-2 border-b border-[#e6ce04]/10"><span className="text-[#f8e555]/70">Privacy</span><span className="font-medium text-[#f8e555] capitalize">{formData.privacy}</span></div>
                       {/* Calculate Max Jackpot and APY based on inputs */}
-                      <div className="flex justify-between py-2 border-b border-[#e6ce04]/10"><span className="text-[#f8e555]/70">Max Jackpot</span><span className="font-medium text-[#e6ce04]">{/* Calculate */} {(parseFloat(formData.entryFee) * parseInt(formData.maxPlayers)) || '0.00'} {formData.currency}</span></div>
-                      <div className="flex justify-between py-2 border-b border-[#e6ce04]/10"><span className="text-[#f8e555]/70">Estimated APY</span><span className="font-medium text-[#e6ce04]">{/* Calculate */} ~12.4%</span></div>
+                      <div className="flex justify-between py-2 border-b border-[#e6ce04]/10"><span className="text-[#f8e555]/70">Max Jackpot</span><span className="font-medium text-[#e6ce04]">{(parseFloat(formData.entryFee) * parseInt(formData.maxPlayers)) || '0.00'} {formData.currency}</span></div>
+                      <div className="flex justify-between py-2 border-b border-[#e6ce04]/10"><span className="text-[#f8e555]/70">Estimated APY</span><span className="font-medium text-[#e6ce04]">~12.4%</span></div>
                     </div>
                   </div>
-                  {/* Gas & Fees (Static/Estimated) */}
-                  {/* ...existing code... */}
+                  {/* Gas & Fees */}
                    <div className="bg-[#252520] p-4 rounded-lg border border-[#e6ce04]/10">
                      <h3 className="text-[#e6ce04] font-medium mb-3">Gas & Fees</h3>
                      <div className="space-y-2 text-sm">
-                       <div className="flex justify-between"><span className="text-[#f8e555]/70">Smart Contract Deployment</span><span className="text-[#f8e555]">~0.012 SOL</span></div> {/* Updated to SOL */}
-                       <div className="flex justify-between"><span className="text-[#f8e555]/70">Platform Fee (1%)</span><span className="text-[#f8e555]">{/* Calculate */} {(parseFloat(formData.entryFee) * parseInt(formData.maxPlayers) * 0.01) || '0.00'} {formData.currency}</span></div>
+                       <div className="flex justify-between"><span className="text-[#f8e555]/70">Smart Contract Deployment</span><span className="text-[#f8e555]">~0.012 SOL</span></div>
+                       <div className="flex justify-between"><span className="text-[#f8e555]/70">Platform Fee (1%)</span><span className="text-[#f8e555]">{(parseFloat(formData.entryFee) * parseInt(formData.maxPlayers) * 0.01) || '0.00'} {formData.currency}</span></div>
                      </div>
                    </div>
                   {/* Info Box */}
-                  {/* ...existing code... */}
                    <div className="flex items-center p-4 bg-[#e6ce04]/10 border border-[#e6ce04]/20 rounded-lg">
                      <InfoIcon className="w-5 h-5 text-[#e6ce04] mr-3 flex-shrink-0" />
                      <p className="text-sm text-[#f8e555]">By creating this game, you will earn 500 XP and the "Game Creator" achievement badge!</p>
@@ -300,12 +315,10 @@ export default function CreatePoolPage() {
               ) : (
                 <button
                   onClick={handleCreateGame}
-                  // disabled={createGameMutation.isPending || !formData.agreeTerms} // Disable during creation or if terms not agreed
-                  disabled={!formData.agreeTerms} // Simplified disabling
+                  disabled={createPoolMutation.isPending || !formData.agreeTerms}
                   className={`px-6 py-2 bg-[#e6ce04] hover:bg-[#f8e555] text-[#010200] rounded-lg font-medium transition duration-300 flex items-center disabled:opacity-50 disabled:cursor-not-allowed`}
                 >
-                  {/* {createGameMutation.isPending ? 'Creating...' : 'Create Game'} <Trophy className="w-4 h-4 ml-2" /> */}
-                   Create Game <Trophy className="w-4 h-4 ml-2" />
+                  {createPoolMutation.isPending ? 'Creating...' : 'Create Game'} <Trophy className="w-4 h-4 ml-2" />
                 </button>
               )}
             </div>

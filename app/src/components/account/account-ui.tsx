@@ -42,21 +42,28 @@ export function AccountBalanceCheck({ address }: { address: PublicKey }) {
   if (query.isLoading) {
     return null
   }
+  
   if (query.isError || !query.data) {
     return (
-      <div className="alert alert-warning text-warning-content/80 rounded-none flex justify-center">
-        <span>
+      <div className="bg-[#010200]/80 border-b-4 border-[#ffdd00] p-4 flex justify-center items-center space-x-4">
+        <span className="font-mono text-[#ffdd00]/80">
           You are connected to <strong>{cluster.name}</strong> but your account is not found on this cluster.
         </span>
-        <button
-          className="btn btn-xs btn-neutral"
-          onClick={() => mutation.mutateAsync(1).catch((err) => console.log(err))}
-        >
-          Request Airdrop
-        </button>
+        <div className="relative inline-block">
+          <div className="btn-wrapper absolute inset-0 z-0"></div>
+          <button
+            className="btn-glitch relative z-10 px-4 py-2 text-sm"
+            onClick={() => mutation.mutateAsync(1).catch((err) => console.log(err))}
+            disabled={mutation.isPending}
+          >
+            <span className="text font-mono">Airdrop 1 SOL</span>
+            {mutation.isPending && <span className="ml-2 animate-pulse">...</span>}
+          </button>
+        </div>
       </div>
     )
   }
+  
   return null
 }
 
@@ -72,24 +79,41 @@ export function AccountButtons({ address }: { address: PublicKey }) {
       <ModalAirdrop hide={() => setShowAirdropModal(false)} address={address} show={showAirdropModal} />
       <ModalReceive address={address} show={showReceiveModal} hide={() => setShowReceiveModal(false)} />
       <ModalSend address={address} show={showSendModal} hide={() => setShowSendModal(false)} />
-      <div className="space-x-2">
-        <button
-          disabled={cluster.network?.includes('mainnet')}
-          className="btn btn-xs lg:btn-md btn-outline"
-          onClick={() => setShowAirdropModal(true)}
-        >
-          Airdrop
-        </button>
-        <button
-          disabled={wallet.publicKey?.toString() !== address.toString()}
-          className="btn btn-xs lg:btn-md btn-outline"
-          onClick={() => setShowSendModal(true)}
-        >
-          Send
-        </button>
-        <button className="btn btn-xs lg:btn-md btn-outline" onClick={() => setShowReceiveModal(true)}>
-          Receive
-        </button>
+      
+      <div className="flex space-x-3">
+        {!cluster.network?.includes('mainnet') && (
+          <div className="relative inline-block">
+            <div className="btn-wrapper absolute inset-0 z-0"></div>
+            <button
+              className="btn-glitch relative z-10 px-4 py-2 text-sm"
+              onClick={() => setShowAirdropModal(true)}
+            >
+              <span className="text font-mono">Airdrop</span>
+            </button>
+          </div>
+        )}
+        
+        {wallet.publicKey?.toString() === address.toString() && (
+          <div className="relative inline-block">
+            <div className="btn-wrapper absolute inset-0 z-0"></div>
+            <button
+              className="btn-glitch relative z-10 px-4 py-2 text-sm"
+              onClick={() => setShowSendModal(true)}
+            >
+              <span className="text font-mono">Send</span>
+            </button>
+          </div>
+        )}
+        
+        <div className="relative inline-block">
+          <div className="btn-wrapper absolute inset-0 z-0"></div>
+          <button
+            className="btn-glitch relative z-10 px-4 py-2 text-sm"
+            onClick={() => setShowReceiveModal(true)}
+          >
+            <span className="text font-mono">Receive</span>
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -196,66 +220,86 @@ export function AccountTransactions({ address }: { address: PublicKey }) {
   }, [query.data, showAll])
 
   return (
-    <div className="space-y-2">
-      <div className="flex justify-between">
-        <h2 className="text-2xl font-bold">Transaction History</h2>
-        <div className="space-x-2">
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold font-mono text-[#ffdd00]">Transaction History</h2>
+        <div>
           {query.isLoading ? (
-            <span className="loading loading-spinner"></span>
+            <div className="w-6 h-6 border-2 border-[#ffdd00]/20 border-t-[#ffdd00] rounded-full animate-spin"></div>
           ) : (
-            <button className="btn btn-sm btn-outline" onClick={() => query.refetch()}>
-              <IconRefresh size={16} />
+            <button 
+              className="text-[#ffdd00] hover:text-[#ffdd00]/80 transition p-2 rounded-md"
+              onClick={() => query.refetch()}
+            >
+              <IconRefresh size={18} />
             </button>
           )}
         </div>
       </div>
-      {query.isError && <pre className="alert alert-error">Error: {query.error?.message.toString()}</pre>}
+      
+      {query.isError && (
+        <div className="bg-[#010200]/80 border-2 border-red-500/50 p-3 rounded-lg">
+          <pre className="font-mono text-red-400">Error: {query.error?.message.toString()}</pre>
+        </div>
+      )}
+      
       {query.isSuccess && (
         <div>
           {query.data.length === 0 ? (
-            <div>No transactions found.</div>
+            <div className="text-center py-8 font-mono text-[#ffdd00]/70">No transactions found.</div>
           ) : (
-            <table className="table border-4 rounded-lg border-separate border-base-300">
-              <thead>
-                <tr>
-                  <th>Signature</th>
-                  <th className="text-right">Slot</th>
-                  <th>Block Time</th>
-                  <th className="text-right">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items?.map((item) => (
-                  <tr key={item.signature}>
-                    <th className="font-mono">
-                      <ExplorerLink path={`tx/${item.signature}`} label={ellipsify(item.signature, 8)} />
-                    </th>
-                    <td className="font-mono text-right">
-                      <ExplorerLink path={`block/${item.slot}`} label={item.slot.toString()} />
-                    </td>
-                    <td>{new Date((item.blockTime ?? 0) * 1000).toISOString()}</td>
-                    <td className="text-right">
-                      {item.err ? (
-                        <div className="badge badge-error" title={JSON.stringify(item.err)}>
-                          Failed
-                        </div>
-                      ) : (
-                        <div className="badge badge-success">Success</div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {(query.data?.length ?? 0) > 5 && (
+            <div className="bg-[#010200]/50 border-4 border-[#ffdd00] rounded-lg overflow-hidden">
+              <table className="w-full font-mono">
+                <thead className="bg-[#010200]">
                   <tr>
-                    <td colSpan={4} className="text-center">
-                      <button className="btn btn-xs btn-outline" onClick={() => setShowAll(!showAll)}>
-                        {showAll ? 'Show Less' : 'Show All'}
-                      </button>
-                    </td>
+                    <th className="px-4 py-3 text-left text-[#ffdd00] border-b border-[#ffdd00]/30">Signature</th>
+                    <th className="px-4 py-3 text-right text-[#ffdd00] border-b border-[#ffdd00]/30">Slot</th>
+                    <th className="px-4 py-3 text-left text-[#ffdd00] border-b border-[#ffdd00]/30">Block Time</th>
+                    <th className="px-4 py-3 text-right text-[#ffdd00] border-b border-[#ffdd00]/30">Status</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {items?.map((item) => (
+                    <tr key={item.signature} className="hover:bg-[#ffdd00]/5">
+                      <td className="font-mono px-4 py-3 border-b border-[#ffdd00]/10 text-[#ffdd00]/80">
+                        <ExplorerLink path={`tx/${item.signature}`} label={ellipsify(item.signature, 8)} className="hover:text-[#ffdd00]" />
+                      </td>
+                      <td className="font-mono px-4 py-3 border-b border-[#ffdd00]/10 text-right text-[#ffdd00]/80">
+                        <ExplorerLink path={`block/${item.slot}`} label={item.slot.toString()} className="hover:text-[#ffdd00]" />
+                      </td>
+                      <td className="px-4 py-3 border-b border-[#ffdd00]/10 text-[#ffdd00]/80">
+                        {new Date((item.blockTime ?? 0) * 1000).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 border-b border-[#ffdd00]/10 text-right">
+                        {item.err ? (
+                          <span className="inline-block px-2 py-1 bg-red-500/20 text-red-400 rounded-md text-xs">
+                            Failed
+                          </span>
+                        ) : (
+                          <span className="inline-block px-2 py-1 bg-green-500/20 text-green-400 rounded-md text-xs">
+                            Success
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              
+              {(query.data?.length ?? 0) > 5 && (
+                <div className="text-center p-3 border-t border-[#ffdd00]/20">
+                  <div className="relative inline-block">
+                    <div className="btn-wrapper absolute inset-0 z-0"></div>
+                    <button 
+                      className="btn-glitch relative z-10 px-4 py-1 text-sm"
+                      onClick={() => setShowAll(!showAll)}
+                    >
+                      <span className="text font-mono">{showAll ? 'Show Less' : 'Show All'}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -269,9 +313,11 @@ function BalanceSol({ balance }: { balance: number }) {
 
 function ModalReceive({ hide, show, address }: { hide: () => void; show: boolean; address: PublicKey }) {
   return (
-    <AppModal title="Receive" hide={hide} show={show}>
-      <p>Receive assets by sending them to your public key:</p>
-      <code>{address.toString()}</code>
+    <AppModal title="Receive" isOpen={show} setIsOpen={hide}>
+      <p className="font-mono text-lg mb-4">Receive assets by sending them to your public key:</p>
+      <div className="bg-[#010200] border-2 border-[#ffdd00]/30 rounded-lg p-3">
+        <code className="font-mono text-[#ffdd00] break-all">{address.toString()}</code>
+      </div>
     </AppModal>
   )
 }
@@ -280,25 +326,43 @@ function ModalAirdrop({ hide, show, address }: { hide: () => void; show: boolean
   const mutation = useRequestAirdrop({ address })
   const [amount, setAmount] = useState('2')
 
+  const handleSubmit = () => {
+    mutation.mutateAsync(parseFloat(amount)).then(() => hide());
+  };
+
   return (
     <AppModal
-      hide={hide}
-      show={show}
+      isOpen={show}
+      setIsOpen={hide}
       title="Airdrop"
-      submitDisabled={!amount || mutation.isPending}
-      submitLabel="Request Airdrop"
-      submit={() => mutation.mutateAsync(parseFloat(amount)).then(() => hide())}
     >
-      <input
-        disabled={mutation.isPending}
-        type="number"
-        step="any"
-        min="1"
-        placeholder="Amount"
-        className="input input-bordered w-full"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-      />
+      <div className="space-y-4">
+        <div className="font-mono">Request SOL from the faucet (devnet/testnet only)</div>
+        <input
+          disabled={mutation.isPending}
+          type="number"
+          step="any"
+          min="1"
+          placeholder="Amount"
+          className="w-full px-3 py-2 font-mono text-lg text-[#ffdd00] bg-[#010200] border-2 border-[#ffdd00]/50 rounded-lg focus:outline-none focus:border-[#ffdd00]"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
+        
+        <div className="flex justify-end pt-4">
+          <div className="relative inline-block">
+            <div className="btn-wrapper absolute inset-0 z-0"></div>
+            <button
+              disabled={!amount || mutation.isPending}
+              onClick={handleSubmit}
+              className="btn-glitch relative z-10 px-6 py-2"
+            >
+              <span className="text font-mono">Request Airdrop</span>
+              {mutation.isPending && <span className="ml-2 animate-pulse">...</span>}
+            </button>
+          </div>
+        </div>
+      </div>
     </AppModal>
   )
 }
@@ -310,43 +374,65 @@ function ModalSend({ hide, show, address }: { hide: () => void; show: boolean; a
   const [amount, setAmount] = useState('1')
 
   if (!address || !wallet.sendTransaction) {
-    return <div>Wallet not connected</div>
+    return <div className="font-mono text-[#ffdd00]">Wallet not connected</div>
   }
+
+  const handleSubmit = () => {
+    mutation
+      .mutateAsync({
+        destination: new PublicKey(destination),
+        amount: parseFloat(amount),
+      })
+      .then(() => hide());
+  };
 
   return (
     <AppModal
-      hide={hide}
-      show={show}
-      title="Send"
-      submitDisabled={!destination || !amount || mutation.isPending}
-      submitLabel="Send"
-      submit={() => {
-        mutation
-          .mutateAsync({
-            destination: new PublicKey(destination),
-            amount: parseFloat(amount),
-          })
-          .then(() => hide())
-      }}
+      isOpen={show}
+      setIsOpen={hide}
+      title="Send SOL"
     >
-      <input
-        disabled={mutation.isPending}
-        type="text"
-        placeholder="Destination"
-        className="input input-bordered w-full"
-        value={destination}
-        onChange={(e) => setDestination(e.target.value)}
-      />
-      <input
-        disabled={mutation.isPending}
-        type="number"
-        step="any"
-        min="1"
-        placeholder="Amount"
-        className="input input-bordered w-full"
-        value={amount}
-        onChange={(e) => setAmount(e.target.value)}
-      />
+      <div className="space-y-4">
+        <div>
+          <label className="block text-lg mb-2 font-mono text-[#ffdd00]">Destination Address</label>
+          <input
+            disabled={mutation.isPending}
+            type="text"
+            placeholder="Enter wallet address"
+            className="w-full px-3 py-2 font-mono text-lg text-[#ffdd00] bg-[#010200] border-2 border-[#ffdd00]/50 rounded-lg focus:outline-none focus:border-[#ffdd00]"
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
+          />
+        </div>
+        
+        <div>
+          <label className="block text-lg mb-2 font-mono text-[#ffdd00]">Amount (SOL)</label>
+          <input
+            disabled={mutation.isPending}
+            type="number"
+            step="any"
+            min="0.001"
+            placeholder="Amount"
+            className="w-full px-3 py-2 font-mono text-lg text-[#ffdd00] bg-[#010200] border-2 border-[#ffdd00]/50 rounded-lg focus:outline-none focus:border-[#ffdd00]"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
+        </div>
+        
+        <div className="flex justify-end pt-4">
+          <div className="relative inline-block">
+            <div className="btn-wrapper absolute inset-0 z-0"></div>
+            <button
+              disabled={!destination || !amount || mutation.isPending}
+              onClick={handleSubmit}
+              className="btn-glitch relative z-10 px-6 py-2"
+            >
+              <span className="text font-mono">Send SOL</span>
+              {mutation.isPending && <span className="ml-2 animate-pulse">...</span>}
+            </button>
+          </div>
+        </div>
+      </div>
     </AppModal>
   )
 }

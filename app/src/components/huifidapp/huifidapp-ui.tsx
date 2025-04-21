@@ -5,17 +5,21 @@ import { useMemo } from 'react'
 import { ellipsify } from '../ui/ui-layout'
 import { ExplorerLink } from '../cluster/cluster-ui'
 import { useHuifidappProgram, useHuifidappProgramAccount } from './huifidapp-data-access'
+import { motion } from 'framer-motion'
 
 export function HuifidappCreate() {
   const { initialize } = useHuifidappProgram()
 
   return (
     <button
-      className="btn btn-xs lg:btn-md btn-primary"
+      className="btn-glitch"
       onClick={() => initialize.mutateAsync(Keypair.generate())}
       disabled={initialize.isPending}
     >
-      Create {initialize.isPending && '...'}
+      <span className="text">// Create</span>
+      <span className="text-decoration">_</span>
+      <span className="decoration">⇒</span>
+      {initialize.isPending && <span className="ml-2">...</span>}
     </button>
   )
 }
@@ -24,30 +28,55 @@ export function HuifidappList() {
   const { accounts, getProgramAccount } = useHuifidappProgram()
 
   if (getProgramAccount.isLoading) {
-    return <span className="loading loading-spinner loading-lg"></span>
+    return <div className="loading-neu mx-auto"></div>
   }
+  
   if (!getProgramAccount.data?.value) {
     return (
-      <div className="alert alert-info flex justify-center">
-        <span>Program account not found. Make sure you have deployed the program and are on the correct cluster.</span>
-      </div>
+      <motion.div 
+        className="neu-box-dark p-8 text-center max-w-xl mx-auto"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <span className="font-['VT323'] text-2xl text-[#ffdd00]">Program account not found. Make sure you have deployed the program and are on the correct cluster.</span>
+      </motion.div>
     )
   }
+  
   return (
-    <div className={'space-y-6'}>
+    <div className="space-y-8 py-8">
       {accounts.isLoading ? (
-        <span className="loading loading-spinner loading-lg"></span>
+        <div className="loading-neu mx-auto"></div>
       ) : accounts.data?.length ? (
-        <div className="grid md:grid-cols-2 gap-4">
+        <motion.div 
+          className="grid md:grid-cols-2 gap-8"
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.1
+              }
+            }
+          }}
+        >
           {accounts.data?.map((account) => (
             <HuifidappCard key={account.publicKey.toString()} account={account.publicKey} />
           ))}
-        </div>
+        </motion.div>
       ) : (
-        <div className="text-center">
-          <h2 className={'text-2xl'}>No accounts</h2>
-          No accounts found. Create one above to get started.
-        </div>
+        <motion.div 
+          className="neu-box-dark p-8 text-center max-w-xl mx-auto"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-3xl font-['VT323'] mb-4 glitch-text text-[#ffdd00]" data-text="No accounts">No accounts</h2>
+          <p className="font-mono text-[#ffdd00]/80">No accounts found. Create one above to get started.</p>
+        </motion.div>
       )}
     </div>
   )
@@ -61,24 +90,35 @@ function HuifidappCard({ account }: { account: PublicKey }) {
   const count = useMemo(() => accountQuery.data?.count ?? 0, [accountQuery.data?.count])
 
   return accountQuery.isLoading ? (
-    <span className="loading loading-spinner loading-lg"></span>
+    <div className="loading-neu mx-auto"></div>
   ) : (
-    <div className="card card-bordered border-base-300 border-4 text-neutral-content">
-      <div className="card-body items-center text-center">
+    <motion.div 
+      className="neu-box-yellow card-glitch p-8"
+      variants={{
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0 }
+      }}
+      whileHover={{ y: -5, transition: { duration: 0.2 } }}
+    >
+      <div className="items-center text-center">
         <div className="space-y-6">
-          <h2 className="card-title justify-center text-3xl cursor-pointer" onClick={() => accountQuery.refetch()}>
+          <h2 
+            className="text-5xl font-['VT323'] cursor-pointer glitch-text text-black" 
+            data-text={count} 
+            onClick={() => accountQuery.refetch()}
+          >
             {count}
           </h2>
-          <div className="card-actions justify-around">
+          <div className="grid grid-cols-3 gap-4">
             <button
-              className="btn btn-xs lg:btn-md btn-outline"
+              className="btn-glitch text-sm min-w-0 w-full"
               onClick={() => incrementMutation.mutateAsync()}
               disabled={incrementMutation.isPending}
             >
-              Increment
+              <span className="text">++</span>
             </button>
             <button
-              className="btn btn-xs lg:btn-md btn-outline"
+              className="btn-glitch text-sm min-w-0 w-full"
               onClick={() => {
                 const value = window.prompt('Set value to:', count.toString() ?? '0')
                 if (!value || parseInt(value) === count || isNaN(parseInt(value))) {
@@ -88,22 +128,22 @@ function HuifidappCard({ account }: { account: PublicKey }) {
               }}
               disabled={setMutation.isPending}
             >
-              Set
+              <span className="text">=</span>
             </button>
             <button
-              className="btn btn-xs lg:btn-md btn-outline"
+              className="btn-glitch text-sm min-w-0 w-full"
               onClick={() => decrementMutation.mutateAsync()}
               disabled={decrementMutation.isPending}
             >
-              Decrement
+              <span className="text">--</span>
             </button>
           </div>
           <div className="text-center space-y-4">
-            <p>
+            <p className="font-mono text-black">
               <ExplorerLink path={`account/${account}`} label={ellipsify(account.toString())} />
             </p>
             <button
-              className="btn btn-xs btn-secondary btn-outline"
+              className="btn-glitch-dark text-sm"
               onClick={() => {
                 if (!window.confirm('Are you sure you want to close this account?')) {
                   return
@@ -112,11 +152,12 @@ function HuifidappCard({ account }: { account: PublicKey }) {
               }}
               disabled={closeMutation.isPending}
             >
-              Close
+              <span className="text">// Close</span>
+              <span className="text-decoration">_</span>
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   )
 }

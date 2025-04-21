@@ -80,48 +80,59 @@ export function ClusterUiModal({ hideModal, show }: { hideModal: () => void; sho
 
   return (
     <AppModal
-      title={'Add Cluster'}
-      hide={hideModal}
-      show={show}
-      submit={() => {
-        try {
-          new Connection(endpoint)
-          if (name) {
-            addCluster({ name, network, endpoint })
-            hideModal()
-          } else {
-            console.log('Invalid cluster name')
-          }
-        } catch {
-          console.log('Invalid cluster endpoint')
-        }
+      isOpen={show}
+      setIsOpen={(isOpen: boolean) => {
+        if (!isOpen) hideModal();
       }}
-      submitLabel="Save"
+      title={'Add Cluster'}
     >
-      <input
-        type="text"
-        placeholder="Name"
-        className="input input-bordered w-full"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-      <input
-        type="text"
-        placeholder="Endpoint"
-        className="input input-bordered w-full"
-        value={endpoint}
-        onChange={(e) => setEndpoint(e.target.value)}
-      />
-      <select
-        className="select select-bordered w-full"
-        value={network}
-        onChange={(e) => setNetwork(e.target.value as ClusterNetwork)}
-      >
-        <option value={undefined}>Select a network</option>
-        <option value={ClusterNetwork.Devnet}>Devnet</option>
-        <option value={ClusterNetwork.Testnet}>Testnet</option>
-        <option value={ClusterNetwork.Mainnet}>Mainnet</option>
-      </select>
+      <div className="space-y-4">
+        <input
+          type="text"
+          placeholder="Name"
+          className="input input-bordered w-full"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <input
+          type="text"
+          placeholder="Endpoint"
+          className="input input-bordered w-full"
+          value={endpoint}
+          onChange={(e) => setEndpoint(e.target.value)}
+        />
+        <select
+          className="select select-bordered w-full"
+          value={network}
+          onChange={(e) => setNetwork(e.target.value as ClusterNetwork)}
+        >
+          <option value={undefined}>Select a network</option>
+          <option value={ClusterNetwork.Devnet}>Devnet</option>
+          <option value={ClusterNetwork.Testnet}>Testnet</option>
+          <option value={ClusterNetwork.Mainnet}>Mainnet</option>
+        </select>
+        
+        <div className="flex justify-end">
+          <button 
+            className="btn btn-primary"
+            onClick={() => {
+              try {
+                new Connection(endpoint)
+                if (name) {
+                  addCluster({ name, network, endpoint })
+                  hideModal()
+                } else {
+                  console.log('Invalid cluster name')
+                }
+              } catch {
+                console.log('Invalid cluster endpoint')
+              }
+            }}
+          >
+            Save
+          </button>
+        </div>
+      </div>
     </AppModal>
   )
 }

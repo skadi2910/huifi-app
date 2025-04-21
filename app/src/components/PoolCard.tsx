@@ -1,119 +1,204 @@
 import React from 'react';
 import Link from 'next/link';
-import { Users, Calendar, Clock, TrendingUp, Award, Star } from 'lucide-react';
-import { PublicKey } from '@solana/web3.js'; // Import PublicKey
+import { 
+  Users, 
+  Calendar, 
+  Clock, 
+  TrendingUp, 
+  Award, 
+  Star, 
+  Coins, 
+  Wallet, 
+  BadgeDollarSign,
+  ArrowRight,
+  Eye,
+  LogIn
+} from 'lucide-react';
+import { PublicKey } from '@solana/web3.js';
+import { HuifiPool } from '@/lib/types/program-types';
+import BN from 'bn.js';
 
-interface PoolCardProps {
-  poolId: PublicKey; // Use PublicKey for ID
-  name: string;
-  participants: { current: number; max: number };
-  contribution: string; // Formatted string (e.g., "100 USDC")
-  totalValue: string; // Formatted string (e.g., "2,000 USDC")
-  frequency: string; // Formatted string (e.g., "Daily")
-  status: 'Active' | 'Filling' | 'Completed';
-  timeRemaining: string; // Formatted string (e.g., "16 hours", "Open")
-  yieldValue: string; // Formatted string (e.g., "12.4%")
-  xpReward?: number; // Optional XP reward display
+export interface PoolCardProps {
+  publicKey: PublicKey;
+  account: HuifiPool;
 }
 
-export const PoolCard: React.FC<PoolCardProps> = ({
-  poolId,
-  name,
-  participants,
-  contribution,
-  totalValue,
-  frequency,
-  status,
-  timeRemaining,
-  yieldValue,
-  xpReward,
-}) => {
-  const getStatusColor = () => {
+export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account }) => {
+  // Extract data from account
+  const { 
+    name,
+    currentParticipants,
+    maxParticipants,
+    contributionAmount,
+    status,
+    frequency,
+    nextPayoutTimestamp,
+    yieldBasisPoints,
+    totalValue,
+  } = account;
+
+  // Convert numerical status to string representation
+  const getStatusString = (): 'Active' | 'Filling' | 'Completed' => {
     switch (status) {
-      case 'Active':
-        return 'bg-[#e6ce04] text-[#010200] font-bold';
-      case 'Filling':
-        return 'bg-[#1a1a18] text-[#e6ce04] border border-[#e6ce04]';
-      case 'Completed':
-        return 'bg-[#252520] text-[#808080] border border-[#808080]/20';
+      case 0:  // Adjust according to your enum values
+        return 'Active';
+      case 1:  // Adjust according to your enum values
+        return 'Filling';
+      case 2:  // Adjust according to your enum values
+        return 'Completed';
       default:
-        return 'bg-[#252520] text-[#f8e555]/70 border border-[#e6ce04]/20';
+        return 'Filling';
     }
   };
 
-  const poolDetailUrl = `/app/pools/${poolId.toString()}`; // Use PublicKey for link
+  const statusString = getStatusString();
+
+  // Format time remaining
+  const formatTimeRemaining = () => {
+    // This is a placeholder - implement based on your nextPayoutTimestamp data structure
+    if (!nextPayoutTimestamp) return "N/A";
+    
+    const now = Math.floor(Date.now() / 1000);
+    const nextTimestamp = nextPayoutTimestamp.toNumber();
+    
+    if (nextTimestamp <= now) return "0h 0m";
+    
+    const diffSeconds = nextTimestamp - now;
+    const hours = Math.floor(diffSeconds / 3600);
+    const minutes = Math.floor((diffSeconds % 3600) / 60);
+    
+    return `${hours}h ${minutes}m`;
+  };
+
+  // Format currency values from BN to string with USDC suffix
+  const formatCurrency = (amount: BN) => {
+    if (!amount) return "0.00 USDC";
+    // Convert BN to a decimal string (assuming 6 decimals for USDC)
+    const value = amount.toNumber() / 1_000_000;
+    return `${value.toFixed(2)} USDC`;
+  };
+
+  const getStatusClass = () => {
+    switch (statusString) {
+      case 'Active':
+        return 'bg-black text-[#ffdd00] border-2 border-black';
+      case 'Filling':
+        return 'bg-[#ffef80] text-black border-2 border-black';
+      case 'Completed':
+        return 'bg-white text-black border-2 border-black';
+      default:
+        return 'bg-white text-black border-2 border-black';
+    }
+  };
+
+  const poolDetailUrl = `/app/pools/${publicKey.toString()}`;
+
+  // Format participants
+  const participants = {
+    current: currentParticipants || 0,
+    max: maxParticipants || 10
+  };
+  
+  // Convert yield basis points to percentage
+  const yieldPercentage = yieldBasisPoints ? (yieldBasisPoints / 100).toFixed(2) : "0.00";
+  
+  // Calculate a simulated XP reward - replace with actual logic if available
+  const xpReward = 100; // Example fixed value
 
   return (
-    <div className="bg-[#010200] rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(230,206,4,0.25)] hover:shadow-[0_8px_30px_rgba(230,206,4,0.35)] transition-shadow duration-300 border border-[#e6ce04]/20">
-      <div className="relative">
-        {xpReward && ( // Conditionally render XP reward
-          <div className="absolute top-2 right-2 flex items-center bg-[#010200]/80 rounded-full px-2 py-0.5">
-            <Star className="h-3 w-3 text-[#e6ce04] mr-1" />
-            <span className="text-xs text-[#e6ce04]">Earn {xpReward} XP</span>
-          </div>
-        )}
-        <div className="h-3 bg-gradient-to-r from-[#e6ce04] to-[#f8e555]"></div>
-      </div>
-      <div className="p-5">
+    <div className="card-glitch bg-[#ffdd00] border-4 border-black p-4 rounded-lg shadow-lg">
+      <div className="p-4">
         <div className="flex justify-between items-start mb-4">
-          <h3 className="text-xl font-semibold text-[#e6ce04]">{name}</h3>
-          <span className={`text-xs py-1 px-2 rounded ${getStatusColor()}`}>
-            {status === 'Active' ? 'LIVE' : status}
-          </span>
+          <h3 className="text-2xl font-mono font-bold text-black glitch-text" data-text={name}>{name}</h3>
+          <div className="flex flex-col items-end space-y-2">
+            <span className={`text-lg py-1 px-3 rounded-md font-mono font-bold ${getStatusClass()} flex items-center`}>
+              {statusString === 'Active' ? (
+                <>
+                  <span className="mr-1 animate-pulse">●</span> LIVE
+                </>
+              ) : statusString.toUpperCase()}
+            </span>
+            {xpReward && (
+              <div className="flex items-center bg-black text-[#ffdd00] rounded-lg px-3 py-1 border-2 border-[#ffdd00]">
+                <Star className="h-3 w-3 text-[#ffdd00] mr-1" />
+                <span className="text-lg font-mono font-bold">+{xpReward.toString()} XP</span>
+              </div>
+            )}
+          </div>
         </div>
 
-        <div className="space-y-3 mb-4">
-          <div className="flex items-center text-[#f8e555]">
-            <Users className="w-4 h-4 mr-2" />
-            <span>
+        <div className="space-y-3 mb-4 font-mono text-lg text-black">
+          <div className="flex items-center">
+            <Users className="w-5 h-5 mr-2 text-black" />
+            <span className="font-medium">
               {participants.current}/{participants.max} Players
             </span>
           </div>
-          <div className="flex items-center text-[#f8e555]">
-            <Calendar className="w-4 h-4 mr-2" />
-            <span>{frequency} Rounds</span>
+          <div className="flex items-center">
+            <Calendar className="w-5 h-5 mr-2 text-black" />
+            <span className="font-medium">{frequency ? `Every ${Math.floor(frequency.toNumber() / 86400)} days` : 'Weekly'} Rounds</span>
           </div>
-          <div className="flex items-center text-[#f8e555]">
-            <Clock className="w-4 h-4 mr-2" />
-            <span>Next round: {timeRemaining}</span>
+          <div className="flex items-center">
+            <Clock className="w-5 h-5 mr-2 text-black" />
+            <span className="font-medium">Next: {formatTimeRemaining()}</span>
           </div>
-          <div className="flex items-center text-[#e6ce04]">
-            <Award className="w-4 h-4 mr-2" />
-            <span>Win rate: {yieldValue}</span>
-          </div>
-        </div>
-
-        <div className="bg-[#1a1a18] p-3 rounded-lg mb-4 border border-[#e6ce04]/10">
-          <div className="flex justify-between mb-2">
-            <span className="text-[#f8e555]">Buy-in</span>
-            <span className="font-medium text-[#e6ce04]">{contribution}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[#f8e555]">Prize Pool</span>
-            <span className="font-medium text-[#e6ce04]">{totalValue}</span>
+          <div className="flex items-center">
+            <TrendingUp className="w-5 h-5 mr-2 text-black" />
+            <span className="font-medium">Yield: {yieldPercentage}%</span>
           </div>
         </div>
 
-        <div className="flex space-x-3">
+        <div className="bg-[#ffef80] border-2 border-black rounded-lg p-4 mb-4 shadow-sm">
+          <div className="flex justify-between mb-2 font-mono text-lg">
+            <span className="text-black font-medium flex items-center">
+              <Wallet className="w-4 h-4 mr-2" />
+              Buy-in
+            </span>
+            <span className="text-black font-bold">{formatCurrency(contributionAmount)}</span>
+          </div>
+          <div className="flex justify-between font-mono text-lg">
+            <span className="text-black font-medium flex items-center">
+              <Coins className="w-4 h-4 mr-2" />
+              Prize Pool
+            </span>
+            <span className="text-black font-bold">{formatCurrency(totalValue)}</span>
+          </div>
+        </div>
+
+        <div className="flex space-x-4">
+          {/* View Game Button - Always the same style */}
           <Link
-            href={poolDetailUrl} // Use dynamic URL
-            className="flex-1 py-2 text-center bg-[#e6ce04] hover:bg-[#f8e555] text-[#010200] rounded-lg transition duration-300 font-bold"
+            href={poolDetailUrl}
+            className="flex-1 flex justify-center items-center btn-glitch-dark"
           >
-            View Game
+            <Eye className="w-4 h-4 mr-2" />
+            <span>// VIEW GAME_</span>
+            <ArrowRight className="w-4 h-4 ml-1" />
           </Link>
-          {status !== 'Completed' && ( // Only show Join if not completed
-            <Link
-              href={`${poolDetailUrl}?action=join`} // Add query param or specific join route if needed
-              className={`flex-1 py-2 text-center rounded-lg transition duration-300 ${
-                status === 'Filling'
-                  ? 'bg-[#1a1a18] text-[#e6ce04] hover:bg-[#252520] border border-[#e6ce04]/30'
-                  : 'bg-gray-600 text-gray-400 cursor-not-allowed border border-gray-500' // Disabled style if Active
-              }`}
-              aria-disabled={status === 'Active'}
-              onClick={(e) => { if (status === 'Active') e.preventDefault(); }} // Prevent click if active
-            >
-              {status === 'Filling' ? 'Join Game' : 'Join Game'} {/* Adjust text if needed */}
-            </Link>
+          
+          {/* Join Game Button - Style varies based on status */}
+          {statusString !== 'Completed' && (
+            statusString === 'Filling' ? (
+              <Link
+                href={`${poolDetailUrl}?action=join`}
+                className="flex-1 flex justify-center items-center btn-glitch"
+              >
+                <LogIn className="w-4 h-4 mr-2" />
+                <span>// JOIN GAME_</span>
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Link>
+            ) : (
+              <Link
+                href={`${poolDetailUrl}?action=join`}
+                className="flex-1 flex justify-center items-center bg-[#ffef80] text-black/40 border-2 border-black/20 rounded-lg py-2.5 px-4 font-mono text-lg font-bold cursor-not-allowed"
+                aria-disabled={statusString === 'Active'}
+                onClick={(e) => { if (statusString === 'Active') e.preventDefault(); }}
+              >
+                <LogIn className="w-4 h-4 mr-2 opacity-50" />
+                <span>// JOIN GAME_</span>
+                <ArrowRight className="w-4 h-4 ml-1 opacity-50" />
+              </Link>
+            )
           )}
         </div>
       </div>

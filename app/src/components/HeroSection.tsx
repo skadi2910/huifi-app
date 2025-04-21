@@ -3,42 +3,21 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-// Import hooks if fetching dynamic stats
-// import { useQuery } from '@tanstack/react-query';
+import { TrendingUp, Users, Percent, BarChart2, Clock, Award, Zap, Shield } from 'lucide-react';
 
 export const HeroSection: React.FC = () => {
-  // Example: Fetching stats (replace with actual data fetching)
-  // const { data: statsData, isLoading } = useQuery({
-  //   queryKey: ['global-stats'],
-  //   queryFn: async () => {
-  //     // Fetch TVL, active games, etc. from your backend or directly if possible
-  //     return {
-  //       tvl: '$4.2M+',
-  //       activeGames: 273,
-  //       avgYield: '12.4%'
-  //     };
-  //   }
-  // });
-  const statsData = { tvl: '$4.2M+', activeGames: 273, avgYield: '12.4%' }; // Placeholder
-  const isLoading = false; // Placeholder
+  const statsData = { tvl: '$4.2M+', activeGames: 273, avgYield: '12.4%', totalWinners: 1842 };
+  const isLoading = false;
 
   return (
-    <section className="relative text-[#e6ce04] py-16 md:py-24 lg:py-32 overflow-hidden">
-      {/* Background effects - synchronized with HowItWorksSection */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute opacity-10 w-96 h-96 rounded-full bg-[#e6ce04] blur-3xl top-10 left-1/4"></div>
-        <div className="absolute opacity-10 w-96 h-96 rounded-full bg-[#e6ce04] blur-3xl -bottom-75 right-20"></div>
-        <div className="absolute h-16 w-16 rounded-full bg-[#e6ce04]/30 top-1/4 left-1/6 animate-coin"></div>
-        <div className="absolute h-12 w-12 rounded-full bg-[#e6ce04]/30 top-2/3 right-1/3 animate-coin" style={{animationDelay: "1s"}}></div>
-        <div className="absolute h-10 w-10 rounded-full bg-[#e6ce04] bottom-1/4 left-1/3 animate-coin opacity-20" style={{animationDelay: "2s"}}></div>
-      </div>
-
+    <section className="relative text-black md:py-4 lg:py-8 overflow-hidden">
       <div className="container mx-auto px-4 sm:px-6 relative z-10">
-        <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-12">
+        <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-4">
           {/* Left column: Heading and CTA */}
-          <div className="flex-1 text-center lg:text-left max-w-2xl mx-auto lg:mx-0">
+          <div className="flex-1 text-center lg:text-left max-w-xl mx-auto lg:mx-0">
             <motion.h1
-              className="text-4xl sm:text-5xl md:text-6xl font-bold mb-4 md:mb-6 bg-clip-text text-transparent bg-gradient-to-r from-[#e6ce04] to-[#f8e555]"
+              className="text-6xl sm:text-7xl md:text-8xl font-mono text-[#ffcc00] mb-6 glitch-text"
+              data-text="HuiFi"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
@@ -46,7 +25,7 @@ export const HeroSection: React.FC = () => {
               HuiFi
             </motion.h1>
             <motion.p
-              className="text-lg sm:text-xl md:text-2xl mb-6 md:mb-8 text-[#f8e555]/90"
+              className="text-lg sm:text-xl md:text-2xl text-[#ffcc00] mb-8 font-mono"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
@@ -59,51 +38,302 @@ export const HeroSection: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
             >
-              <Link
-                href="/app/pools"
-                className="px-8 py-3 rounded-lg bg-gradient-to-r from-[#e6ce04] to-[#f8e555] hover:from-[#f8e555] hover:to-[#f8e555] text-[#010200] font-bold transition duration-300 text-center"
-              >
-                Explore Games
-              </Link>
+              <div className="relative">
+                <div className="btn-wrapper absolute inset-0 z-0"></div>
+                <Link
+                  href="/app/pools"
+                  className="btn-glitch relative z-10"
+                >
+                  <span className="text">// Explore Games</span>
+                  <span className="text-decoration">_</span>
+                  <span className="decoration">⇒</span>
+                </Link>
+              </div>
               <Link
                 href="/learn/how-it-works"
-                className="px-8 py-3 rounded-lg bg-[#1a1a18] hover:bg-[#252520] text-[#e6ce04] font-medium border border-[#e6ce04]/30 transition duration-300 text-center"
+                className="btn-glitch-dark"
               >
-                How To Play
+                <span className="text">// How To Play</span>
+                <span className="text-decoration">_</span>
+                <span className="decoration">⇒</span>
               </Link>
             </motion.div>
           </div>
 
-          {/* Right column: Stats Card */}
+          {/* Right column: Enhanced Bento Stats Grid - Made larger and positioned properly */}
           <motion.div
-            className="w-full lg:flex-1 max-w-md mx-auto lg:mx-0"
+            className="w-full lg:w-[45%] max-w-none lg:transform lg:translate-x-[-10px] mx-auto"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.5, delay: 0.3 }}
           >
-            <div className="relative p-5 sm:p-6 bg-[#1a1a18] rounded-xl border border-[#e6ce04]/20 shadow-[0_4px_20px_rgba(230,206,4,0.15)] hover:shadow-[0_8px_30px_rgba(230,206,4,0.25)] transition-all duration-300">
-              {/* Stats header */}
-              <div className="flex items-center justify-center mb-4">
-                <h3 className="text-xl font-semibold text-center text-[#e6ce04]">Platform Statistics</h3>
-              </div>
+            <div className="grid grid-cols-4 gap-3">
+              {/* TVL Stat */}
+              <motion.div 
+                className="col-span-2 p-6 neu-box-yellow rounded-lg group"
+                whileHover={{ y: -5 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex flex-col items-center">
+                  <motion.div 
+                    initial={{ scale: 1 }}
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
+                    className="bg-black rounded-full p-3 mb-3"
+                  >
+                    <TrendingUp size={24} className="text-[#ffcc00]" />
+                  </motion.div>
+                  <p className="text-xs font-mono uppercase tracking-wider text-black mb-1">Total Value Locked</p>
+                  <motion.h4 
+                    className="text-2xl font-mono font-bold glitch-text"
+                    data-text={isLoading ? '...' : statsData?.tvl}
+                  >
+                    {isLoading ? '...' : statsData?.tvl}
+                  </motion.h4>
+                  <div className="mt-2 w-full bg-black bg-opacity-20 h-2 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: '75%' }}
+                      transition={{ duration: 1.5, delay: 0.5 }}
+                      className="h-full bg-black rounded-full"
+                    />
+                  </div>
+                </div>
+              </motion.div>
               
-              {/* Stats content */}
-              <div className="flex flex-col gap-5">
-                <div className="flex justify-between items-center border-b border-[#e6ce04]/20 pb-4">
-                  <span className="text-[#f8e555]/80">Total Value Locked</span>
-                  <span className="text-xl font-bold text-[#e6ce04]">{isLoading ? '...' : statsData?.tvl}</span>
+              {/* Active Games Stat */}
+              <motion.div 
+                className="col-span-2 p-6 neu-box-yellow rounded-lg group"
+                whileHover={{ y: -5 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex flex-col items-center">
+                  <motion.div 
+                    initial={{ rotate: 0 }}
+                    animate={{ rotate: [0, 10, -10, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, repeatType: "reverse", ease: "easeInOut" }}
+                    className="bg-black rounded-full p-3 mb-3"
+                  >
+                    <Users size={24} className="text-[#ffcc00]" />
+                  </motion.div>
+                  <p className="text-xs font-mono uppercase tracking-wider text-black mb-1">Active Games</p>
+                  <div className="h-10">
+                    <motion.h4 
+                      className="text-2xl font-mono font-bold glitch-text" 
+                      data-text={isLoading ? '...' : statsData?.activeGames}
+                      initial={{ opacity: 1 }}
+                      whileHover={{ scale: 1.1 }}
+                    >
+                      {isLoading ? '...' : statsData?.activeGames}
+                    </motion.h4>
+                  </div>
+                  <div className="flex mt-2 gap-1 w-full justify-center">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <motion.div 
+                        key={i}
+                        initial={{ height: 10 }}
+                        animate={{ height: [10, 20, 10] }}
+                        transition={{ 
+                          duration: 1, 
+                          repeat: Infinity, 
+                          repeatType: "reverse", 
+                          delay: i * 0.2 
+                        }}
+                        className="w-2 bg-black rounded-full"
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="flex justify-between items-center border-b border-[#e6ce04]/20 pb-4">
-                  <span className="text-[#f8e555]/80">Active Games</span>
-                  <span className="text-xl font-bold text-[#e6ce04]">{isLoading ? '...' : statsData?.activeGames}</span>
+              </motion.div>
+
+              {/* NEW: Time & Security - Combined small tile */}
+              <motion.div 
+                className="p-4 neu-box-yellow rounded-lg group"
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex flex-col justify-center items-center h-full">
+                  <motion.div 
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+                    className="bg-black rounded-full p-2 mb-2"
+                  >
+                    <Clock size={20} className="text-[#ffcc00]" />
+                  </motion.div>
+                  <div className="text-center">
+                    <p className="text-xs font-mono text-black mb-1">Average Round</p>
+                    <p className="text-lg font-mono font-bold">28 days</p>
+                  </div>
                 </div>
-                <div className="flex justify-between items-center pb-2">
-                  <span className="text-[#f8e555]/80">Average Yield</span>
-                  <span className="text-xl font-bold text-[#f8e555]">{isLoading ? '...' : statsData?.avgYield}</span>
+              </motion.div>
+
+              {/* NEW: Security Guarantee */}
+              <motion.div 
+                className="p-4 neu-box-yellow rounded-lg group"
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex flex-col justify-center items-center h-full">
+                  <motion.div 
+                    animate={{ y: [0, -5, 0] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    className="bg-black rounded-full p-2 mb-2"
+                  >
+                    <Shield size={20} className="text-[#ffcc00]" />
+                  </motion.div>
+                  <div className="text-center">
+                    <p className="text-xs font-mono text-black mb-1">Security Level</p>
+                    <p className="text-lg font-mono font-bold">99.8%</p>
+                  </div>
                 </div>
-              </div>
-            
-              <div className="absolute inset-0 bg-gradient-to-br from-[#e6ce04]/10 via-transparent to-transparent rounded-xl -z-10"></div>
+              </motion.div>
+              
+              {/* NEW: Winners Count */}
+              <motion.div 
+                className="p-4 neu-box-yellow rounded-lg group"
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex flex-col justify-center items-center h-full">
+                  <motion.div
+                    initial={{ scale: 1 }}
+                    animate={{ scale: [1, 1.2, 1], rotate: [0, 5, 0, -5, 0] }}
+                    transition={{ duration: 3, repeat: Infinity }}
+                    className="bg-black rounded-full p-2 mb-2"
+                  >
+                    <Award size={20} className="text-[#ffcc00]" />
+                  </motion.div>
+                  <div className="text-center">
+                    <p className="text-xs font-mono text-black mb-1">Total Winners</p>
+                    <motion.p 
+                      className="text-lg font-mono font-bold"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: 0.8 }}
+                    >
+                      {statsData.totalWinners}
+                    </motion.p>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* NEW: Performance Indicator */}
+              <motion.div 
+                className="p-4 neu-box-yellow rounded-lg group"
+                whileHover={{ scale: 1.05 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex flex-col justify-center items-center h-full">
+                  <motion.div 
+                    animate={{ 
+                      boxShadow: ["0 0 0 0 rgba(0,0,0,0)", "0 0 0 10px rgba(0,0,0,0.1)", "0 0 0 0 rgba(0,0,0,0)"]
+                    }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="bg-black rounded-full p-2 mb-2"
+                  >
+                    <Zap size={20} className="text-[#ffcc00]" />
+                  </motion.div>
+                  <div className="text-center">
+                    <p className="text-xs font-mono text-black mb-1">Performance</p>
+                    <p className="text-lg font-mono font-bold">+5.2%</p>
+                  </div>
+                </div>
+              </motion.div>
+              
+              {/* Charts & Yield - Larger tile spanning full width */}
+              <motion.div 
+                className="col-span-4 p-6 neu-box-yellow rounded-lg group"
+                whileHover={{ y: -5 }}
+                transition={{ duration: 0.2 }}
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <motion.div 
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                      className="bg-black rounded-full p-2"
+                    >
+                      <Percent size={18} className="text-[#ffcc00]" />
+                    </motion.div>
+                    <div>
+                      <p className="text-xs font-mono uppercase tracking-wider text-black">Average Yield</p>
+                      <motion.h4 
+                        className="text-3xl font-mono font-bold glitch-text" 
+                        data-text={isLoading ? '...' : statsData?.avgYield}
+                      >
+                        {isLoading ? '...' : statsData?.avgYield}
+                      </motion.h4>
+                    </div>
+                  </div>
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    className="bg-black px-3 py-1 rounded-full"
+                  >
+                    <span className="text-xs font-mono text-[#ffcc00]">TRENDING UP</span>
+                  </motion.div>
+                </div>
+                
+                {/* Mini chart */}
+                <div className="mt-3 h-20 w-full relative">
+                  <div className="absolute inset-0 flex items-end justify-between px-1">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map((i) => {
+                      // Generate a pseudo-random height between 20% and 100%
+                      const height = `${20 + Math.abs(Math.sin(i * 0.7) * 80)}%`;
+                      
+                      return (
+                        <motion.div
+                          key={i}
+                          className="bg-black rounded-sm w-[4%]"
+                          style={{ height }}
+                          initial={{ scaleY: 0 }}
+                          animate={{ scaleY: 1 }}
+                          transition={{ duration: 0.5, delay: i * 0.05 }}
+                          whileHover={{ scaleY: 1.2 }}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-black bg-opacity-30"></div>
+                </div>
+                
+                <div className="mt-3 flex justify-between text-xs font-mono text-black opacity-70">
+                  <span>Apr</span>
+                  <span>May</span>
+                  <span>Jun</span>
+                  <span>Jul</span>
+                  <span>Aug</span>
+                </div>
+              </motion.div>
+              
+              {/* NEW: Call to action banner */}
+              <motion.div 
+                className="col-span-4 p-4 bg-black rounded-lg group overflow-hidden relative border-2 border-[#ffcc00]"
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.2 }}
+              >
+                <motion.div 
+                  className="absolute -right-20 -top-20 w-40 h-40 bg-[#ffcc00] rounded-full opacity-10"
+                  animate={{ 
+                    scale: [1, 1.2, 1],
+                    opacity: [0.1, 0.2, 0.1]
+                  }}
+                  transition={{ duration: 3, repeat: Infinity, repeatType: "reverse" }}
+                />
+                <div className="flex justify-between items-center">
+                  <p className="text-sm font-mono text-[#ffcc00]">
+                    JOIN THE <span className="glitch-text" data-text="NEXT GAME">NEXT GAME</span> STARTING IN 2 DAYS
+                  </p>
+                  <motion.p 
+                    className="text-xs font-mono text-[#ffcc00] border border-[#ffcc00] rounded-full px-3 py-1"
+                    animate={{ 
+                      backgroundColor: ["rgba(0,0,0,0)", "rgba(255,204,0,0.2)", "rgba(0,0,0,0)"]
+                    }}
+                    transition={{ duration: 1.5, repeat: Infinity }}
+                  >
+                    11:24:36 LEFT
+                  </motion.p>
+                </div>
+              </motion.div>
             </div>
           </motion.div>
         </div>
