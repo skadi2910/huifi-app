@@ -89,7 +89,7 @@ export default function CreatePoolPage() {
         entryFee: parseFloat(formData.entryFee),
         currency: formData.currency,
         payoutMethod: formData.payoutMethod as 'predetermined' | 'bidding',
-        latePenalty: formData.latePenalty as 'none' | 'low' | 'medium' | 'high',
+        latePenalty: formData.latePenalty as 'none' | 'small' | 'moderate' | 'strict',
         privacy: formData.privacy as 'public' | 'private',
         creator: publicKey,
       });
@@ -240,7 +240,7 @@ export default function CreatePoolPage() {
                     <select id="latePenalty" name="latePenalty" value={formData.latePenalty} onChange={handleInputChange} className="w-full px-4 py-2 border border-[#e6ce04]/30 rounded-lg bg-[#252520] text-[#f8e555] focus:ring-2 focus:ring-[#e6ce04] focus:border-transparent">
                       <option value="none">None - Players can contribute late without penalty</option>
                       <option value="small">Small - 1% fee for late contributions</option>
-                      <option value="moderate">Moderate - 3% fee for late contributions</option>
+                      <option value="moderate">Moderate - 5% fee for late contributions</option>
                       <option value="strict">Strict - Remove players after 24 hours of missed contribution</option>
                     </select>
                   </div>

@@ -1,81 +1,75 @@
-import { PublicKey, Transaction, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js';
+import { PublicKey, Keypair, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js';
 import { BN, Program, AnchorProvider } from '@project-serum/anchor';
 import { findPoolAddress, findUserAccountAddress, findBidAddress, findRoundResultAddress, findVaultAddress, findProtocolSettingsAddress } from './pda';
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddress } from '@solana/spl-token';
 import { USDC_MINT } from './constants';
+import { POOL_SEED} from './constants';
 
 // Update the PoolConfig interface to match the Solana program exactly
 export interface PoolConfig {
-  maxParticipants: number;
-  contributionAmount: BN;
-  cycleDurationSeconds: BN;
-  payoutDelaySeconds: BN;
-  earlyWithdrawalFeeBps: number;
-  collateralRequirementBps: number;
-  yieldStrategy: { none: {} } | { jitoSol: {} };
-  isPrivate: boolean; // This will be handled separately, not part of the on-chain struct
+  max_participants: number;
+  contribution_amount: BN;
+  cycle_duration_seconds: BN;
+  payout_delay_seconds: BN;
+  early_withdrawal_fee_bps: number;
+  collateral_requirement_bps: number;
+  yield_strategy: { none: {} } | { jitoSol: {} };
+  is_private: boolean;
 }
 
 // Create pool function
 export const createPool = async (
   program: Program,
   creator: PublicKey,
-  name: string,
-  description: string,
   poolConfig: PoolConfig,
-  tokenMint: PublicKey
+  tokenMint: PublicKey | string
 ) => {
+  
+  // Ensure tokenMint is a PublicKey object
+  const tokenMintKey = typeof tokenMint === 'string' 
+    ? new PublicKey(tokenMint) 
+    : tokenMint;
+  
   // Find PDAs with bump seeds
   const [poolAddress, poolBump] = findPoolAddress(
-    tokenMint, 
+    tokenMintKey, 
     creator, 
-    poolConfig.maxParticipants
+    poolConfig.max_participants
   );
   
   const [vaultAddress] = findVaultAddress(poolAddress);
+  const [protocolSettingsAddress] = findProtocolSettingsAddress();
   
   try {
-    // Create a formatted pool config that exactly matches the Solana program's expected structure
-    const formattedPoolConfig = {
-      max_participants: poolConfig.maxParticipants,
-      contribution_amount: poolConfig.contributionAmount,
-      cycle_duration_seconds: poolConfig.cycleDurationSeconds,
-      payout_delay_seconds: poolConfig.payoutDelaySeconds,
-      early_withdrawal_fee_bps: Math.min(poolConfig.earlyWithdrawalFeeBps, 10000),
-      collateral_requirement_bps: Math.min(poolConfig.collateralRequirementBps, 65535),
-      yield_strategy: { none: {} }
-    };
-
-    // Debug log to check values
-    console.log("Creating pool with config:", {
-      maxParticipants: formattedPoolConfig.max_participants,
-      contributionAmount: formattedPoolConfig.contribution_amount.toString(),
-      cycleDurationSeconds: formattedPoolConfig.cycle_duration_seconds.toString(),
-      payoutDelaySeconds: formattedPoolConfig.payout_delay_seconds.toString(),
-      earlyWithdrawalFeeBps: formattedPoolConfig.early_withdrawal_fee_bps,
-      collateralRequirementBps: formattedPoolConfig.collateral_requirement_bps,
-      yieldStrategy: "none",
-      isPrivate: poolConfig.isPrivate // Only for logging
+    // Import necessary tokens dynamically to avoid circular dependencies
+    const { TOKEN_PROGRAM_ID } = await import('@solana/spl-token');
+    const { SystemProgram, SYSVAR_RENT_PUBKEY } = await import('@solana/web3.js');
+    
+    console.log("Sending create_pool transaction with:", {
+      creator: creator.toString(),
+      pool_config: {
+        max_participants: poolConfig.max_participants,
+        contribution_amount: poolConfig.contribution_amount.toString(),
+        cycle_duration_seconds: poolConfig.cycle_duration_seconds.toString(),
+        payout_delay_seconds: poolConfig.payout_delay_seconds.toString(),
+        early_withdrawal_fee_bps: poolConfig.early_withdrawal_fee_bps,
+        collateral_requirement_bps: poolConfig.collateral_requirement_bps,
+        yield_strategy: poolConfig.yield_strategy,
+        is_private: poolConfig.is_private
+      }
     });
     
-    // Get the protocol settings account
-    const [protocolSettingsAddress] = findProtocolSettingsAddress();
-    
-    // Fix: Rename groupAccount to pool as expected by the Anchor program
+    // Create the transaction with properly formatted account names to match the IDL
     const tx = await program.methods
-      .createPool(
-        formattedPoolConfig,
-        name,
-        description
-      )
+      .createPool(poolConfig)
       .accounts({
         creator: creator,
-        pool: poolAddress, // Changed from 'groupAccount' to 'pool'
-        tokenMint: tokenMint,       
+        group_account: poolAddress, 
+        token_mint: tokenMintKey,
         vault: vaultAddress,
-        protocolSettings: protocolSettingsAddress,
-        tokenProgram: TOKEN_PROGRAM_ID, 
-        systemProgram: SystemProgram.programId, 
+        protocol_settings: protocolSettingsAddress,
+        token_program: TOKEN_PROGRAM_ID,
+        system_program: SystemProgram.programId,
         rent: SYSVAR_RENT_PUBKEY,
       })
       .rpc();
@@ -83,6 +77,64 @@ export const createPool = async (
     return tx;
   } catch (error) {
     console.error("Error in createPool transaction:", error);
+    
+    // Enhanced error logging
+    if (error instanceof Error) {
+      console.error("Error details:", error.message);
+    }
+    
+    throw error;
+  }
+};
+
+export const initializeProtocol = async (
+  program: Program,
+  admin: PublicKey,
+  protocolFeeBps: number = 100
+) => {
+  const [protocolSettingsAddress] = findProtocolSettingsAddress();
+  
+  try {
+    const { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } = await import('@solana/spl-token');
+    const { SystemProgram, SYSVAR_RENT_PUBKEY } = await import('@solana/web3.js');
+    
+    // Calculate the treasury account address - this will be an associated token account
+    // owned by the protocol settings PDA
+    const treasuryAddress = await getAssociatedTokenAddress(
+      USDC_MINT,
+      protocolSettingsAddress,
+      true // allowOwnerOffCurve = true for PDA
+    );
+    
+    console.log("Protocol settings address:", protocolSettingsAddress.toString());
+    console.log("Treasury associated token account:", treasuryAddress.toString());
+    
+    // Execute the transaction with correctly ordered accounts matching your Rust program
+    const tx = await program.methods
+  .initializeProtocol(
+    protocolFeeBps
+  )
+  .accounts({
+    admin: admin,
+    protocolSettings: protocolSettingsAddress,
+    treasury: treasuryAddress,
+    tokenMint: USDC_MINT,
+    tokenProgram: TOKEN_PROGRAM_ID,
+    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID, 
+    systemProgram: SystemProgram.programId,
+    rent: SYSVAR_RENT_PUBKEY,
+  })
+  .signers([])
+  .rpc({ 
+    commitment: 'confirmed',
+    skipPreflight: true  
+  });
+      
+    console.log("Protocol initialized successfully with signature:", tx);
+    return tx;
+  } catch (error) {
+    console.error("Error in initializeProtocol transaction:", error);
+    
     // Enhanced error logging
     if (error instanceof Error) {
       console.error("Error details:", error.message);
@@ -90,6 +142,7 @@ export const createPool = async (
         console.error("Program logs:", (error as any).logs);
       }
     }
+    
     throw error;
   }
 };

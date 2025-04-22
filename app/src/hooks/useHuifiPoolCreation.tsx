@@ -36,12 +36,12 @@ const payoutMethodToConfig = {
   }
 };
 
-// Mapping from UI penalty types to contract values
+// Updated mapping from UI penalty types to contract values
 const penaltyToBps = {
   none: 0,
-  low: 100,  // 1%
-  medium: 500, // 5%
-  high: 1000, // 10%
+  small: 100,    // 1%
+  moderate: 500,  // 3%
+  strict: 1000,   // 10% - maximum penalty
 };
 
 export type PoolCreationParams = {
@@ -52,7 +52,7 @@ export type PoolCreationParams = {
   entryFee: number;
   currency: string; // Should be a token mint address in production
   payoutMethod: 'predetermined' | 'bidding';
-  latePenalty: 'none' | 'low' | 'medium' | 'high';
+  latePenalty: 'none' | 'small' | 'moderate' | 'strict';
   privacy: 'public' | 'private';
   creator: PublicKey;
 };
@@ -92,7 +92,7 @@ export function useHuifiPoolCreation() {
       const tokenMint = new PublicKey(USDC_MINT);
       
       // Convert UI parameters to contract parameters
-       const contributionAmount = Math.floor(rawContributionAmount);
+      const contributionAmount = Math.floor(rawContributionAmount);
       const cycleDurationSeconds = frequencyToSeconds[params.frequency];
       
       // Ensure cycle duration is within bounds
@@ -102,8 +102,16 @@ export function useHuifiPoolCreation() {
       
       const payoutDelaySeconds = 24 * 60 * 60; // 1 day delay by default
       
-      // Ensure these values are within acceptable ranges (typically u16 max = 65535)
-      const earlyWithdrawalFeeBps = Math.min(penaltyToBps[params.latePenalty], MAX_EARLY_WITHDRAWAL_FEE_BPS);
+      // Ensure these values are within acceptable ranges with better error handling
+      let earlyWithdrawalFeeBps = params.latePenalty ? penaltyToBps[params.latePenalty] : 0;
+      if (earlyWithdrawalFeeBps === undefined) {
+        console.warn(`Unknown penalty type "${params.latePenalty}", defaulting to 0`);
+        earlyWithdrawalFeeBps = 0;
+      }
+      if (earlyWithdrawalFeeBps > MAX_EARLY_WITHDRAWAL_FEE_BPS) {
+        console.warn(`Early withdrawal fee ${earlyWithdrawalFeeBps} exceeds maximum of ${MAX_EARLY_WITHDRAWAL_FEE_BPS}, clamping to maximum.`);
+        earlyWithdrawalFeeBps = MAX_EARLY_WITHDRAWAL_FEE_BPS;
+      }
       
       // Ensure collateral requirement meets the minimum but doesn't exceed u16 max
       const collateralRequirementBps = Math.min(
@@ -123,32 +131,64 @@ export function useHuifiPoolCreation() {
           params.maxPlayers
         );
       
+        // Ensure all numeric values are proper numbers and within range
+        const maxParticipants = Number(params.maxPlayers);
+        if (isNaN(maxParticipants) || maxParticipants < MIN_PARTICIPANTS || maxParticipants > MAX_PARTICIPANTS) {
+          throw new Error(`maxPlayers must be a valid number between ${MIN_PARTICIPANTS} and ${MAX_PARTICIPANTS}`);
+        }
+        
+        // Ensure currency amount is a proper BN
+        const contributionAmountBn = new BN(contributionAmount);
+        
+        // Ensure cycle duration is a proper BN
+        const cycleDurationSecondsBn = new BN(cycleDurationSeconds);
+        
+        // Ensure payout delay is a proper BN
+        const payoutDelaySecondsBn = new BN(payoutDelaySeconds);
+        
+        // Ensure BPS values are proper numbers and within range with detailed error info
+        const earlyWithdrawalFeeBpsNum = Number(earlyWithdrawalFeeBps);
+        if (isNaN(earlyWithdrawalFeeBpsNum)) {
+          throw new Error(`earlyWithdrawalFeeBps is not a valid number (value: ${earlyWithdrawalFeeBps}, type: ${typeof earlyWithdrawalFeeBps})`);
+        }
+        
+        // Extra validation to make sure earlyWithdrawalFeeBps is not exceeding the max
+        if (earlyWithdrawalFeeBpsNum > MAX_EARLY_WITHDRAWAL_FEE_BPS) {
+          throw new Error(`earlyWithdrawalFeeBps must be a valid number not exceeding ${MAX_EARLY_WITHDRAWAL_FEE_BPS}`);
+        }
+        
+        const collateralRequirementBpsNum = Number(collateralRequirementBps);
+        if (isNaN(collateralRequirementBpsNum) || collateralRequirementBpsNum < MIN_COLLATERAL_REQUIREMENT_BPS) {
+          throw new Error(`collateralRequirementBps must be a valid number at least ${MIN_COLLATERAL_REQUIREMENT_BPS}`);
+        }
+      
         // Create a properly structured pool_config object matching the IDL definition
         const poolConfig = {
-          maxParticipants: params.maxPlayers,
-          contributionAmount: new BN(contributionAmount),
-          cycleDurationSeconds: new BN(cycleDurationSeconds),
-          payoutDelaySeconds: new BN(payoutDelaySeconds),
-          earlyWithdrawalFeeBps: earlyWithdrawalFeeBps,
-          collateralRequirementBps: collateralRequirementBps,
-          yieldStrategy: { none: {} },
-          isPrivate: isPrivate
+          max_participants: Number(maxParticipants), 
+          contribution_amount: contributionAmountBn,
+          cycle_duration_seconds: cycleDurationSecondsBn,
+          payout_delay_seconds: payoutDelaySecondsBn,
+          early_withdrawal_fee_bps: Number(earlyWithdrawalFeeBpsNum), 
+          collateral_requirement_bps: Number(collateralRequirementBpsNum), 
+          yield_strategy: { none: {} }, 
+          is_private: Boolean(isPrivate)
         };
       
         console.log("Pool config before passing to createPool:", {
           ...poolConfig,
-          contributionAmount: poolConfig.contributionAmount.toString(),
-          cycleDurationSeconds: poolConfig.cycleDurationSeconds.toString(),
-          payoutDelaySeconds: poolConfig.payoutDelaySeconds.toString(),
+          contribution_amount: poolConfig.contribution_amount.toString(),
+          cycle_duration_seconds: poolConfig.cycle_duration_seconds.toString(),
+          payout_delay_seconds: poolConfig.payout_delay_seconds.toString(),
+          maxParticipants: poolConfig.max_participants,
+          earlyWithdrawalFeeBps: poolConfig.early_withdrawal_fee_bps,
+          collateralRequirementBps: poolConfig.collateral_requirement_bps
         });
       
         const tx = await createPool(
           program,
           publicKey,
-          params.name,
-          params.description,
           poolConfig,
-          tokenMint
+          new PublicKey(USDC_MINT)
         );
       
         return tx;

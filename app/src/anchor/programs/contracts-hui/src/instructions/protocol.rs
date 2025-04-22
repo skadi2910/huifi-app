@@ -1,11 +1,13 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Token, TokenAccount};
+use anchor_spl::token::{Token, TokenAccount, Mint};
+use anchor_spl::associated_token::AssociatedToken;
 
 use crate::state::*;
 use crate::constants::*;
 use crate::errors::*;
 
 #[derive(Accounts)]
+#[instruction(protocol_fee_bps: u16)]
 pub struct InitializeProtocol<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
@@ -19,17 +21,19 @@ pub struct InitializeProtocol<'info> {
     )]
     pub protocol_settings: Account<'info, ProtocolSettings>,
     
+    // Changed from init_if_needed to init
     #[account(
         init,
         payer = admin,
-        token::mint = token_mint,
-        token::authority = protocol_settings,
+        associated_token::mint = token_mint,
+        associated_token::authority = protocol_settings,
     )]
     pub treasury: Account<'info, TokenAccount>,
     
-    pub token_mint: Account<'info, anchor_spl::token::Mint>,
+    pub token_mint: Account<'info, Mint>,
     
     pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
 }
@@ -45,6 +49,8 @@ pub fn initialize_protocol(
     );
     
     let protocol_settings = &mut ctx.accounts.protocol_settings;
+    
+    // Access the bump directly from ctx.bumps
     let bump = ctx.bumps.protocol_settings;
     
     protocol_settings.authority = ctx.accounts.admin.key();

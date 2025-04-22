@@ -1,17 +1,28 @@
-import { HUIFI_PROGRAM_ID, POOL_SEED, USER_ACCOUNT_SEED, BID_SEED, ROUND_RESULT_SEED, VAULT_SEED, PROTOCOL_SETTINGS_SEED } from './constants';
+import { HUIFI_PROGRAM_ID, POOL_SEED, USER_ACCOUNT_SEED, BID_SEED, ROUND_RESULT_SEED, VAULT_SEED, PROTOCOL_SEED } from './constants';
 import { PublicKey } from '@solana/web3.js';
 
 export const findPoolAddress = (
-  tokenMint: PublicKey, 
-  creator: PublicKey,
+  tokenMint: PublicKey | string, 
+  creator: PublicKey | string,
   maxParticipants: number
 ): [PublicKey, number] => {
+  // Convert strings to PublicKey objects if needed
+  const tokenMintKey = typeof tokenMint === 'string' 
+    ? new PublicKey(tokenMint) 
+    : tokenMint;
+    
+  const creatorKey = typeof creator === 'string'
+    ? new PublicKey(creator)
+    : creator;
+  
+  const maxParticipantsBuffer = Buffer.from([maxParticipants]);
+  
   return PublicKey.findProgramAddressSync(
     [
       Buffer.from(POOL_SEED),
-      tokenMint.toBuffer(),
-      creator.toBuffer(),
-      Buffer.from([maxParticipants])
+      tokenMintKey.toBuffer(),
+      creatorKey.toBuffer(),
+      maxParticipantsBuffer
     ],
     HUIFI_PROGRAM_ID
   );
@@ -66,7 +77,7 @@ export const findRoundResultAddress = (
 
 export const findProtocolSettingsAddress = (): [PublicKey, number] => {
   return PublicKey.findProgramAddressSync(
-    [Buffer.from(PROTOCOL_SETTINGS_SEED)],
+    [Buffer.from(PROTOCOL_SEED)],
     HUIFI_PROGRAM_ID
   );
 };
