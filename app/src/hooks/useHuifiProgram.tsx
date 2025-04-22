@@ -39,11 +39,11 @@ export function useHuifiProgram() {
           },
           // Add initialize_protocol instruction to instructions array
           {
-            name: "initializeProtocol", // Changed from snake_case to camelCase
+            name: "initializeProtocol",
             accounts: [
               { name: "admin", isMut: true, isSigner: true },
               { name: "protocol_settings", isMut: true, isSigner: false },
-              { name: "treasury", isMut: true, isSigner: false },
+              { name: "treasury", isMut: true, isSigner: true },
               { name: "token_mint", isMut: false, isSigner: false },
               { name: "token_program", isMut: false, isSigner: false },
               { name: "system_program", isMut: false, isSigner: false },

@@ -18,6 +18,7 @@ export interface PoolConfig {
 }
 
 // Create pool function
+// Update the createPool function with better error handling
 export const createPool = async (
   program: Program,
   creator: PublicKey,
@@ -41,11 +42,28 @@ export const createPool = async (
   const [protocolSettingsAddress] = findProtocolSettingsAddress();
   
   try {
+    // Check if the creator has enough SOL balance for the transaction
+    const { connection } = program.provider;
+    const balance = await connection.getBalance(creator);
+    const minimumBalance = 10000000; // 0.01 SOL, adjust as needed
+    
+    if (balance < minimumBalance) {
+      throw new Error(`Insufficient SOL balance. You need at least 0.01 SOL to create a pool. Current balance: ${balance / 1_000_000_000} SOL`);
+    }
+    
+    // Check if protocol settings exist
+    try {
+      await program.account.protocolSettings.fetch(protocolSettingsAddress);
+    } catch (err) {
+      console.log('Protocol settings not initialized. Initialize protocol first.');
+      throw new Error('Protocol not initialized. Please initialize protocol first.');
+    }
+    
     // Import necessary tokens dynamically to avoid circular dependencies
     const { TOKEN_PROGRAM_ID } = await import('@solana/spl-token');
     const { SystemProgram, SYSVAR_RENT_PUBKEY } = await import('@solana/web3.js');
     
-    console.log("Sending create_pool transaction with:", {
+    console.log("Sending createPool transaction with:", {
       creator: creator.toString(),
       pool_config: {
         max_participants: poolConfig.max_participants,
@@ -72,7 +90,10 @@ export const createPool = async (
         system_program: SystemProgram.programId,
         rent: SYSVAR_RENT_PUBKEY,
       })
-      .rpc();
+      .rpc({
+        commitment: 'confirmed',
+        skipPreflight: false // Set to true if you want to bypass simulation
+      });
       
     return tx;
   } catch (error) {
@@ -81,6 +102,15 @@ export const createPool = async (
     // Enhanced error logging
     if (error instanceof Error) {
       console.error("Error details:", error.message);
+      
+      // Check for specific error messages
+      if (error.message.includes('debit an account but found no record of a prior credit')) {
+        throw new Error('Insufficient SOL balance for transaction. Please add more SOL to your wallet.');
+      }
+      
+      if (error.message.includes('Custom program error')) {
+        throw new Error(`Solana program error: ${error.message}`);
+      }
     }
     
     throw error;
@@ -95,40 +125,37 @@ export const initializeProtocol = async (
   const [protocolSettingsAddress] = findProtocolSettingsAddress();
   
   try {
-    const { TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID } = await import('@solana/spl-token');
-    const { SystemProgram, SYSVAR_RENT_PUBKEY } = await import('@solana/web3.js');
+    // Import necessary packages
+    const { TOKEN_PROGRAM_ID } = await import('@solana/spl-token');
+    const { SystemProgram, SYSVAR_RENT_PUBKEY, Keypair } = await import('@solana/web3.js');
     
-    // Calculate the treasury account address - this will be an associated token account
-    // owned by the protocol settings PDA
-    const treasuryAddress = await getAssociatedTokenAddress(
-      USDC_MINT,
-      protocolSettingsAddress,
-      true // allowOwnerOffCurve = true for PDA
-    );
+    // Create a treasury keypair as required by the program
+    const treasuryKeypair = Keypair.generate();
     
     console.log("Protocol settings address:", protocolSettingsAddress.toString());
-    console.log("Treasury associated token account:", treasuryAddress.toString());
+    console.log("Treasury keypair public key:", treasuryKeypair.publicKey.toString());
+    console.log("Admin:", admin.toString());
+    console.log("Protocol fee bps:", protocolFeeBps);
     
-    // Execute the transaction with correctly ordered accounts matching your Rust program
+    // Execute the transaction with snake_case account names
     const tx = await program.methods
-  .initializeProtocol(
-    protocolFeeBps
-  )
-  .accounts({
-    admin: admin,
-    protocolSettings: protocolSettingsAddress,
-    treasury: treasuryAddress,
-    tokenMint: USDC_MINT,
-    tokenProgram: TOKEN_PROGRAM_ID,
-    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID, 
-    systemProgram: SystemProgram.programId,
-    rent: SYSVAR_RENT_PUBKEY,
-  })
-  .signers([])
-  .rpc({ 
-    commitment: 'confirmed',
-    skipPreflight: true  
-  });
+      .initializeProtocol(
+        protocolFeeBps
+      )
+      .accounts({
+        admin: admin,
+        protocol_settings: protocolSettingsAddress,  // Use snake_case to match IDL
+        treasury: treasuryKeypair.publicKey,
+        token_mint: USDC_MINT,
+        token_program: TOKEN_PROGRAM_ID,
+        system_program: SystemProgram.programId,
+        rent: SYSVAR_RENT_PUBKEY,
+      })
+      .signers([treasuryKeypair])  // Include treasury keypair as a signer
+      .rpc({ 
+        commitment: 'confirmed',
+        skipPreflight: false  // Better for error debugging
+      });
       
     console.log("Protocol initialized successfully with signature:", tx);
     return tx;
@@ -138,6 +165,7 @@ export const initializeProtocol = async (
     // Enhanced error logging
     if (error instanceof Error) {
       console.error("Error details:", error.message);
+      
       if ('logs' in error) {
         console.error("Program logs:", (error as any).logs);
       }

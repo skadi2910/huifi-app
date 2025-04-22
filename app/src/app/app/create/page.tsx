@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Coins, Trophy, Calendar, Users, Zap, ChevronRight, InfoIcon, ArrowLeftIcon, CheckCircleIcon, Loader2 } from 'lucide-react';
-import { useWallet } from '@solana/wallet-adapter-react';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
 import { WalletButton } from '@/components/solana/solana-provider';
 import { useTransactionToast } from '@/components/ui/ui-layout';
 import { useRouter } from 'next/navigation';
@@ -13,11 +14,15 @@ import { useHuifiPoolCreation } from '@/hooks/useHuifiPoolCreation';
 export default function CreatePoolPage() {
   const [step, setStep] = useState(1);
   const program = useHuifiProgram();
+  const { connection } = useConnection();
   const { publicKey } = useWallet();
   const transactionToast = useTransactionToast();
   const router = useRouter();
   const { createPoolMutation } = useHuifiPoolCreation();
   const [isCreating, setIsCreating] = useState(false);
+  const [isRequestingAirdrop, setIsRequestingAirdrop] = useState(false);
+  const [balance, setBalance] = useState(0);
+  const [hasCheckedBalance, setHasCheckedBalance] = useState(false);
 
   // Form data state
   const [formData, setFormData] = useState({
@@ -32,6 +37,53 @@ export default function CreatePoolPage() {
     privacy: 'public',
     agreeTerms: false,
   });
+
+  // Check SOL balance when wallet is connected
+  useEffect(() => {
+    if (publicKey && connection) {
+      const fetchBalance = async () => {
+        try {
+          const bal = await connection.getBalance(publicKey);
+          setBalance(bal / LAMPORTS_PER_SOL);
+          setHasCheckedBalance(true);
+        } catch (err) {
+          console.error("Error fetching balance:", err);
+        }
+      };
+      fetchBalance();
+    }
+  }, [publicKey, connection]);
+
+  // Function to request an airdrop
+  const requestAirdrop = async () => {
+    if (!publicKey || !connection) return;
+    
+    try {
+      setIsRequestingAirdrop(true);
+      
+      // Request 2 SOL (adjust as needed)
+      const signature = await connection.requestAirdrop(publicKey, 2 * LAMPORTS_PER_SOL);
+      
+      // Confirm the transaction
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+      await connection.confirmTransaction({
+        blockhash,
+        lastValidBlockHeight,
+        signature,
+      });
+      
+      // Update balance
+      const newBalance = await connection.getBalance(publicKey);
+      setBalance(newBalance / LAMPORTS_PER_SOL);
+      
+      toast.success(`Successfully received 2 SOL! New balance: ${(newBalance / LAMPORTS_PER_SOL).toFixed(4)} SOL`);
+    } catch (error) {
+      console.error("Airdrop failed:", error);
+      toast.error("Failed to request SOL airdrop. Are you connected to Solana devnet?");
+    } finally {
+      setIsRequestingAirdrop(false);
+    }
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -67,6 +119,14 @@ export default function CreatePoolPage() {
     setIsCreating(true);
   
     try {
+      // Check if the user has sufficient SOL balance
+      const currentBalance = await connection.getBalance(publicKey);
+      if (currentBalance < 10000000) { // 0.01 SOL
+        toast.error(`Insufficient SOL balance. You need at least 0.01 SOL to create a pool. Current balance: ${currentBalance / LAMPORTS_PER_SOL} SOL`);
+        setIsCreating(false);
+        return;
+      }
+  
       console.log("Starting pool creation with data:", {
         name: formData.name,
         description: formData.description,
@@ -121,41 +181,109 @@ export default function CreatePoolPage() {
     );
   }
 
+  // Display information if SOL balance is insufficient
+  if (hasCheckedBalance && balance < 0.01) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="max-w-lg mx-auto bg-[#1a1a18] rounded-xl shadow-lg p-8 border border-[#e6ce04]/20">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Coins className="w-8 h-8 text-[#e6ce04]" />
+            </div>
+            <h2 className="text-2xl font-semibold text-[#e6ce04] mb-2">Insufficient SOL Balance</h2>
+            <p className="text-[#f8e555]/70 mb-4">
+              You need at least 0.01 SOL to create a pool. Your current balance is {balance.toFixed(4)} SOL.
+            </p>
+          </div>
+          
+          <div className="bg-[#252520] p-5 rounded-lg mb-6">
+            <h3 className="text-[#e6ce04] font-medium mb-3">Why do I need SOL?</h3>
+            <p className="text-sm text-[#f8e555]/70 mb-3">
+              Creating a pool requires SOL for:
+            </p>
+            <ul className="list-disc pl-5 text-sm text-[#f8e555]/70 space-y-1">
+              <li>Transaction fees</li>
+              <li>Creating on-chain accounts</li>
+              <li>Storing game data</li>
+            </ul>
+          </div>
+          
+          <div className="flex flex-col gap-4">
+            <button 
+              onClick={requestAirdrop}
+              disabled={isRequestingAirdrop}
+              className="w-full px-6 py-3 bg-[#e6ce04] hover:bg-[#f8e555] text-[#010200] rounded-lg font-medium transition duration-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isRequestingAirdrop ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Requesting SOL...
+                </>
+              ) : (
+                <>
+                  Request 2 SOL Airdrop <Coins className="w-4 h-4 ml-2" />
+                </>
+              )}
+            </button>
+            
+            <div className="text-center text-sm text-[#f8e555]/50 mt-2">
+              Note: Airdrops only work on devnet and testnet networks
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4">
       <div className="max-w-3xl mx-auto">
+        {/* Add SOL Balance display at the top */}
+        <div className="flex items-center justify-end mb-4">
+          <div className="bg-[#252520] px-4 py-2 rounded-lg flex items-center">
+            <Coins className="w-4 h-4 text-[#e6ce04] mr-2" />
+            <span className="text-[#f8e555]">{balance.toFixed(4)} SOL</span>
+            <button 
+              onClick={requestAirdrop}
+              disabled={isRequestingAirdrop}
+              className="ml-2 text-xs bg-[#e6ce04]/10 hover:bg-[#e6ce04]/20 text-[#e6ce04] px-2 py-1 rounded-md transition duration-300 disabled:opacity-50"
+            >
+              {isRequestingAirdrop ? "Requesting..." : "+2 SOL"}
+            </button>
+          </div>
+        </div>
+        
         {/* Header and Progress Steps */}
-         <div className="flex items-center mb-6">
-           <div className="w-10 h-10 bg-[#e6ce04] rounded-full flex items-center justify-center mr-3">
-             <Coins className="w-5 h-5 text-[#010200]" />
-           </div>
-           <h1 className="text-3xl font-bold text-[#e6ce04]">Create New Game</h1>
-         </div>
+        <div className="flex items-center mb-6">
+          <div className="w-10 h-10 bg-[#e6ce04] rounded-full flex items-center justify-center mr-3">
+            <Coins className="w-5 h-5 text-[#010200]" />
+          </div>
+          <h1 className="text-3xl font-bold text-[#e6ce04]">Create New Game</h1>
+        </div>
 
-         {/* Progress Steps */}
-         <div className="flex items-center mb-8">
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-[#e6ce04] text-[#010200]' : 'bg-[#252520] text-[#f8e555]/70'}`}>1</div>
-            <div className={`h-0.5 w-12 ${step >= 2 ? 'bg-[#e6ce04]' : 'bg-[#252520]'}`}></div>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-[#e6ce04] text-[#010200]' : 'bg-[#252520] text-[#f8e555]/70'}`}>2</div>
-            <div className={`h-0.5 w-12 ${step >= 3 ? 'bg-[#e6ce04]' : 'bg-[#252520]'}`}></div>
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-[#e6ce04] text-[#010200]' : 'bg-[#252520] text-[#f8e555]/70'}`}>3</div>
-         </div>
+        {/* Progress Steps */}
+        <div className="flex items-center mb-8">
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-[#e6ce04] text-[#010200]' : 'bg-[#252520] text-[#f8e555]/70'}`}>1</div>
+          <div className={`h-0.5 w-12 ${step >= 2 ? 'bg-[#e6ce04]' : 'bg-[#252520]'}`}></div>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-[#e6ce04] text-[#010200]' : 'bg-[#252520] text-[#f8e555]/70'}`}>2</div>
+          <div className={`h-0.5 w-12 ${step >= 3 ? 'bg-[#e6ce04]' : 'bg-[#252520]'}`}></div>
+          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-[#e6ce04] text-[#010200]' : 'bg-[#252520] text-[#f8e555]/70'}`}>3</div>
+        </div>
 
         <div className="bg-[#1a1a18] rounded-xl shadow-lg p-6 border border-[#e6ce04]/20 relative overflow-hidden">
           {/* Background decorative elements */}
-            <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full bg-[#e6ce04]/5 blur-2xl"></div>
-            <div className="absolute -left-12 -bottom-12 w-40 h-40 rounded-full bg-[#e6ce04]/5 blur-2xl"></div>
+          <div className="absolute -right-12 -top-12 w-40 h-40 rounded-full bg-[#e6ce04]/5 blur-2xl"></div>
+          <div className="absolute -left-12 -bottom-12 w-40 h-40 rounded-full bg-[#e6ce04]/5 blur-2xl"></div>
 
           <div className="relative z-10">
             {step === 1 && (
               <div className="mb-8">
                 {/* Step 1 Header */}
-                 <div className="flex items-center justify-between mb-6">
-                   <h2 className="text-xl font-semibold text-[#e6ce04] flex items-center">
-                     <Trophy className="w-5 h-5 mr-2" /> Game Details
-                   </h2>
-                   <span className="text-sm bg-[#e6ce04]/10 text-[#e6ce04] px-3 py-1 rounded-full border border-[#e6ce04]/30">Step 1 of 3</span>
-                 </div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold text-[#e6ce04] flex items-center">
+                    <Trophy className="w-5 h-5 mr-2" /> Game Details
+                  </h2>
+                  <span className="text-sm bg-[#e6ce04]/10 text-[#e6ce04] px-3 py-1 rounded-full border border-[#e6ce04]/30">Step 1 of 3</span>
+                </div>
                 <div className="space-y-6">
                   {/* Game Name */}
                   <div>
@@ -200,14 +328,14 @@ export default function CreatePoolPage() {
                     </div>
                   </div>
                   {/* XP Rewards */}
-                   <div className="bg-[#252520] p-4 rounded-lg border border-[#e6ce04]/10">
-                     <h3 className="text-[#e6ce04] font-medium mb-2 flex items-center"><Zap className="w-4 h-4 mr-1" /> XP & Rewards</h3>
-                     <div className="space-y-3 text-sm text-[#f8e555]/70">
-                       <div className="flex justify-between"><span>Entry XP reward:</span><span className="text-[#e6ce04]">+15 XP per entry</span></div>
-                       <div className="flex justify-between"><span>Jackpot winner bonus:</span><span className="text-[#e6ce04]">+100 XP</span></div>
-                       <div className="flex justify-between"><span>Game completion bonus:</span><span className="text-[#e6ce04]">+250 XP</span></div>
-                     </div>
-                   </div>
+                  <div className="bg-[#252520] p-4 rounded-lg border border-[#e6ce04]/10">
+                    <h3 className="text-[#e6ce04] font-medium mb-2 flex items-center"><Zap className="w-4 h-4 mr-1" /> XP & Rewards</h3>
+                    <div className="space-y-3 text-sm text-[#f8e555]/70">
+                      <div className="flex justify-between"><span>Entry XP reward:</span><span className="text-[#e6ce04]">+15 XP per entry</span></div>
+                      <div className="flex justify-between"><span>Jackpot winner bonus:</span><span className="text-[#e6ce04]">+100 XP</span></div>
+                      <div className="flex justify-between"><span>Game completion bonus:</span><span className="text-[#e6ce04]">+250 XP</span></div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -215,10 +343,10 @@ export default function CreatePoolPage() {
             {step === 2 && (
               <div className="mb-8">
                 {/* Step 2 Header */}
-                 <div className="flex items-center justify-between mb-6">
-                   <h2 className="text-xl font-semibold text-[#e6ce04] flex items-center"><Trophy className="w-5 h-5 mr-2" /> Game Rules</h2>
-                   <span className="text-sm bg-[#e6ce04]/10 text-[#e6ce04] px-3 py-1 rounded-full border border-[#e6ce04]/30">Step 2 of 3</span>
-                 </div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold text-[#e6ce04] flex items-center"><Trophy className="w-5 h-5 mr-2" /> Game Rules</h2>
+                  <span className="text-sm bg-[#e6ce04]/10 text-[#e6ce04] px-3 py-1 rounded-full border border-[#e6ce04]/30">Step 2 of 3</span>
+                </div>
                 <div className="space-y-6">
                   {/* Payout Method */}
                   <div>
@@ -259,10 +387,10 @@ export default function CreatePoolPage() {
                     </div>
                   </div>
                   {/* Info Box */}
-                   <div className="flex items-center p-4 bg-[#e6ce04]/10 border border-[#e6ce04]/20 rounded-lg">
-                     <InfoIcon className="w-5 h-5 text-[#e6ce04] mr-3 flex-shrink-0" />
-                     <p className="text-sm text-[#f8e555]">All game rules are encoded in the smart contract and cannot be changed after creation. Choose wisely!</p>
-                   </div>
+                  <div className="flex items-center p-4 bg-[#e6ce04]/10 border border-[#e6ce04]/20 rounded-lg">
+                    <InfoIcon className="w-5 h-5 text-[#e6ce04] mr-3 flex-shrink-0" />
+                    <p className="text-sm text-[#f8e555]">All game rules are encoded in the smart contract and cannot be changed after creation. Choose wisely!</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -270,10 +398,10 @@ export default function CreatePoolPage() {
             {step === 3 && (
               <div className="mb-8">
                 {/* Step 3 Header */}
-                 <div className="flex items-center justify-between mb-6">
-                   <h2 className="text-xl font-semibold text-[#e6ce04] flex items-center"><Trophy className="w-5 h-5 mr-2" /> Game Review</h2>
-                   <span className="text-sm bg-[#e6ce04]/10 text-[#e6ce04] px-3 py-1 rounded-full border border-[#e6ce04]/30">Step 3 of 3</span>
-                 </div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold text-[#e6ce04] flex items-center"><Trophy className="w-5 h-5 mr-2" /> Game Review</h2>
+                  <span className="text-sm bg-[#e6ce04]/10 text-[#e6ce04] px-3 py-1 rounded-full border border-[#e6ce04]/30">Step 3 of 3</span>
+                </div>
                 <div className="space-y-6">
                   {/* Game Summary */}
                   <div className="bg-[#252520] p-5 rounded-lg border border-[#e6ce04]/10">
@@ -291,18 +419,18 @@ export default function CreatePoolPage() {
                     </div>
                   </div>
                   {/* Gas & Fees */}
-                   <div className="bg-[#252520] p-4 rounded-lg border border-[#e6ce04]/10">
-                     <h3 className="text-[#e6ce04] font-medium mb-3">Gas & Fees</h3>
-                     <div className="space-y-2 text-sm">
-                       <div className="flex justify-between"><span className="text-[#f8e555]/70">Smart Contract Deployment</span><span className="text-[#f8e555]">~0.012 SOL</span></div>
-                       <div className="flex justify-between"><span className="text-[#f8e555]/70">Platform Fee (1%)</span><span className="text-[#f8e555]">{(parseFloat(formData.entryFee || '0') * parseInt(formData.maxPlayers || '0') * 0.01) || '0.00'} {formData.currency}</span></div>
-                     </div>
-                   </div>
+                  <div className="bg-[#252520] p-4 rounded-lg border border-[#e6ce04]/10">
+                    <h3 className="text-[#e6ce04] font-medium mb-3">Gas & Fees</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between"><span className="text-[#f8e555]/70">Smart Contract Deployment</span><span className="text-[#f8e555]">~0.012 SOL</span></div>
+                      <div className="flex justify-between"><span className="text-[#f8e555]/70">Platform Fee (1%)</span><span className="text-[#f8e555]">{(parseFloat(formData.entryFee || '0') * parseInt(formData.maxPlayers || '0') * 0.01) || '0.00'} {formData.currency}</span></div>
+                    </div>
+                  </div>
                   {/* Info Box */}
-                   <div className="flex items-center p-4 bg-[#e6ce04]/10 border border-[#e6ce04]/20 rounded-lg">
-                     <InfoIcon className="w-5 h-5 text-[#e6ce04] mr-3 flex-shrink-0" />
-                     <p className="text-sm text-[#f8e555]">By creating this game, you will earn 500 XP and the "Game Creator" achievement badge!</p>
-                   </div>
+                  <div className="flex items-center p-4 bg-[#e6ce04]/10 border border-[#e6ce04]/20 rounded-lg">
+                    <InfoIcon className="w-5 h-5 text-[#e6ce04] mr-3 flex-shrink-0" />
+                    <p className="text-sm text-[#f8e555]">By creating this game, you will earn 500 XP and the "Game Creator" achievement badge!</p>
+                  </div>
                   {/* Terms Agreement */}
                   <div className="flex items-center">
                     <input type="checkbox" id="agreeTerms" name="agreeTerms" checked={formData.agreeTerms} onChange={handleInputChange} className="mr-2 accent-[#e6ce04]" />
@@ -343,4 +471,4 @@ export default function CreatePoolPage() {
       </div>
     </div>
   );
-};
+}
