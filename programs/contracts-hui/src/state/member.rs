@@ -6,6 +6,7 @@ pub enum MemberStatus {
     ReceivedPayout,
     Late,
     Defaulted,
+    Withdrawed,
 }
 
 impl Default for MemberStatus {

@@ -2,7 +2,11 @@ pub const PROTOCOL_SEED: &[u8] = b"huifi-protocol";
 pub const POOL_SEED: &[u8] = b"huifi-pool";
 pub const MEMBER_SEED: &[u8] = b"huifi-member";
 pub const VAULT_SEED: &[u8] = b"huifi-vault";
-
+pub const COLLATERAL_VAULT_SPL_SEED: &[u8] = b"huifi-collateral-vault-spl";
+pub const COLLATERAL_VAULT_SOL_SEED: &[u8] = b"huifi-collateral-vault-sol";
+pub const VAULT_SPL_SEED: &[u8] = b"huifi-vault-spl";
+pub const VAULT_SOL_SEED: &[u8] = b"huifi-vault-sol";
+pub const TREASURY_SEED: &[u8] = b"huifi-treasury";
 pub const MIN_PARTICIPANTS: u8 = 3;
 pub const MAX_PARTICIPANTS: u8 = 10;
 

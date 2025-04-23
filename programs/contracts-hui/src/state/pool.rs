@@ -36,8 +36,10 @@ pub struct PoolConfig {
     pub cycle_duration_seconds: u64,  // Duration of each cycle in seconds
     pub payout_delay_seconds: u64,    // Delay before payout to generate yield
     pub early_withdrawal_fee_bps: u16, // Early withdrawal fee in basis points
-    pub collateral_requirement_bps: u16, // Collateral requirement in % of payout
+    pub collateral_requirement_bps: u16, // Collateral requirement in % of payout / Can be 0 for private bool
     pub yield_strategy: YieldPlatform, // Strategy for generating yield
+    pub is_private: bool, // Whether the pool is private
+    pub is_native_sol: bool, // Whether the pool is native SOL
 }
 
 impl Default for PoolConfig {
@@ -50,6 +52,8 @@ impl Default for PoolConfig {
             early_withdrawal_fee_bps: 200,            // 2%
             collateral_requirement_bps: 20000,        // 200%
             yield_strategy: YieldPlatform::None,
+            is_private: false,
+            is_native_sol: false,
         }
     }
 }
@@ -57,6 +61,8 @@ impl Default for PoolConfig {
 #[account]
 #[derive(Default)]
 pub struct GroupAccount {
+    pub uuid: [u8; 6],                        // NEW: 6-character alphanumeric
+    pub whitelist: Vec<Pubkey>,              // NEW: optional whitelist
     pub creator: Pubkey,                // Creator of the pool
     pub token_mint: Pubkey,             // Token used for the pool (SOL, USDC, etc.)
     pub vault: Pubkey,                  // Pool's token vault

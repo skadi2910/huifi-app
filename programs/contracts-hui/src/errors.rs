@@ -55,4 +55,34 @@ pub enum HuiFiError {
     
     #[msg("Payout delay hasn't elapsed yet")]
     PayoutDelayNotElapsed,
+
+    #[msg("Treasury account already exists")]
+    TreasuryAccountAlreadyExists,
+
+    #[msg("Invalid treasury account")]
+    InvalidTreasuryAccount,
+
+    #[msg("Not whitelisted")]
+    NotWhitelisted,
+
+    #[msg("Invalid slash amount")]
+    InvalidSlashAmount,
+
+    #[msg("Member not defaulted")]
+    MemberNotDefaulted,
+
+    #[msg("Member not paid yet")]
+    MemberNotPaidYet,
+
+    #[msg("Unsupported token")]
+    UnsupportedToken,
+
+    #[msg("Invalid vault")]
+    InvalidVault,
+
+    #[msg("Invalid pool type")]
+    InvalidPoolType,
+
+    #[msg("Invalid token mint")]
+    InvalidTokenMint,
 }
