@@ -1,0 +1,27 @@
+[features]
+seeds = false
+skip-lint = false
+
+[toolchain]
+anchor_version = "0.31.1"
+
+[programs.localnet]
+contracts_hui = "5S8b4n1VwN3wasBcheSdUKSMyvVPLMgMe9FLxWLfBT8t"
+
+[programs.devnet]
+contracts_hui = "5S8b4n1VwN3wasBcheSdUKSMyvVPLMgMe9FLxWLfBT8t"
+
+[programs.testnet]
+contracts_hui = "5S8b4n1VwN3wasBcheSdUKSMyvVPLMgMe9FLxWLfBT8t"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "localnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+build = "anchor build"
+deploy = "anchor deploy"

@@ -1,5 +1,5 @@
 {
-  "name": "app",
+  "name": "huifi-app",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,22 +7,32 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "anchor": "cd anchor && anchor",
+    "update-idl": "mkdir -p src/lib/idl && cp -f src/anchor/target/idl/contracts_hui.json src/lib/idl/",
+    "anchor-build": "cd anchor && anchor build",
+    "anchor-localnet": "cd anchor && anchor localnet",
+    "anchor-test": "cd anchor && anchor test",
+    "ci": "npm run build"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.0",
     "@solana/kit": "^2.1.0",
+    "@solana/spl-token": "^0.4.13",
     "@solana/wallet-adapter-base": "^0.9.24",
     "@solana/wallet-adapter-react": "^0.15.36",
-    "@solana/wallet-adapter-react-ui": "^0.9.36",
+    "@solana/wallet-adapter-react-ui": "^0.9.38",
     "@solana/wallet-adapter-wallets": "^0.19.34",
     "@walletconnect/solana-adapter": "^0.0.7",
-    "next": "15.3.0",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "next": "^15.3.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "framer-motion": "^12.7.2",
+    "lucide-react": "^0.488.0",
+    "sonner": "^2.0.3",
+    "react-hot-toast": "^2.5.2"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.1",
     "@types/node": "^22.14.1",
     "@types/react": "^19.1.1",
     "@types/react-dom": "^19.1.2",
@@ -30,7 +40,7 @@
     "eslint": "^9.24.0",
     "eslint-config-next": "15.3.0",
     "postcss": "^8.5.3",
-    "tailwindcss": "^4.1.3",
+    "tailwindcss": "^4.1.4",
     "typescript": "^5.8.3"
   }
 }
