@@ -9,6 +9,7 @@
   "main": "index.js",
   "scripts": {
     "anchor": "cd anchor && anchor",
+    "update-idl": "mkdir -p src/lib/idl && cp -f src/anchor/target/idl/contracts_hui.json src/lib/idl/",
     "anchor-build": "cd anchor && anchor build",
     "anchor-localnet": "cd anchor && anchor localnet",
     "anchor-test": "cd anchor && anchor test",
@@ -25,8 +26,8 @@
     "@solana/spl-token": "^0.4.13",
     "@solana/wallet-adapter-base": "^0.9.5",
     "@solana/wallet-adapter-react": "^0.15.36",
-    "@solana/wallet-adapter-react-ui": "^0.9.7",
-    "@solana/wallet-adapter-wallets": "^0.16.1",
+    "@solana/wallet-adapter-react-ui": "^0.9.38",
+    "@solana/wallet-adapter-wallets": "^0.16.10",
     "@solana/web3.js": "^1.98.0",
     "@tabler/icons-react": "^3.30.0",
     "@tailwindcss/postcss": "^4.1.4",

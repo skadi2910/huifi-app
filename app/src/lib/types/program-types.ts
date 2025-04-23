@@ -1,48 +1,81 @@
 import { PublicKey } from '@solana/web3.js';
-import BN from 'bn.js';
+import { BN } from '@coral-xyz/anchor';
 
-export type HuifiPool = {
-  admin: PublicKey;
-  name: string;
-  description: string;
-  currency: string;
+export enum PoolStatus {
+  Filling = 0,
+  Active = 1,
+  Completed = 2,
+}
+
+export enum YieldPlatform {
+  None = 0,
+  JitoSol = 1,
+  Kamino = 2,
+}
+
+export interface HuifiPool {
+  creator: PublicKey;
+  tokenMint: PublicKey;
   maxParticipants: number;
   currentParticipants: number;
   contributionAmount: BN;
+  cycleDurationSeconds: BN;
+  payoutDelaySeconds: BN;
+  earlyWithdrawalFeeBps: number;
+  collateralRequirementBps: number;
+  status: PoolStatus;
   totalValue: BN;
-  frequency: BN; // in seconds
-  status: number; // 0 = Active, 1 = Filling, 2 = Completed
-  nextPayoutTimestamp: BN;
   currentRound: number;
+  nextPayoutTimestamp: BN;
+  startTime: BN;
   yieldBasisPoints: number;
-  creationTimestamp: BN;
-};
+  yieldStrategy: YieldPlatform;
+  participants: PublicKey[];
+  bump: number;
+  // UI specific fields
+  name: string;
+  description: string;
+  frequency: string;
+}
 
-export type UserAccount = {
+export interface UserAccount {
   owner: PublicKey;
-  joinedPools: PublicKey[];
-  currentContributions: PublicKey[];
-  xp: number;
-  level: number;
-  totalContributed: BN;
-  totalWon: BN;
-};
+  poolsJoined: number;
+  activePools: number;
+  totalContribution: BN;
+  totalWinnings: BN;
+  experiencePoints: number;
+  bump: number;
+}
 
-export type BidAccount = {
+export interface ProtocolSettings {
+  admin: PublicKey;
+  treasury: PublicKey;
+  tokenMint: PublicKey;
+  protocolFeeBps: number;
+  bump: number;
+}
+
+export interface Bid {
   bidder: PublicKey;
   pool: PublicKey;
   round: number;
   amount: BN;
   timestamp: BN;
-};
+  bump: number;
+}
 
-export type RoundResult = {
+export interface RoundResult {
   pool: PublicKey;
   round: number;
   winner: PublicKey;
-  amount: BN;
-  timestamp: BN;
-};
+  paid: boolean;
+  payoutAmount: BN;
+  payoutTimestamp: BN;
+  bump: number;
+}
 
-export type ParticipantStatus = 'Winner' | 'Next' | 'Waiting' | 'Confirmed';
-export type PoolStatus = 'Active' | 'Filling' | 'Completed';
+export interface Vault {
+  pool: PublicKey;
+  bump: number;
+}

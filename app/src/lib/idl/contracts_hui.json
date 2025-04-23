@@ -4,33 +4,48 @@
     "name": "contracts_hui",
     "version": "0.1.0",
     "spec": "0.1.0",
-    "description": "Created with Anchor"
+    "description": "HuiFi - Solana Rotating Savings Smart Contract"
   },
   "instructions": [
     {
-      "name": "contribute",
+      "name": "claim_jackpot",
+      "docs": [
+        "Claim the jackpot for a round"
+      ],
       "discriminator": [
-        82,
-        33,
-        68,
-        131,
-        32,
-        0,
-        205,
-        95
+        28,
+        214,
+        134,
+        248,
+        249,
+        81,
+        206,
+        198
       ],
       "accounts": [
-        {
-          "name": "contributor",
-          "writable": true,
-          "signer": true
-        },
         {
           "name": "group_account",
           "writable": true
         },
         {
-          "name": "member_account",
+          "name": "round_result",
+          "writable": true
+        },
+        {
+          "name": "winner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "winner_token_account",
+          "writable": true
+        },
+        {
+          "name": "pool_token_account",
+          "writable": true
+        },
+        {
+          "name": "user_account",
           "writable": true,
           "pda": {
             "seeds": [
@@ -53,21 +68,78 @@
               },
               {
                 "kind": "account",
-                "path": "group_account"
-              },
-              {
-                "kind": "account",
-                "path": "contributor"
+                "path": "winner"
               }
             ]
           }
         },
         {
-          "name": "contributor_token_account",
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "round",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "close_pool",
+      "docs": [
+        "Close a completed pool"
+      ],
+      "discriminator": [
+        140,
+        189,
+        209,
+        23,
+        239,
+        62,
+        239,
+        11
+      ],
+      "accounts": [
+        {
+          "name": "group_account",
           "writable": true
         },
         {
-          "name": "vault",
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "contribute",
+      "docs": [
+        "Contribute to pool"
+      ],
+      "discriminator": [
+        82,
+        33,
+        68,
+        131,
+        32,
+        0,
+        205,
+        95
+      ],
+      "accounts": [
+        {
+          "name": "group_account",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user_account",
           "writable": true,
           "pda": {
             "seeds": [
@@ -80,19 +152,28 @@
                   102,
                   105,
                   45,
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
                 ]
               },
               {
                 "kind": "account",
-                "path": "group_account"
+                "path": "user"
               }
             ]
           }
+        },
+        {
+          "name": "user_token_account",
+          "writable": true
+        },
+        {
+          "name": "pool_token_account",
+          "writable": true
         },
         {
           "name": "token_program",
@@ -108,6 +189,9 @@
     },
     {
       "name": "create_pool",
+      "docs": [
+        "Create a new rotating savings pool"
+      ],
       "discriminator": [
         233,
         146,
@@ -160,30 +244,7 @@
           }
         },
         {
-          "name": "protocol_settings",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  112,
-                  114,
-                  111,
-                  116,
-                  111,
-                  99,
-                  111,
-                  108
-                ]
-              }
-            ]
-          }
+          "name": "protocol_settings"
         },
         {
           "name": "token_program",
@@ -210,7 +271,67 @@
       ]
     },
     {
+      "name": "create_user_account",
+      "docs": [
+        "Create a user account to track participation"
+      ],
+      "discriminator": [
+        146,
+        68,
+        100,
+        69,
+        63,
+        46,
+        182,
+        199
+      ],
+      "accounts": [
+        {
+          "name": "user_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "initialize_protocol",
+      "docs": [
+        "Initialize the protocol settings"
+      ],
       "discriminator": [
         188,
         233,
@@ -284,6 +405,9 @@
     },
     {
       "name": "join_pool",
+      "docs": [
+        "Join a pool"
+      ],
       "discriminator": [
         14,
         65,
@@ -296,16 +420,16 @@
       ],
       "accounts": [
         {
+          "name": "group_account",
+          "writable": true
+        },
+        {
           "name": "user",
           "writable": true,
           "signer": true
         },
         {
-          "name": "group_account",
-          "writable": true
-        },
-        {
-          "name": "member_account",
+          "name": "user_account",
           "writable": true,
           "pda": {
             "seeds": [
@@ -325,10 +449,6 @@
                   101,
                   114
                 ]
-              },
-              {
-                "kind": "account",
-                "path": "group_account"
               },
               {
                 "kind": "account",
@@ -338,148 +458,6 @@
           }
         },
         {
-          "name": "user_token_account"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "rent",
-          "address": "SysvarRent111111111111111111111111111111111"
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "process_payout",
-      "discriminator": [
-        48,
-        192,
-        129,
-        57,
-        230,
-        161,
-        233,
-        148
-      ],
-      "accounts": [
-        {
-          "name": "user",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "group_account",
-          "writable": true
-        },
-        {
-          "name": "recipient_account",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  109,
-                  101,
-                  109,
-                  98,
-                  101,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "group_account"
-              },
-              {
-                "kind": "account",
-                "path": "recipient"
-              }
-            ]
-          }
-        },
-        {
-          "name": "recipient"
-        },
-        {
-          "name": "recipient_token_account",
-          "writable": true
-        },
-        {
-          "name": "collateral_token_account",
-          "writable": true
-        },
-        {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "group_account"
-              }
-            ]
-          }
-        },
-        {
-          "name": "protocol_settings",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  112,
-                  114,
-                  111,
-                  116,
-                  111,
-                  99,
-                  111,
-                  108
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "protocol_treasury",
-          "writable": true
-        },
-        {
-          "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        },
-        {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
         }
@@ -487,124 +465,40 @@
       "args": []
     },
     {
-      "name": "request_early_payout",
+      "name": "place_bid",
+      "docs": [
+        "Place a bid for the current round"
+      ],
       "discriminator": [
-        21,
-        249,
-        224,
-        151,
+        238,
         77,
-        80,
-        37,
-        6
+        148,
+        91,
+        200,
+        151,
+        92,
+        146
       ],
       "accounts": [
         {
-          "name": "member",
-          "writable": true,
-          "signer": true
+          "name": "bid",
+          "writable": true
         },
         {
           "name": "group_account",
           "writable": true
         },
         {
-          "name": "member_account",
+          "name": "bidder",
           "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  109,
-                  101,
-                  109,
-                  98,
-                  101,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "group_account"
-              },
-              {
-                "kind": "account",
-                "path": "member"
-              }
-            ]
-          }
+          "signer": true
         },
         {
-          "name": "member_token_account",
+          "name": "bidder_token_account",
           "writable": true
         },
         {
-          "name": "collateral_token_account",
-          "writable": true
-        },
-        {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "group_account"
-              }
-            ]
-          }
-        },
-        {
-          "name": "protocol_settings",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  112,
-                  114,
-                  111,
-                  116,
-                  111,
-                  99,
-                  111,
-                  108
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "protocol_treasury",
+          "name": "pool_token_account",
           "writable": true
         },
         {
@@ -616,34 +510,43 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "round",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
     }
   ],
   "accounts": [
     {
-      "name": "GroupAccount",
+      "name": "Bid",
       "discriminator": [
-        12,
+        143,
+        246,
+        48,
+        245,
         42,
-        207,
-        53,
-        238,
-        29,
-        151,
-        111
+        145,
+        180,
+        88
       ]
     },
     {
-      "name": "MemberAccount",
+      "name": "HuifiPool",
       "discriminator": [
-        173,
-        25,
-        100,
-        97,
-        192,
-        177,
-        84,
-        139
+        164,
+        169,
+        5,
+        168,
+        119,
+        212,
+        14,
+        167
       ]
     },
     {
@@ -658,103 +561,305 @@
         139,
         162
       ]
+    },
+    {
+      "name": "RoundResult",
+      "discriminator": [
+        216,
+        11,
+        21,
+        196,
+        213,
+        240,
+        117,
+        235
+      ]
+    },
+    {
+      "name": "UserAccount",
+      "discriminator": [
+        211,
+        33,
+        136,
+        16,
+        186,
+        110,
+        242,
+        127
+      ]
+    },
+    {
+      "name": "Vault",
+      "discriminator": [
+        211,
+        8,
+        232,
+        43,
+        2,
+        152,
+        117,
+        119
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "BidPlacedEvent",
+      "discriminator": [
+        141,
+        248,
+        16,
+        119,
+        196,
+        169,
+        112,
+        121
+      ]
+    },
+    {
+      "name": "ContributionEvent",
+      "discriminator": [
+        66,
+        160,
+        5,
+        247,
+        2,
+        131,
+        249,
+        150
+      ]
+    },
+    {
+      "name": "JackpotClaimedEvent",
+      "discriminator": [
+        246,
+        37,
+        222,
+        46,
+        217,
+        46,
+        76,
+        109
+      ]
+    },
+    {
+      "name": "PoolClosedEvent",
+      "discriminator": [
+        76,
+        55,
+        28,
+        161,
+        130,
+        142,
+        226,
+        133
+      ]
+    },
+    {
+      "name": "PoolCreatedEvent",
+      "discriminator": [
+        25,
+        94,
+        75,
+        47,
+        112,
+        99,
+        53,
+        63
+      ]
+    },
+    {
+      "name": "PoolJoinedEvent",
+      "discriminator": [
+        165,
+        159,
+        189,
+        207,
+        169,
+        11,
+        49,
+        78
+      ]
+    },
+    {
+      "name": "UserAccountCreatedEvent",
+      "discriminator": [
+        96,
+        104,
+        165,
+        193,
+        178,
+        212,
+        180,
+        82
+      ]
     }
   ],
   "errors": [
     {
       "code": 6000,
-      "name": "InvalidPoolConfig",
-      "msg": "Invalid pool configuration"
+      "name": "ProtocolFeeExceedsLimit",
+      "msg": "Protocol fee exceeds 10% maximum"
     },
     {
       "code": 6001,
-      "name": "PoolFull",
-      "msg": "Pool is full"
+      "name": "InvalidParticipantCount",
+      "msg": "Invalid participant count, must be between 3 and 20"
     },
     {
       "code": 6002,
-      "name": "InvalidPoolStatus",
-      "msg": "Pool is not in the correct status"
+      "name": "ContributionTooSmall",
+      "msg": "Contribution amount is too small"
     },
     {
       "code": 6003,
-      "name": "MemberAlreadyJoined",
-      "msg": "Member already joined"
+      "name": "CycleDurationTooShort",
+      "msg": "Cycle duration is too short"
     },
     {
       "code": 6004,
-      "name": "Unauthorized",
-      "msg": "Unauthorized access"
+      "name": "PoolNotAcceptingParticipants",
+      "msg": "Pool is not accepting participants"
     },
     {
       "code": 6005,
-      "name": "InsufficientContribution",
-      "msg": "Insufficient contribution amount"
+      "name": "PoolFull",
+      "msg": "Pool is already full"
     },
     {
       "code": 6006,
-      "name": "InvalidCycleForContribution",
-      "msg": "Invalid cycle - not ready for contribution"
+      "name": "AlreadyParticipant",
+      "msg": "User is already a participant"
     },
     {
       "code": 6007,
-      "name": "AlreadyContributed",
-      "msg": "Member has already contributed for this cycle"
+      "name": "PoolNotActive",
+      "msg": "Pool is not active"
     },
     {
       "code": 6008,
-      "name": "InsufficientCollateral",
-      "msg": "Insufficient collateral for early payout"
+      "name": "NotParticipant",
+      "msg": "User is not a participant in this pool"
     },
     {
       "code": 6009,
-      "name": "AlreadyReceivedPayout",
-      "msg": "Member already received payout"
+      "name": "IncorrectContributionAmount",
+      "msg": "Incorrect contribution amount"
     },
     {
       "code": 6010,
-      "name": "NotEligibleForPayout",
-      "msg": "Not eligible for payout yet"
+      "name": "InvalidRound",
+      "msg": "Invalid round number"
     },
     {
       "code": 6011,
-      "name": "InsufficientVaultFunds",
-      "msg": "Pool vault has insufficient funds"
+      "name": "BidTooLow",
+      "msg": "Bid amount is too low"
     },
     {
       "code": 6012,
-      "name": "PendingContributions",
-      "msg": "Not all members have contributed for the current cycle"
+      "name": "NotRoundWinner",
+      "msg": "User is not the round winner"
     },
     {
       "code": 6013,
-      "name": "InvalidPayoutAmount",
-      "msg": "Invalid payout amount calculation"
+      "name": "JackpotAlreadyClaimed",
+      "msg": "Jackpot has already been claimed"
     },
     {
       "code": 6014,
-      "name": "MemberNotFound",
-      "msg": "Member not found in the pool"
+      "name": "NotPoolCreator",
+      "msg": "User is not the pool creator"
     },
     {
       "code": 6015,
-      "name": "InvalidTokenAccountOwner",
-      "msg": "Invalid token account owner"
-    },
-    {
-      "code": 6016,
-      "name": "CycleDurationNotElapsed",
-      "msg": "Cycle duration hasn't elapsed yet"
-    },
-    {
-      "code": 6017,
-      "name": "PayoutDelayNotElapsed",
-      "msg": "Payout delay hasn't elapsed yet"
+      "name": "PoolStillActive",
+      "msg": "Pool is still active"
     }
   ],
   "types": [
     {
-      "name": "GroupAccount",
+      "name": "Bid",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bidder",
+            "type": "pubkey"
+          },
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "round",
+            "type": "u8"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BidPlacedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "bidder",
+            "type": "pubkey"
+          },
+          {
+            "name": "round",
+            "type": "u8"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ContributionEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "total_pool_value",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "HuifiPool",
       "type": {
         "kind": "struct",
         "fields": [
@@ -767,36 +872,32 @@
             "type": "pubkey"
           },
           {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "config",
-            "type": {
-              "defined": {
-                "name": "PoolConfig"
-              }
-            }
-          },
-          {
-            "name": "member_addresses",
-            "type": {
-              "vec": "pubkey"
-            }
-          },
-          {
-            "name": "payout_order",
-            "type": {
-              "vec": "pubkey"
-            }
-          },
-          {
-            "name": "current_cycle",
+            "name": "max_participants",
             "type": "u8"
           },
           {
-            "name": "total_cycles",
+            "name": "current_participants",
             "type": "u8"
+          },
+          {
+            "name": "contribution_amount",
+            "type": "u64"
+          },
+          {
+            "name": "cycle_duration_seconds",
+            "type": "u64"
+          },
+          {
+            "name": "payout_delay_seconds",
+            "type": "u64"
+          },
+          {
+            "name": "early_withdrawal_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "collateral_requirement_bps",
+            "type": "u16"
           },
           {
             "name": "status",
@@ -807,16 +908,41 @@
             }
           },
           {
-            "name": "total_contributions",
+            "name": "total_value",
             "type": "u64"
           },
           {
-            "name": "last_cycle_timestamp",
-            "type": "i64"
+            "name": "current_round",
+            "type": "u8"
           },
           {
             "name": "next_payout_timestamp",
-            "type": "i64"
+            "type": "u64"
+          },
+          {
+            "name": "start_time",
+            "type": "u64"
+          },
+          {
+            "name": "yield_basis_points",
+            "type": "u16"
+          },
+          {
+            "name": "yield_strategy",
+            "type": {
+              "defined": {
+                "name": "YieldPlatform"
+              }
+            }
+          },
+          {
+            "name": "participants",
+            "type": {
+              "array": [
+                "pubkey",
+                20
+              ]
+            }
           },
           {
             "name": "bump",
@@ -826,69 +952,41 @@
       }
     },
     {
-      "name": "MemberAccount",
+      "name": "JackpotClaimedEvent",
       "type": {
         "kind": "struct",
         "fields": [
-          {
-            "name": "owner",
-            "type": "pubkey"
-          },
           {
             "name": "pool",
             "type": "pubkey"
           },
           {
-            "name": "contributions_made",
+            "name": "winner",
+            "type": "pubkey"
+          },
+          {
+            "name": "round",
             "type": "u8"
           },
           {
-            "name": "status",
-            "type": {
-              "defined": {
-                "name": "MemberStatus"
-              }
-            }
-          },
-          {
-            "name": "has_received_early_payout",
-            "type": "bool"
-          },
-          {
-            "name": "collateral_staked",
+            "name": "amount",
             "type": "u64"
-          },
-          {
-            "name": "reputation_points",
-            "type": "u64"
-          },
-          {
-            "name": "last_contribution_timestamp",
-            "type": "i64"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
           }
         ]
       }
     },
     {
-      "name": "MemberStatus",
+      "name": "PoolClosedEvent",
       "type": {
-        "kind": "enum",
-        "variants": [
+        "kind": "struct",
+        "fields": [
           {
-            "name": "Active"
+            "name": "pool",
+            "type": "pubkey"
           },
           {
-            "name": "ReceivedPayout"
-          },
-          {
-            "name": "Late"
-          },
-          {
-            "name": "Defaulted"
+            "name": "creator",
+            "type": "pubkey"
           }
         ]
       }
@@ -934,21 +1032,66 @@
       }
     },
     {
+      "name": "PoolCreatedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "max_participants",
+            "type": "u8"
+          },
+          {
+            "name": "contribution_amount",
+            "type": "u64"
+          },
+          {
+            "name": "cycle_duration",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolJoinedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "participants_count",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "PoolStatus",
       "type": {
         "kind": "enum",
         "variants": [
           {
-            "name": "Initializing"
+            "name": "Filling"
           },
           {
             "name": "Active"
           },
           {
             "name": "Completed"
-          },
-          {
-            "name": "Defaulted"
           }
         ]
       }
@@ -959,7 +1102,7 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "authority",
+            "name": "admin",
             "type": "pubkey"
           },
           {
@@ -967,20 +1110,112 @@
             "type": "pubkey"
           },
           {
-            "name": "fee_bps",
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocol_fee_bps",
             "type": "u16"
           },
           {
-            "name": "total_fees_collected",
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RoundResult",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "round",
+            "type": "u8"
+          },
+          {
+            "name": "winner",
+            "type": "pubkey"
+          },
+          {
+            "name": "paid",
+            "type": "bool"
+          },
+          {
+            "name": "payout_amount",
             "type": "u64"
           },
           {
-            "name": "yield_generated",
+            "name": "payout_timestamp",
             "type": "u64"
           },
           {
-            "name": "reserve_buffer",
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "pools_joined",
+            "type": "u16"
+          },
+          {
+            "name": "active_pools",
+            "type": "u16"
+          },
+          {
+            "name": "total_contribution",
             "type": "u64"
+          },
+          {
+            "name": "total_winnings",
+            "type": "u64"
+          },
+          {
+            "name": "experience_points",
+            "type": "u32"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UserAccountCreatedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "user",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Vault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
           },
           {
             "name": "bump",
