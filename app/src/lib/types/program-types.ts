@@ -32,7 +32,6 @@ export interface HuifiPool {
   yieldStrategy: YieldPlatform;
   participants: PublicKey[];
   bump: number;
-  // UI specific fields
   name: string;
   description: string;
   frequency: string;

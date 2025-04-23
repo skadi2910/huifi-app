@@ -235,7 +235,7 @@ export default function CreatePoolPage() {
   }
 
   return (
-    <div className="container mx-auto px-4">
+    <div className="container mx-auto px-4 py-12">
       <div className="max-w-3xl mx-auto">
         {/* Add SOL Balance display at the top */}
         <div className="flex items-center justify-end mb-4">

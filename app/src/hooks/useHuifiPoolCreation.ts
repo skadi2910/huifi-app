@@ -5,11 +5,23 @@ import {
   SystemProgram,
   SYSVAR_RENT_PUBKEY
 } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { 
+  TOKEN_PROGRAM_ID, 
+  ASSOCIATED_TOKEN_PROGRAM_ID,
+  getAssociatedTokenAddress 
+} from '@solana/spl-token';
 import { BN } from '@coral-xyz/anchor';
 import { useHuifiProgram } from './useHuifiProgram';
 import { useTransactions } from '@/contexts/TransactionContext';
 import { useMemo } from 'react';
+
+// Define USDC addresses for different networks
+const USDC_ADDRESSES = {
+  mainnet: '',
+  devnet: '', 
+  testnet: '', 
+  localnet: '8HS8L4z9jYnbciuucqovMh6J7R8sfVsyKFcaUSeZRFs9',
+};
 
 interface CreatePoolParams {
   name: string;
@@ -55,10 +67,33 @@ export const useHuifiPoolCreation = () => {
         throw new Error('Wallet not connected or program not loaded');
       }
 
-      // Constants
-      const tokenMint = new PublicKey('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'); // USDC
+      // Determine which network we're on
+      const currentNetwork = connection.rpcEndpoint.includes('devnet') 
+        ? 'devnet' 
+        : connection.rpcEndpoint.includes('testnet')
+          ? 'testnet'
+          : connection.rpcEndpoint.includes('localhost') || connection.rpcEndpoint.includes('127.0.0.1')
+            ? 'localnet'
+            : 'mainnet';
+      
+      // Use correct USDC address for network
+      const tokenMintAddress = USDC_ADDRESSES[currentNetwork];
+      const tokenMint = new PublicKey(tokenMintAddress);
+      
+      console.log(`Using ${currentNetwork} USDC address: ${tokenMintAddress}`);
 
-      // Derive the groupAccount PDA using correct seeds
+      // Verify token mint exists
+      try {
+        const tokenMintInfo = await connection.getAccountInfo(tokenMint);
+        if (!tokenMintInfo) {
+          throw new Error(`Token mint account for ${currentNetwork} USDC does not exist or could not be found. You may need to create your own test token.`);
+        }
+      } catch (err) {
+        console.error(`Error checking token mint (${tokenMintAddress}):`, err);
+        throw new Error(`Failed to verify token mint on ${currentNetwork}. If using devnet/testnet, you may need to create your own test token.`);
+      }
+
+      // Derive the groupAccount PDA
       const groupPda = PublicKey.findProgramAddressSync(
         [
           Buffer.from('huifi-pool'),
@@ -69,13 +104,20 @@ export const useHuifiPoolCreation = () => {
         program.programId
       )[0];
 
-      // Derive vault PDA using groupPda
+      // Derive vault PDA
       const vaultPda = PublicKey.findProgramAddressSync(
         [Buffer.from('huifi-vault'), groupPda.toBuffer()],
         program.programId
       )[0];
 
-      const contributionAmount = new BN(params.entryFee * 1_000_000);
+      // Get vault token account address
+      const vaultTokenAccount = await getAssociatedTokenAddress(
+        tokenMint,        // mint
+        vaultPda,         // owner
+        true              // allowOwnerOffCurve: true for PDA as owner
+      );
+
+      const contributionAmount = new BN(params.entryFee * 1_000_000); // Assuming 6 decimals for USDC
       const cycleDuration = getFrequencyInSeconds(params.frequency);
 
       const yieldStrategy = { none: {} };
@@ -94,27 +136,34 @@ export const useHuifiPoolCreation = () => {
         creator: publicKey.toBase58(),
         groupPda: groupPda.toBase58(),
         vaultPda: vaultPda.toBase58(),
+        vaultTokenAccount: vaultTokenAccount.toBase58(),
         poolConfig,
       });
 
-      const signature = await program.methods
-        .createPool(poolConfig)
-        .accounts({
-          creator: publicKey,
-          groupAccount: groupPda,
-          tokenMint,
-          vault: vaultPda,
-          protocolSettings: protocolSettingsPda,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          systemProgram: SystemProgram.programId,
-          rent: SYSVAR_RENT_PUBKEY,
-        })
-        .rpc();
+      try {
+        // Create the pool
+        const signature = await program.methods
+          .createPool(poolConfig)
+          .accounts({
+            creator: publicKey,
+            groupAccount: groupPda,
+            tokenMint: tokenMint,
+            vault: vaultPda,
+            protocolSettings: protocolSettingsPda,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+            rent: SYSVAR_RENT_PUBKEY,
+          })
+          .rpc();
 
-      await connection.confirmTransaction(signature);
-      addTransaction(signature, 'Create Pool');
+        await connection.confirmTransaction(signature);
+        addTransaction(signature, 'Create Pool');
 
-      return signature;
+        return signature;
+      } catch (error) {
+        console.error('Error creating pool:', error);
+        throw error;
+      }
     },
   });
 
