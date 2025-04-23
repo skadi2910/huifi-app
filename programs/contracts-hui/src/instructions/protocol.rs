@@ -37,6 +37,7 @@ pub struct InitializeProtocol<'info> {
         bump,
         owner = system_program.key(),
     )]
+    /// CHECK: This is a PDA that holds SOL and doesn't need to implement a specific structure
     pub treasury_sol: AccountInfo<'info>,
 
     //USDC TREASURY
