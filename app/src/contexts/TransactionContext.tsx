@@ -1,8 +1,16 @@
 'use client'
 
+<<<<<<< HEAD
 import { ReactNode, createContext, useContext, useState } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { useTransactionToast } from '@/components/ui/ui-layout';
+=======
+import { ReactNode, createContext, useContext, useState, useEffect } from 'react';
+import { useConnection } from '@solana/wallet-adapter-react';
+import { useTransactionToast } from '@/components/ui/ui-layout';
+import { PublicKey } from '@solana/web3.js';
+import { CollateralDepositedEvent, EarlyPayoutRequestedEvent, PayoutProcessedEvent } from '@/lib/types/events';
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 
 type TransactionType = {
   signature: string;
@@ -22,6 +30,10 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
   const { connection } = useConnection();
   const transactionToast = useTransactionToast();
   const [pendingTransactions, setPendingTransactions] = useState<TransactionType[]>([]);
+<<<<<<< HEAD
+=======
+  const [program, setProgram] = useState<any>(null);
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 
   const addTransaction = (signature: string, description?: string) => {
     setPendingTransactions(prev => [
@@ -77,6 +89,49 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     }
   };
 
+<<<<<<< HEAD
+=======
+  const getTransactionDescription = (description?: string) => {
+    switch (description) {
+      case 'Request Early Payout':
+        return 'Requesting early payout...';
+      case 'Deposit Collateral':
+        return 'Depositing collateral...';
+      case 'Process Payout':
+        return 'Processing payout...';
+      default:
+        return description || 'Processing transaction...';
+    }
+  };
+
+  const handleCollateralDeposited = (event: CollateralDepositedEvent) => {
+    // Handle collateral deposited event
+  };
+
+  const handleEarlyPayoutRequested = (event: EarlyPayoutRequestedEvent) => {
+    // Handle early payout request event
+  };
+
+  const handlePayoutProcessed = (event: PayoutProcessedEvent) => {
+    // Handle payout processed event
+  };
+
+  // Add event listeners
+  useEffect(() => {
+    if (!program) return;
+
+    const collateralListener = program.addEventListener('CollateralDepositedEvent', handleCollateralDeposited);
+    const earlyPayoutListener = program.addEventListener('EarlyPayoutRequestedEvent', handleEarlyPayoutRequested);
+    const payoutListener = program.addEventListener('PayoutProcessedEvent', handlePayoutProcessed);
+
+    return () => {
+      program.removeEventListener(collateralListener);
+      program.removeEventListener(earlyPayoutListener);
+      program.removeEventListener(payoutListener);
+    };
+  }, [program]);
+
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
   return (
     <TransactionContext.Provider value={{ 
       pendingTransactions, 

@@ -1,7 +1,11 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
+<<<<<<< HEAD
 declare_id!("73N3XxT1FGJt2sZmtVbiuD3TcF2f6bLffMqUi7PJQZk9");
+=======
+declare_id!("5S8b4n1VwN3wasBcheSdUKSMyvVPLMgMe9FLxWLfBT8t");
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 
 #[program]
 pub mod contracts_hui {
@@ -11,6 +15,10 @@ pub mod contracts_hui {
     pub fn initialize_protocol(
         ctx: Context<InitializeProtocol>,
         protocol_fee_bps: u16,
+<<<<<<< HEAD
+=======
+        create_pool_fee: u64,
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
     ) -> Result<()> {
         let protocol_settings = &mut ctx.accounts.protocol_settings;
         
@@ -21,15 +29,31 @@ pub mod contracts_hui {
         protocol_settings.treasury = ctx.accounts.treasury.key();
         protocol_settings.token_mint = ctx.accounts.token_mint.key();
         protocol_settings.protocol_fee_bps = protocol_fee_bps;
+<<<<<<< HEAD
         protocol_settings.bump = ctx.bumps.protocol_settings; // Fixed: use new Anchor bump API
+=======
+        protocol_settings.create_pool_fee = create_pool_fee;
+        protocol_settings.bump = ctx.bumps.protocol_settings;
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 
         Ok(())
     }
 
+<<<<<<< HEAD
     /// Create a new rotating savings pool
     pub fn create_pool(
         ctx: Context<CreatePool>,
         pool_config: PoolConfig,
+=======
+    // SPL TOKEN HANDLING FUNCTIONS
+    
+    /// Create a new rotating savings pool for SPL tokens
+    pub fn create_spl_pool(
+        ctx: Context<CreateSplPool>,
+        pool_config: PoolConfig,
+        uuid: [u8; 6],
+        whitelist: Option<Vec<Pubkey>>
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
     ) -> Result<()> {
         require!(
             pool_config.max_participants >= 3 && pool_config.max_participants <= 20,
@@ -50,7 +74,11 @@ pub mod contracts_hui {
         let creator = &ctx.accounts.creator;
         let vault = &mut ctx.accounts.vault;
 
+<<<<<<< HEAD
         // Set pool data
+=======
+        // Set pool data for SPL token pool
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
         pool.creator = creator.key();
         pool.token_mint = ctx.accounts.token_mint.key();
         pool.max_participants = pool_config.max_participants;
@@ -60,6 +88,24 @@ pub mod contracts_hui {
         pool.early_withdrawal_fee_bps = pool_config.early_withdrawal_fee_bps;
         pool.collateral_requirement_bps = pool_config.collateral_requirement_bps;
         pool.yield_strategy = pool_config.yield_strategy;
+<<<<<<< HEAD
+=======
+        pool.uuid = uuid;
+        pool.is_native_sol = false; // SPL token pool
+        
+        // Set whitelist if provided
+        if let Some(whitelist_addresses) = whitelist {
+            require!(
+                whitelist_addresses.len() <= 20,
+                ErrorCode::WhitelistTooLarge
+            );
+            
+            pool.is_private = true;
+            pool.whitelist = whitelist_addresses;
+        } else {
+            pool.is_private = false;
+        }
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
         
         // Set initial state
         pool.current_participants = 1; // Creator is first participant
@@ -68,11 +114,19 @@ pub mod contracts_hui {
         pool.current_round = 0;
         pool.next_payout_timestamp = Clock::get()?.unix_timestamp as u64 + pool_config.cycle_duration_seconds;
         pool.yield_basis_points = 0;
+<<<<<<< HEAD
         pool.bump = ctx.bumps.group_account; // Fixed: use new Anchor bump API
         
         // Set vault data
         vault.pool = pool.key();
         vault.bump = ctx.bumps.vault; // Fixed: use new Anchor bump API
+=======
+        pool.bump = ctx.bumps.group_account;
+        
+        // Set vault data
+        vault.pool = pool.key();
+        vault.bump = ctx.bumps.vault;
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 
         // Create user account for creator
         create_user_account_internal(creator.key())?;
@@ -88,6 +142,84 @@ pub mod contracts_hui {
         Ok(())
     }
 
+<<<<<<< HEAD
+=======
+    /// Create a SOL-based rotating savings pool
+    pub fn create_sol_pool(
+        ctx: Context<CreateSolPool>,
+        pool_config: PoolConfig,
+        uuid: [u8; 6],
+        whitelist: Option<Vec<Pubkey>>
+    ) -> Result<()> {
+        // Validation checks
+        require!(
+            pool_config.max_participants >= 3 && pool_config.max_participants <= 20,
+            ErrorCode::InvalidParticipantCount
+        );
+
+        require!(
+            pool_config.contribution_amount >= 10_000_000, // 0.01 SOL minimum (assuming 9 decimals)
+            ErrorCode::ContributionTooSmall
+        );
+
+        require!(
+            pool_config.cycle_duration_seconds >= 24 * 60 * 60, // 1 day minimum
+            ErrorCode::CycleDurationTooShort
+        );
+        
+        let pool = &mut ctx.accounts.group_account;
+        let creator = &ctx.accounts.creator;
+        
+        // Set pool data with SOL-specific settings
+        pool.creator = creator.key();
+        pool.token_mint = Pubkey::default(); // Use default Pubkey for native SOL
+        pool.max_participants = pool_config.max_participants;
+        pool.contribution_amount = pool_config.contribution_amount;
+        pool.cycle_duration_seconds = pool_config.cycle_duration_seconds;
+        pool.payout_delay_seconds = pool_config.payout_delay_seconds;
+        pool.early_withdrawal_fee_bps = pool_config.early_withdrawal_fee_bps;
+        pool.collateral_requirement_bps = pool_config.collateral_requirement_bps;
+        pool.yield_strategy = pool_config.yield_strategy;
+        pool.is_native_sol = true;  // Mark as SOL pool
+        pool.uuid = uuid; // Store the uuid for the pool
+        
+        // Set whitelist if provided
+        if let Some(whitelist_addresses) = whitelist {
+            require!(
+                whitelist_addresses.len() <= 20,
+                ErrorCode::WhitelistTooLarge
+            );
+            
+            pool.is_private = true;
+            pool.whitelist = whitelist_addresses;
+        } else {
+            pool.is_private = false;
+        }
+        
+        // Set initial state
+        pool.current_participants = 1; // Creator is first participant
+        pool.status = PoolStatus::Filling;
+        pool.total_value = 0;
+        pool.current_round = 0;
+        pool.next_payout_timestamp = Clock::get()?.unix_timestamp as u64 + pool_config.cycle_duration_seconds;
+        pool.yield_basis_points = 0;
+        pool.bump = ctx.bumps.group_account;
+        
+        // Create user account for creator
+        create_user_account_internal(creator.key())?;
+        
+        emit!(PoolCreatedEvent {
+            pool: pool.key(),
+            creator: creator.key(),
+            max_participants: pool_config.max_participants,
+            contribution_amount: pool_config.contribution_amount,
+            cycle_duration: pool_config.cycle_duration_seconds
+        });
+        
+        Ok(())
+    }
+
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
     /// Create a user account to track participation
     pub fn create_user_account(ctx: Context<CreateUserAccount>) -> Result<()> {
         let user_account = &mut ctx.accounts.user_account;
@@ -96,10 +228,19 @@ pub mod contracts_hui {
         user_account.owner = user.key();
         user_account.pools_joined = 0;
         user_account.active_pools = 0;
+<<<<<<< HEAD
         user_account.total_contribution = 0;
         user_account.total_winnings = 0;
         user_account.experience_points = 0;
         user_account.bump = ctx.bumps.user_account; // Fixed: use new Anchor bump API
+=======
+        user_account.pools_created = 0;
+        user_account.total_contribution = 0;
+        user_account.total_winnings = 0;
+        user_account.collateral_deposited = 0;
+        user_account.experience_points = 0;
+        user_account.bump = ctx.bumps.user_account;
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 
         emit!(UserAccountCreatedEvent {
             user: user.key(),
@@ -108,8 +249,16 @@ pub mod contracts_hui {
         Ok(())
     }
 
+<<<<<<< HEAD
     /// Join a pool
     pub fn join_pool(ctx: Context<JoinPool>) -> Result<()> {
+=======
+    /// Join a pool with SPL tokens
+    pub fn join_spl_pool(
+        ctx: Context<JoinSplPool>, 
+        uuid: [u8; 6]
+    ) -> Result<()> {
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
         let pool = &mut ctx.accounts.group_account;
         let user = ctx.accounts.user.key();
         let user_account = &mut ctx.accounts.user_account;
@@ -131,6 +280,29 @@ pub mod contracts_hui {
             !pool.is_participant(user),
             ErrorCode::AlreadyParticipant
         );
+<<<<<<< HEAD
+=======
+        
+        // Check if this is a private pool with whitelist
+        if pool.is_private {
+            require!(
+                pool.is_whitelisted(user),
+                ErrorCode::NotWhitelisted
+            );
+        }
+        
+        // Verify pool is not a SOL pool
+        require!(
+            !pool.is_native_sol,
+            ErrorCode::InvalidPoolType
+        );
+        
+        // Verify the provided UUID matches
+        require!(
+            pool.uuid == uuid,
+            ErrorCode::InvalidPoolUuid
+        );
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 
         // Add user to participants
         pool.add_participant(user);
@@ -149,15 +321,99 @@ pub mod contracts_hui {
 
         emit!(PoolJoinedEvent {
             pool: pool.key(),
+<<<<<<< HEAD
             user: user,
+=======
+            user,
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
             participants_count: pool.current_participants,
         });
 
         Ok(())
     }
 
+<<<<<<< HEAD
     /// Contribute to pool
     pub fn contribute(ctx: Context<Contribute>, amount: u64) -> Result<()> {
+=======
+    /// Join a SOL-based pool
+    pub fn join_sol_pool(
+        ctx: Context<JoinSolPool>,
+        uuid: [u8; 6]
+    ) -> Result<()> {
+        let pool = &mut ctx.accounts.group_account;
+        let user = ctx.accounts.user.key();
+        let user_account = &mut ctx.accounts.user_account;
+
+        // Check if pool is still accepting participants
+        require!(
+            pool.status == PoolStatus::Filling,
+            ErrorCode::PoolNotAcceptingParticipants
+        );
+
+        // Check if there's room for more participants
+        require!(
+            pool.current_participants < pool.max_participants,
+            ErrorCode::PoolFull
+        );
+
+        // Check if user is already a participant
+        require!(
+            !pool.is_participant(user),
+            ErrorCode::AlreadyParticipant
+        );
+        
+        // Check if this is a private pool with whitelist
+        if pool.is_private {
+            require!(
+                pool.is_whitelisted(user),
+                ErrorCode::NotWhitelisted
+            );
+        }
+        
+        // Verify the pool is a SOL pool
+        require!(
+            pool.is_native_sol,
+            ErrorCode::InvalidPoolType
+        );
+        
+        // Verify the provided UUID matches
+        require!(
+            pool.uuid == uuid,
+            ErrorCode::InvalidPoolUuid
+        );
+
+        // Add user to participants
+        pool.add_participant(user);
+        pool.current_participants += 1;
+
+        // Update user account stats
+        user_account.pools_joined += 1;
+        user_account.active_pools += 1;
+        user_account.experience_points += 10; // Award XP for joining
+
+        // Check if pool is now full
+        if pool.current_participants == pool.max_participants {
+            pool.status = PoolStatus::Active;
+            pool.start_time = Clock::get()?.unix_timestamp as u64;
+        }
+
+        emit!(PoolJoinedEvent {
+            pool: pool.key(),
+            user,
+            participants_count: pool.current_participants,
+        });
+
+        Ok(())
+    }
+
+    /// Contribute SPL tokens to pool
+    pub fn contribute_spl(
+        ctx: Context<ContributeSpl>, 
+        uuid: [u8; 6],
+        amount: u64
+    ) -> Result<()> {
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
         let pool = &mut ctx.accounts.group_account;
         let user = &ctx.accounts.user;
         let user_account = &mut ctx.accounts.user_account;
@@ -179,6 +435,21 @@ pub mod contracts_hui {
             amount == pool.contribution_amount,
             ErrorCode::IncorrectContributionAmount
         );
+<<<<<<< HEAD
+=======
+        
+        // Verify the pool is not a SOL pool
+        require!(
+            !pool.is_native_sol, 
+            ErrorCode::InvalidPoolType
+        );
+
+        // Verify the provided UUID matches
+        require!(
+            pool.uuid == uuid,
+            ErrorCode::InvalidPoolUuid
+        );
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 
         // Transfer tokens from user to pool vault
         let cpi_accounts = Transfer {
@@ -207,6 +478,406 @@ pub mod contracts_hui {
         Ok(())
     }
 
+<<<<<<< HEAD
+=======
+    /// Contribute SOL to a pool
+    pub fn contribute_sol(
+        ctx: Context<ContributeSol>, 
+        uuid: [u8; 6],
+        amount: u64
+    ) -> Result<()> {
+        let pool = &mut ctx.accounts.group_account;
+        let user = &ctx.accounts.user;
+        let user_account = &mut ctx.accounts.user_account;
+
+        // Ensure pool is active or filling
+        require!(
+            pool.status == PoolStatus::Active || pool.status == PoolStatus::Filling,
+            ErrorCode::PoolNotActive
+        );
+
+        // Check if user is a participant
+        require!(
+            pool.is_participant(user.key()),
+            ErrorCode::NotParticipant
+        );
+
+        // Check correct amount
+        require!(
+            amount == pool.contribution_amount,
+            ErrorCode::IncorrectContributionAmount
+        );
+
+        // Verify the provided UUID matches
+        require!(
+            pool.uuid == uuid,
+            ErrorCode::InvalidPoolUuid
+        );
+
+        // Verify the pool is a SOL pool
+        require!(
+            pool.is_native_sol,
+            ErrorCode::InvalidPoolType
+        );
+
+        // SOL is already transferred via the system program in the account context
+        // so we just need to verify and update accounting
+
+        // Update pool and user stats
+        pool.total_value = pool.total_value.checked_add(amount).unwrap();
+        user_account.total_contribution = user_account.total_contribution.checked_add(amount).unwrap();
+        user_account.experience_points += 5; // Award XP for contributing
+
+        emit!(ContributionEvent {
+            pool: pool.key(),
+            user: user.key(),
+            amount,
+            total_pool_value: pool.total_value,
+        });
+
+        Ok(())
+    }
+
+    /// Deposit SPL tokens as collateral for a pool
+    pub fn deposit_spl_collateral(
+        ctx: Context<DepositSplCollateral>,
+        uuid: [u8; 6], 
+        amount: u64
+    ) -> Result<()> {
+        let pool = &ctx.accounts.group_account;
+        let user = &ctx.accounts.user;
+        let user_account = &mut ctx.accounts.user_account;
+        
+        // Ensure pool UUID matches
+        require!(
+            pool.uuid == uuid,
+            ErrorCode::InvalidPoolUuid
+        );
+
+        // Check if user is a participant
+        require!(
+            pool.is_participant(user.key()),
+            ErrorCode::NotParticipant
+        );
+        
+        // Verify the pool is not a SOL pool
+        require!(
+            !pool.is_native_sol,
+            ErrorCode::InvalidPoolType
+        );
+        
+        // Calculate required collateral amount
+        let required_collateral = pool.contribution_amount
+            .checked_mul(pool.collateral_requirement_bps as u64)
+            .unwrap()
+            .checked_div(10000)
+            .unwrap();
+        
+        // Check that collateral amount is sufficient
+        require!(
+            amount >= required_collateral,
+            ErrorCode::InsufficientCollateralAmount
+        );
+
+        // Transfer tokens from user to collateral account
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.user_token_account.to_account_info(),
+            to: ctx.accounts.collateral_account.to_account_info(),
+            authority: user.to_account_info(),
+        };
+        
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+        
+        token::transfer(cpi_ctx, amount)?;
+        
+        // Update user account with collateral information
+        user_account.collateral_deposited = user_account.collateral_deposited.checked_add(amount).unwrap();
+        user_account.experience_points += 3; // Award XP for depositing collateral
+        
+        emit!(CollateralDepositedEvent {
+            pool: pool.key(),
+            user: user.key(),
+            amount,
+        });
+        
+        Ok(())
+    }
+
+    /// Deposit SOL as collateral for a pool
+    pub fn deposit_sol_collateral(
+        ctx: Context<DepositSolCollateral>,
+        uuid: [u8; 6],
+        amount: u64
+    ) -> Result<()> {
+        let pool = &ctx.accounts.group_account;
+        let user = &ctx.accounts.user;
+        let user_account = &mut ctx.accounts.user_account;
+        
+        // Ensure pool UUID matches
+        require!(
+            pool.uuid == uuid,
+            ErrorCode::InvalidPoolUuid
+        );
+
+        // Check if user is a participant
+        require!(
+            pool.is_participant(user.key()),
+            ErrorCode::NotParticipant
+        );
+        
+        // Verify the pool is a SOL pool
+        require!(
+            pool.is_native_sol,
+            ErrorCode::InvalidPoolType
+        );
+        
+        // Calculate required collateral amount
+        let required_collateral = pool.contribution_amount
+            .checked_mul(pool.collateral_requirement_bps as u64)
+            .unwrap()
+            .checked_div(10000)
+            .unwrap();
+        
+        // Check that collateral amount is sufficient
+        require!(
+            amount >= required_collateral,
+            ErrorCode::InsufficientCollateralAmount
+        );
+        
+        // SOL is already transferred via the system program in the account context
+        // Update user account with collateral information
+        user_account.collateral_deposited = user_account.collateral_deposited.checked_add(amount).unwrap();
+        user_account.experience_points += 3; // Award XP for depositing collateral
+        
+        emit!(CollateralDepositedEvent {
+            pool: pool.key(),
+            user: user.key(),
+            amount,
+        });
+        
+        Ok(())
+    }
+
+    /// Request early payout with collateral
+    pub fn request_early_payout(
+        ctx: Context<RequestEarlyPayout>,
+    ) -> Result<()> {
+        let pool = &mut ctx.accounts.group_account;
+        let user = &ctx.accounts.user;
+        let user_account = &ctx.accounts.user_account;
+        
+        // Ensure pool is active
+        require!(
+            pool.status == PoolStatus::Active,
+            ErrorCode::PoolNotActive
+        );
+
+        // Check if user is a participant
+        require!(
+            pool.is_participant(user.key()),
+            ErrorCode::NotParticipant
+        );
+        
+        // Check if user has sufficient collateral
+        let required_collateral = pool.contribution_amount
+            .checked_mul(pool.max_participants as u64)
+            .unwrap()
+            .checked_mul(pool.collateral_requirement_bps as u64)
+            .unwrap()
+            .checked_div(10000)
+            .unwrap();
+        
+        require!(
+            user_account.collateral_deposited >= required_collateral,
+            ErrorCode::InsufficientCollateral
+        );
+        
+        // Check if user has already received a payout
+        require!(
+            !pool.has_received_payout(user.key()),
+            ErrorCode::AlreadyReceivedPayout
+        );
+        
+        // Mark user as requesting early payout
+        pool.add_early_payout_request(user.key());
+        
+        emit!(EarlyPayoutRequestedEvent {
+            pool: pool.key(),
+            user: user.key(),
+        });
+        
+        Ok(())
+    }
+
+    /// Process SOL payout to recipient
+    pub fn process_sol_payout(
+        ctx: Context<ProcessSolPayout>,
+    ) -> Result<()> {
+        let pool = &mut ctx.accounts.group_account;
+        let recipient = &ctx.accounts.recipient;
+        let recipient_account = &mut ctx.accounts.recipient_account;
+        
+        // Ensure pool is active
+        require!(
+            pool.status == PoolStatus::Active,
+            ErrorCode::PoolNotActive
+        );
+        
+        // Verify the pool is a SOL pool
+        require!(
+            pool.is_native_sol,
+            ErrorCode::InvalidPoolType
+        );
+
+        // Check if recipient is eligible (either has requested early payout or is next in rotation)
+        let is_early_payout = pool.has_requested_early_payout(recipient.key());
+        let is_next_recipient = pool.get_next_recipient() == recipient.key();
+        
+        require!(
+            is_early_payout || is_next_recipient,
+            ErrorCode::NotEligibleForPayout
+        );
+        
+        // Check if recipient has already received a payout
+        require!(
+            !pool.has_received_payout(recipient.key()),
+            ErrorCode::AlreadyReceivedPayout
+        );
+        
+        // Calculate payout amount
+        let payout_amount = pool.contribution_amount
+            .checked_mul(pool.current_participants as u64)
+            .unwrap();
+            
+        // Check if pool has sufficient funds
+        let current_pool_value = ctx.accounts.pool_sol_vault.to_account_info().lamports();
+        
+        require!(
+            current_pool_value >= payout_amount,
+            ErrorCode::InsufficientPoolFunds
+        );
+        
+        // Transfer SOL from pool vault to recipient
+        **ctx.accounts.pool_sol_vault.to_account_info().try_borrow_mut_lamports()? -= payout_amount;
+        **recipient.to_account_info().try_borrow_mut_lamports()? += payout_amount;
+        
+        // Mark recipient as having received payout
+        pool.mark_payout_received(recipient.key());
+        
+        // Update recipient account stats
+        recipient_account.total_winnings = recipient_account.total_winnings.checked_add(payout_amount).unwrap();
+        recipient_account.experience_points += 50; // Award XP for receiving payout
+        
+        // If not early payout, advance to next round if needed
+        if !is_early_payout {
+            pool.current_round = pool.current_round.checked_add(1).unwrap();
+            pool.next_payout_timestamp = Clock::get()?.unix_timestamp as u64 + pool.cycle_duration_seconds;
+        }
+        
+        emit!(PayoutProcessedEvent {
+            pool: pool.key(),
+            recipient: recipient.key(),
+            amount: payout_amount,
+            is_early_payout,
+        });
+        
+        Ok(())
+    }
+
+    /// Process SPL token payout to recipient
+    pub fn process_spl_payout(
+        ctx: Context<ProcessSplPayout>,
+    ) -> Result<()> {
+        let pool = &mut ctx.accounts.group_account;
+        let recipient = &ctx.accounts.recipient;
+        let recipient_account = &mut ctx.accounts.recipient_account;
+        
+        // Ensure pool is active
+        require!(
+            pool.status == PoolStatus::Active,
+            ErrorCode::PoolNotActive
+        );
+        
+        // Verify the pool is not a SOL pool
+        require!(
+            !pool.is_native_sol,
+            ErrorCode::InvalidPoolType
+        );
+
+        // Check if recipient is eligible (either has requested early payout or is next in rotation)
+        let is_early_payout = pool.has_requested_early_payout(recipient.key());
+        let is_next_recipient = pool.get_next_recipient() == recipient.key();
+        
+        require!(
+            is_early_payout || is_next_recipient,
+            ErrorCode::NotEligibleForPayout
+        );
+        
+        // Check if recipient has already received a payout
+        require!(
+            !pool.has_received_payout(recipient.key()),
+            ErrorCode::AlreadyReceivedPayout
+        );
+        
+        // Calculate payout amount
+        let payout_amount = pool.contribution_amount
+            .checked_mul(pool.current_participants as u64)
+            .unwrap();
+            
+        // Check if pool has sufficient funds
+        let current_pool_value = ctx.accounts.pool_token_account.amount;
+        
+        require!(
+            current_pool_value >= payout_amount,
+            ErrorCode::InsufficientPoolFunds
+        );
+        
+        // Transfer SPL tokens from pool vault to recipient
+        let seeds = &[
+            b"huifi-pool".as_ref(),
+            &pool.token_mint.to_bytes(),
+            &pool.creator.to_bytes(),
+            &pool.uuid,
+            &[pool.bump],
+        ];
+        let signer = &[&seeds[..]];
+
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.pool_token_account.to_account_info(),
+            to: ctx.accounts.recipient_token_account.to_account_info(),
+            authority: pool.to_account_info(),
+        };
+        
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        
+        token::transfer(cpi_ctx, payout_amount)?;
+        
+        // Mark recipient as having received payout
+        pool.mark_payout_received(recipient.key());
+        
+        // Update recipient account stats
+        recipient_account.total_winnings = recipient_account.total_winnings.checked_add(payout_amount).unwrap();
+        recipient_account.experience_points += 50; // Award XP for receiving payout
+        
+        // If not early payout, advance to next round if needed
+        if !is_early_payout {
+            pool.current_round = pool.current_round.checked_add(1).unwrap();
+            pool.next_payout_timestamp = Clock::get()?.unix_timestamp as u64 + pool.cycle_duration_seconds;
+        }
+        
+        emit!(PayoutProcessedEvent {
+            pool: pool.key(),
+            recipient: recipient.key(),
+            amount: payout_amount,
+            is_early_payout,
+        });
+        
+        Ok(())
+    }
+
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
     /// Place a bid for the current round
     pub fn place_bid(ctx: Context<PlaceBid>, round: u8, amount: u64) -> Result<()> {
         let pool = &mut ctx.accounts.group_account;
@@ -232,7 +903,11 @@ pub mod contracts_hui {
         );
 
         // For bidding model, ensure minimum bid
+<<<<<<< HEAD
         if pool.collateral_requirement_bps > 10000 { // This is how we detect bidding model
+=======
+        if pool.collateral_requirement_bps > 10000 {
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
             let min_bid = pool.contribution_amount
                 .checked_mul(pool.current_participants as u64)
                 .unwrap()
@@ -253,7 +928,11 @@ pub mod contracts_hui {
         bid.round = round;
         bid.amount = amount;
         bid.timestamp = Clock::get()?.unix_timestamp as u64;
+<<<<<<< HEAD
         bid.bump = ctx.bumps.bid; // Fixed: use new Anchor bump API
+=======
+        bid.bump = ctx.bumps.bid;
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 
         emit!(BidPlacedEvent {
             pool: pool.key(),
@@ -306,7 +985,11 @@ pub mod contracts_hui {
             b"huifi-pool".as_ref(),
             &pool.token_mint.to_bytes(),
             &pool.creator.to_bytes(),
+<<<<<<< HEAD
             &[pool.max_participants],
+=======
+            &pool.uuid,
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
             &[pool.bump],
         ];
         let signer = &[&seeds[..]];
@@ -323,8 +1006,12 @@ pub mod contracts_hui {
         token::transfer(cpi_ctx, jackpot_amount)?;
 
         // Update round result and user stats
+<<<<<<< HEAD
         // Fixed: remove the clone to prevent the Clone trait conflict
         let mut modified_result = RoundResult {
+=======
+        let _modified_result = RoundResult {
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
             pool: round_result.pool,
             round: round_result.round,
             winner: round_result.winner,
@@ -384,6 +1071,7 @@ pub mod contracts_hui {
 
 // Helper function to create user account if it doesn't exist
 fn create_user_account_internal(_user: Pubkey) -> Result<()> {
+<<<<<<< HEAD
     // Fixed: added underscore to unused parameter
     // This is a placeholder - in reality, you would check if the account exists
     // and create it if it doesn't, but that would require a CPI to the program itself
@@ -396,6 +1084,19 @@ pub struct InitializeProtocol<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
 
+=======
+    // This is a placeholder - in reality, you would check if the account exists
+    // and create it if it doesn't, but that would require a CPI to the program itself
+    Ok(())
+}
+
+// Account structures
+#[derive(Accounts)]
+#[instruction(protocol_fee_bps: u16, create_pool_fee: u64)]
+pub struct InitializeProtocol<'info> {
+    #[account(mut)]
+    pub admin: Signer<'info>,
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
     #[account(
         init,
         payer = admin,
@@ -404,20 +1105,33 @@ pub struct InitializeProtocol<'info> {
         bump
     )]
     pub protocol_settings: Box<Account<'info, ProtocolSettings>>,
+<<<<<<< HEAD
 
     #[account(mut)]
     pub treasury: Signer<'info>,
 
     pub token_mint: Account<'info, token::Mint>,
 
+=======
+    #[account(mut)]
+    pub treasury: Signer<'info>,
+    pub token_mint: Account<'info, token::Mint>,
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
 }
 
+<<<<<<< HEAD
 #[derive(Accounts)]
 #[instruction(pool_config: PoolConfig)] // Fixed: add instruction parameter to access max_participants
 pub struct CreatePool<'info> {
+=======
+// Renamed from CreatePool to CreateSplPool to be more explicit
+#[derive(Accounts)]
+#[instruction(pool_config: PoolConfig, uuid: [u8; 6], whitelist: Option<Vec<Pubkey>>)]
+pub struct CreateSplPool<'info> {
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
     #[account(mut)]
     pub creator: Signer<'info>,
 
@@ -429,7 +1143,11 @@ pub struct CreatePool<'info> {
             b"huifi-pool",
             token_mint.key().as_ref(),
             creator.key().as_ref(),
+<<<<<<< HEAD
             &[pool_config.max_participants] // Fixed: use parameter from pool_config
+=======
+            &uuid[..],
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
         ],
         bump
     )]
@@ -441,7 +1159,11 @@ pub struct CreatePool<'info> {
         init,
         payer = creator,
         space = 8 + Vault::INIT_SPACE,
+<<<<<<< HEAD
         seeds = [b"huifi-vault", group_account.key().as_ref()],
+=======
+        seeds = [b"huifi-spl-vault", group_account.key().as_ref()],
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
         bump
     )]
     pub vault: Box<Account<'info, Vault>>,
@@ -454,6 +1176,43 @@ pub struct CreatePool<'info> {
 }
 
 #[derive(Accounts)]
+<<<<<<< HEAD
+=======
+#[instruction(pool_config: PoolConfig, uuid: [u8; 6], whitelist: Option<Vec<Pubkey>>)]
+pub struct CreateSolPool<'info> {
+    #[account(mut)]
+    pub creator: Signer<'info>,
+
+    #[account(
+        init,
+        payer = creator, 
+        space = 8 + HuifiPool::INIT_SPACE,
+        seeds = [
+            b"huifi-sol-pool",
+            creator.key().as_ref(),
+            &uuid[..],  
+        ],
+        bump
+    )]
+    pub group_account: Box<Account<'info, HuifiPool>>,
+
+    #[account(
+        init,
+        payer = creator,
+        space = 8 + Vault::INIT_SPACE,
+        seeds = [b"huifi-sol-vault", group_account.key().as_ref()],
+        bump
+    )]
+    pub sol_vault: Box<Account<'info, Vault>>,
+
+    pub protocol_settings: Box<Account<'info, ProtocolSettings>>,
+
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+}
+
+#[derive(Accounts)]
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 pub struct CreateUserAccount<'info> {
     #[account(
         init,
@@ -470,9 +1229,26 @@ pub struct CreateUserAccount<'info> {
     pub system_program: Program<'info, System>,
 }
 
+<<<<<<< HEAD
 #[derive(Accounts)]
 pub struct JoinPool<'info> {
     #[account(mut)]
+=======
+// Renamed from JoinPool to JoinSplPool to be more explicit
+#[derive(Accounts)]
+#[instruction(uuid: [u8; 6])]
+pub struct JoinSplPool<'info> {
+    #[account(
+        mut,
+        seeds = [
+            b"huifi-pool",
+            group_account.token_mint.as_ref(),
+            group_account.creator.as_ref(),
+            &uuid
+        ],
+        bump = group_account.bump
+    )]
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
     pub group_account: Box<Account<'info, HuifiPool>>,
 
     #[account(mut)]
@@ -489,8 +1265,51 @@ pub struct JoinPool<'info> {
 }
 
 #[derive(Accounts)]
+<<<<<<< HEAD
 pub struct Contribute<'info> {
     #[account(mut)]
+=======
+#[instruction(uuid: [u8; 6])]
+pub struct JoinSolPool<'info> {
+    #[account(
+        mut,
+        seeds = [
+            b"huifi-sol-pool",
+            group_account.creator.as_ref(),
+            &uuid[..],  
+        ],
+        bump = group_account.bump
+    )]
+    pub group_account: Box<Account<'info, HuifiPool>>,
+
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"huifi-member", user.key().as_ref()],
+        bump = user_account.bump
+    )]
+    pub user_account: Box<Account<'info, UserAccount>>,
+
+    pub system_program: Program<'info, System>,
+}
+
+// Renamed from Contribute to ContributeSpl for clarity
+#[derive(Accounts)]
+#[instruction(uuid: [u8; 6], amount: u64)]
+pub struct ContributeSpl<'info> {
+    #[account(
+        mut,
+        seeds = [
+            b"huifi-pool",
+            group_account.token_mint.as_ref(),
+            group_account.creator.as_ref(),
+            &uuid
+        ],
+        bump = group_account.bump
+    )]
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
     pub group_account: Box<Account<'info, HuifiPool>>,
 
     #[account(mut)]
@@ -516,7 +1335,186 @@ pub struct Contribute<'info> {
 }
 
 #[derive(Accounts)]
+<<<<<<< HEAD
 #[instruction(round: u8, amount: u64)] // Fixed: add instruction parameters to make round available
+=======
+#[instruction(uuid: [u8; 6], amount: u64)]
+pub struct ContributeSol<'info> {
+    #[account(
+        mut,
+        seeds = [
+            b"huifi-sol-pool",
+            group_account.creator.as_ref(), 
+            &uuid[..],
+        ],
+        bump = group_account.bump
+    )]
+    pub group_account: Box<Account<'info, HuifiPool>>,
+
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"huifi-member", user.key().as_ref()],
+        bump = user_account.bump
+    )]
+    pub user_account: Box<Account<'info, UserAccount>>,
+
+    #[account(
+        mut,
+        seeds = [b"huifi-sol-vault", group_account.key().as_ref()],
+        bump
+    )]
+    pub pool_sol_vault: Box<Account<'info, Vault>>,
+    
+    pub system_program: Program<'info, System>,
+}
+
+// Adding the missing account structures
+#[derive(Accounts)]
+#[instruction(uuid: [u8; 6], amount: u64)]
+pub struct DepositSplCollateral<'info> {
+    #[account(
+        seeds = [
+            b"huifi-pool",
+            group_account.token_mint.as_ref(),
+            group_account.creator.as_ref(),
+            &uuid
+        ],
+        bump = group_account.bump
+    )]
+    pub group_account: Box<Account<'info, HuifiPool>>,
+
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"huifi-member", user.key().as_ref()],
+        bump = user_account.bump
+    )]
+    pub user_account: Box<Account<'info, UserAccount>>,
+
+    #[account(mut)]
+    pub user_token_account: Account<'info, TokenAccount>,
+
+    #[account(mut)]
+    pub collateral_account: Account<'info, TokenAccount>,
+
+    pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+#[instruction(uuid: [u8; 6], amount: u64)]
+pub struct DepositSolCollateral<'info> {
+    #[account(
+        seeds = [
+            b"huifi-sol-pool",
+            group_account.creator.as_ref(),
+            &uuid[..],
+        ],
+        bump = group_account.bump
+    )]
+    pub group_account: Box<Account<'info, HuifiPool>>,
+
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"huifi-member", user.key().as_ref()],
+        bump = user_account.bump
+    )]
+    pub user_account: Box<Account<'info, UserAccount>>,
+
+    #[account(
+        mut,
+        seeds = [b"huifi-sol-collateral", group_account.key().as_ref()],
+        bump
+    )]
+    pub collateral_account: SystemAccount<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct RequestEarlyPayout<'info> {
+    #[account(mut)]
+    pub group_account: Box<Account<'info, HuifiPool>>,
+
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        seeds = [b"huifi-member", user.key().as_ref()],
+        bump = user_account.bump
+    )]
+    pub user_account: Box<Account<'info, UserAccount>>,
+
+    pub system_program: Program<'info, System>,
+}
+
+// Splitting ProcessPayout into SOL and SPL specific versions
+#[derive(Accounts)]
+pub struct ProcessSolPayout<'info> {
+    #[account(mut)]
+    pub group_account: Box<Account<'info, HuifiPool>>,
+
+    #[account(mut)]
+    pub recipient: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"huifi-member", recipient.key().as_ref()],
+        bump = recipient_account.bump
+    )]
+    pub recipient_account: Box<Account<'info, UserAccount>>,
+
+    #[account(
+        mut,
+        seeds = [b"huifi-sol-vault", group_account.key().as_ref()],
+        bump
+    )]
+    pub pool_sol_vault: Box<Account<'info, Vault>>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct ProcessSplPayout<'info> {
+    #[account(mut)]
+    pub group_account: Box<Account<'info, HuifiPool>>,
+
+    #[account(mut)]
+    pub recipient: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [b"huifi-member", recipient.key().as_ref()],
+        bump = recipient_account.bump
+    )]
+    pub recipient_account: Box<Account<'info, UserAccount>>,
+    
+    #[account(
+        mut,
+        constraint = pool_token_account.mint == group_account.token_mint
+    )]
+    pub pool_token_account: Account<'info, TokenAccount>,
+
+    #[account(
+        mut,
+        constraint = recipient_token_account.owner == recipient.key()
+    )]
+    pub recipient_token_account: Account<'info, TokenAccount>,
+
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(round: u8, amount: u64)]
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 pub struct PlaceBid<'info> {
     #[account(
         init_if_needed,
@@ -526,7 +1524,11 @@ pub struct PlaceBid<'info> {
             b"bid", 
             bidder.key().as_ref(), 
             group_account.key().as_ref(), 
+<<<<<<< HEAD
             &[round] // Now using round from instruction parameter
+=======
+            &[round]
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
         ],
         bump
     )]
@@ -552,14 +1554,22 @@ pub struct PlaceBid<'info> {
 }
 
 #[derive(Accounts)]
+<<<<<<< HEAD
 #[instruction(round: u8)] // Fixed: add instruction parameter to make round available
+=======
+#[instruction(round: u8)]
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 pub struct ClaimJackpot<'info> {
     #[account(mut)]
     pub group_account: Box<Account<'info, HuifiPool>>,
 
     #[account(
         mut,
+<<<<<<< HEAD
         seeds = [b"round_result", group_account.key().as_ref(), &[round]], // Now using round from parameter
+=======
+        seeds = [b"round_result", group_account.key().as_ref(), &[round]],
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
         bump = round_result.bump
     )]
     pub round_result: Box<Account<'info, RoundResult>>,
@@ -608,6 +1618,10 @@ pub struct ProtocolSettings {
     pub treasury: Pubkey,
     pub token_mint: Pubkey,
     pub protocol_fee_bps: u16,
+<<<<<<< HEAD
+=======
+    pub create_pool_fee: u64, // Added: Fee to create a pool
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
     pub bump: u8,
 }
 
@@ -631,6 +1645,19 @@ pub struct HuifiPool {
     pub yield_basis_points: u16,
     pub yield_strategy: YieldPlatform,
     pub participants: [Pubkey; 20], // Max size is 20 participants
+<<<<<<< HEAD
+=======
+    
+    // Added fields from lib_1.rs
+    pub uuid: [u8; 6],                     // Unique identifier for the pool
+    pub is_native_sol: bool,               // Whether this is a SOL pool
+    pub is_private: bool,                  // Whether this pool is private (whitelist)
+    #[max_len(20)]
+    pub whitelist: Vec<Pubkey>,            // Whitelist of addresses for private pools
+    pub payout_recipients: [Pubkey; 20],   // Track who received payouts
+    pub early_payout_requests: [Pubkey; 20], // Track early payout requests
+    
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
     pub bump: u8,
 }
 
@@ -640,8 +1667,15 @@ pub struct UserAccount {
     pub owner: Pubkey,
     pub pools_joined: u16,
     pub active_pools: u16,
+<<<<<<< HEAD
     pub total_contribution: u64,
     pub total_winnings: u64,
+=======
+    pub pools_created: u16,       // Added: Number of pools created by this user
+    pub total_contribution: u64,
+    pub total_winnings: u64,
+    pub collateral_deposited: u64, // Added: Track collateral deposited
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
     pub experience_points: u32,
     pub bump: u8,
 }
@@ -654,7 +1688,11 @@ pub struct Vault {
 }
 
 #[account]
+<<<<<<< HEAD
 #[derive(Default, InitSpace)] // Fixed: Remove Clone to avoid conflict with account macro
+=======
+#[derive(Default, InitSpace)]
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 pub struct Bid {
     pub bidder: Pubkey,
     pub pool: Pubkey,
@@ -665,7 +1703,11 @@ pub struct Bid {
 }
 
 #[account]
+<<<<<<< HEAD
 #[derive(Default, InitSpace)] // Fixed: Remove Clone to avoid conflict with account macro
+=======
+#[derive(Default, InitSpace)]
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 pub struct RoundResult {
     pub pool: Pubkey,
     pub round: u8,
@@ -702,8 +1744,11 @@ impl Default for YieldPlatform {
     }
 }
 
+<<<<<<< HEAD
 // Remove redundant CreatePoolContext struct since you have CreatePool already
 
+=======
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, InitSpace)]
 pub struct PoolConfig {
     pub max_participants: u8,
@@ -716,6 +1761,10 @@ pub struct PoolConfig {
 }
 
 impl HuifiPool {
+<<<<<<< HEAD
+=======
+    // Existing methods
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
     pub fn is_participant(&self, user: Pubkey) -> bool {
         for i in 0..self.current_participants {
             if self.participants[i as usize] == user {
@@ -730,6 +1779,69 @@ impl HuifiPool {
             self.participants[self.current_participants as usize] = user;
         }
     }
+<<<<<<< HEAD
+=======
+    
+    // Added methods from lib_1.rs
+    pub fn is_whitelisted(&self, user: Pubkey) -> bool {
+        if !self.is_private {
+            return true; // If the pool is not private, everyone is "whitelisted"
+        }
+        
+        for addr in &self.whitelist {
+            if *addr == user {
+                return true;
+            }
+        }
+        false
+    }
+    
+    pub fn has_received_payout(&self, user: Pubkey) -> bool {
+        for recipient in self.payout_recipients.iter() {
+            if *recipient == user {
+                return true;
+            }
+        }
+        false
+    }
+    
+    pub fn mark_payout_received(&mut self, user: Pubkey) {
+        // Find first empty slot and add user
+        for i in 0..self.max_participants {
+            if self.payout_recipients[i as usize] == Pubkey::default() {
+                self.payout_recipients[i as usize] = user;
+                break;
+            }
+        }
+    }
+    
+    pub fn has_requested_early_payout(&self, user: Pubkey) -> bool {
+        for requester in self.early_payout_requests.iter() {
+            if *requester == user {
+                return true;
+            }
+        }
+        false
+    }
+    
+    pub fn add_early_payout_request(&mut self, user: Pubkey) {
+        // Find first empty slot and add user
+        for i in 0..self.max_participants {
+            if self.early_payout_requests[i as usize] == Pubkey::default() {
+                self.early_payout_requests[i as usize] = user;
+                break;
+            }
+        }
+    }
+    
+    pub fn get_next_recipient(&self) -> Pubkey {
+        // Calculate who should be next based on round number
+        if self.current_round < self.max_participants as u8 {
+            return self.participants[self.current_round as usize];
+        }
+        Pubkey::default()
+    }
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 }
 
 #[error_code]
@@ -781,9 +1893,43 @@ pub enum ErrorCode {
     
     #[msg("Pool is still active")]
     PoolStillActive,
+<<<<<<< HEAD
 }
 
 // Event definitions
+=======
+    
+    // Added error codes from lib_1.rs
+    #[msg("Not whitelisted")]
+    NotWhitelisted,
+    
+    #[msg("Insufficient collateral for early payout")]
+    InsufficientCollateral,
+    
+    #[msg("Member already received payout")]
+    AlreadyReceivedPayout,
+    
+    #[msg("Not eligible for payout yet")]
+    NotEligibleForPayout,
+    
+    #[msg("Pool vault has insufficient funds")]
+    InsufficientPoolFunds,
+    
+    #[msg("Invalid pool UUID")]
+    InvalidPoolUuid,
+    
+    #[msg("Invalid pool type")]
+    InvalidPoolType,
+    
+    #[msg("Insufficient collateral amount")]
+    InsufficientCollateralAmount,
+    
+    #[msg("Whitelist too large")]
+    WhitelistTooLarge,
+}
+
+// Existing Event definitions
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 #[event]
 pub struct PoolCreatedEvent {
     pub pool: Pubkey,
@@ -833,4 +1979,28 @@ pub struct JackpotClaimedEvent {
 pub struct PoolClosedEvent {
     pub pool: Pubkey,
     pub creator: Pubkey,
+<<<<<<< HEAD
+=======
+}
+
+#[event]
+pub struct CollateralDepositedEvent {
+    pub pool: Pubkey,
+    pub user: Pubkey,
+    pub amount: u64,
+}
+
+#[event]
+pub struct EarlyPayoutRequestedEvent {
+    pub pool: Pubkey,
+    pub user: Pubkey,
+}
+
+#[event]
+pub struct PayoutProcessedEvent {
+    pub pool: Pubkey,
+    pub recipient: Pubkey,
+    pub amount: u64,
+    pub is_early_payout: bool,
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 }

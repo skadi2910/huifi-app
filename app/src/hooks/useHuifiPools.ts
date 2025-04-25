@@ -26,13 +26,17 @@ export const useHuifiPools = () => {
   const { addTransaction } = useTransactions();
   const [pools, setPools] = useState<PoolWithKey[]>([]);
   
+<<<<<<< HEAD
   // Query to fetch all pools
+=======
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
   const poolsQuery = useQuery({
     queryKey: ['huifi-pools'],
     queryFn: async () => {
       if (!program) {
         throw new Error('Program not loaded');
       }
+<<<<<<< HEAD
       
       try {
         console.log("Fetching pools from program:", program.programId.toString());
@@ -176,6 +180,40 @@ export const useHuifiPools = () => {
       }
     },
     enabled: !!program,
+=======
+
+      try {
+        // Fetch both SPL and SOL pools
+        const [splPools, solPools] = await Promise.all([
+          (program.account as any).huifipool.all([
+            {
+              memcmp: {
+                offset: 8 + 32 + 32, // Adjust offset based on account structure
+                bytes: bs58.encode(new Uint8Array([0])) // isNativeSol = false - using Uint8Array
+              }
+            }
+          ]),
+          (program.account as any).huifipool.all([
+            {
+              memcmp: {
+                offset: 8 + 32 + 32, // Adjust offset based on account structure
+                bytes: bs58.encode(new Uint8Array([1])) // isNativeSol = true - using Uint8Array
+              }
+            }
+          ])
+        ]);
+
+        return [...splPools, ...solPools].map(pool => ({
+          publicKey: pool.publicKey,
+          account: pool.account
+        }));
+      } catch (err) {
+        console.error("Failed to fetch pools:", err);
+        throw err;
+      }
+    },
+    enabled: !!program
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
   });
   
   // Function to refresh pools

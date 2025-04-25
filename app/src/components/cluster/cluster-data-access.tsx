@@ -37,7 +37,11 @@ export const defaultClusters: Cluster[] = [
   },
 ]
 
+<<<<<<< HEAD
 const clusterAtom = atomWithStorage<Cluster>('solana-cluster', defaultClusters[1])
+=======
+const clusterAtom = atomWithStorage<Cluster>('solana-cluster', defaultClusters[0])
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 const clustersAtom = atomWithStorage<Cluster[]>('solana-clusters', defaultClusters)
 
 const activeClustersAtom = atom<Cluster[]>((get) => {
@@ -115,3 +119,7 @@ function getClusterUrlParam(cluster: Cluster): string {
 
   return suffix.length ? `?cluster=${suffix}` : ''
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80

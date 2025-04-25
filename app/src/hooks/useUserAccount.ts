@@ -15,7 +15,11 @@ export const useUserAccount = () => {
     if (!publicKey || !program) return null;
 
     const [pda] = PublicKey.findProgramAddressSync(
+<<<<<<< HEAD
       [Buffer.from('huifi-member'), publicKey.toBuffer()], 
+=======
+      [Buffer.from('huifi-member'), publicKey.toBuffer()], // ✅ CORRECT SEED
+>>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
       program.programId
     );
 
