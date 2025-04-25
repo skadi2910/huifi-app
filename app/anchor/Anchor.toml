@@ -6,15 +6,6 @@ skip-lint = false
 anchor_version = "0.31.1"
 
 [programs.localnet]
-<<<<<<< HEAD
-contracts_hui = "73N3XxT1FGJt2sZmtVbiuD3TcF2f6bLffMqUi7PJQZk9"
-
-[programs.devnet]
-contracts_hui = "73N3XxT1FGJt2sZmtVbiuD3TcF2f6bLffMqUi7PJQZk9"
-
-[programs.testnet]
-contracts_hui = "73N3XxT1FGJt2sZmtVbiuD3TcF2f6bLffMqUi7PJQZk9"
-=======
 contracts_hui = "5S8b4n1VwN3wasBcheSdUKSMyvVPLMgMe9FLxWLfBT8t"
 
 [programs.devnet]
@@ -22,13 +13,12 @@ contracts_hui = "5S8b4n1VwN3wasBcheSdUKSMyvVPLMgMe9FLxWLfBT8t"
 
 [programs.testnet]
 contracts_hui = "5S8b4n1VwN3wasBcheSdUKSMyvVPLMgMe9FLxWLfBT8t"
->>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

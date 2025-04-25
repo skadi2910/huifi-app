@@ -2,10 +2,6 @@ import { Idl, Program } from '@coral-xyz/anchor';
 import idl from '@/lib/idl/contracts_hui.json';
 import { UserAccount, HuifiPool, RoundResult, ProtocolSettings, Bid, Vault } from './program-types';
 import { PublicKey } from '@solana/web3.js';
-<<<<<<< HEAD
-=======
-import { BN } from '@coral-xyz/anchor';
->>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 
 // Define account methods structure to match Anchor-generated types
 export interface HuifiAccounts {
@@ -35,7 +31,6 @@ export interface HuifiAccounts {
 // Define program methods structure to match Anchor-generated types
 export interface HuifiMethods {
   createUserAccount(): any;
-<<<<<<< HEAD
   createPool(config: any): any;
   joinPool(): any;
   contribute(amount: any): any;
@@ -43,22 +38,6 @@ export interface HuifiMethods {
   claimJackpot(round: number): any;
   closePool(): any;
   initializeProtocol(protocolFeeBps: number): any;
-=======
-  createSplPool(config: any, uuid: number[], whitelist?: PublicKey[]): any;
-  createSolPool(config: any, uuid: number[], whitelist?: PublicKey[]): any;
-  joinPool(): any;
-  contributeSpl(uuid: number[], amount: BN): any;
-  contributeSol(uuid: number[], amount: BN): any;
-  depositSplCollateral(uuid: number[], amount: BN): any;
-  depositSolCollateral(uuid: number[], amount: BN): any;
-  requestEarlyPayout(): any;
-  processSplPayout(): any;
-  processSolPayout(): any;
-  placeBid(round: number, amount: BN): any;
-  claimJackpot(round: number): any;
-  closePool(): any;
-  initializeProtocol(protocolFeeBps: number, createPoolFee: BN): any;
->>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
 }
 
 // Define the HuifiProgram type correctly

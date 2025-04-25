@@ -18,13 +18,8 @@
     "@types/chai": "^4.3.20",
     "@types/mocha": "^9.1.1",
     "@types/node": "^22.14.1",
-<<<<<<< HEAD
-    "chai": "^4.5.0",
-    "mocha": "^9.2.2",
-=======
     "chai": "^4.3.4",
     "mocha": "^9.0.3",
->>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
     "prettier": "^2.6.2",
     "ts-mocha": "^10.0.0",
     "typescript": "^5.7.3"

@@ -21,14 +21,6 @@ export default function AdminPage() {
       return;
     }
 
-<<<<<<< HEAD
-=======
-    if (!initializeMutation) {
-      toast.error('Initialization mutation not available.');
-      return;
-    }
-
->>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
     setIsInitializing(true);
     try {
       const signature = await initializeMutation.mutateAsync(protocolFeeBps);
@@ -101,11 +93,7 @@ export default function AdminPage() {
             
             <button
               onClick={handleInitializeProtocol}
-<<<<<<< HEAD
               disabled={isInitializing}
-=======
-              disabled={isInitializing || !initializeMutation}
->>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
               className="w-full px-6 py-2 bg-[#e6ce04] hover:bg-[#f8e555] text-[#010200] rounded-lg font-medium transition duration-300 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isInitializing ? (

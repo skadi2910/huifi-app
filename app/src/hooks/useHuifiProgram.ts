@@ -26,10 +26,7 @@ export const useHuifiProgram = () => {
   const program = useMemo(() => {
     if (!provider) return null;
     try {
-<<<<<<< HEAD
       // Fix: The order should be: IDL, PROGRAM_ID, provider
-=======
->>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
       return new Program(IDL, provider) as HuifiProgram;
     } catch (error) {
       console.error('Failed to initialize program:', error);

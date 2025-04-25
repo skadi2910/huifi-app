@@ -4,65 +4,8 @@ import { PublicKey } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { useHuifiProgram } from './useHuifiProgram';
 import { useTransactions } from '@/contexts/TransactionContext';
-<<<<<<< HEAD
 
 export const useClaimJackpot = (poolAddress: PublicKey) => {
-=======
-import { Program } from '@coral-xyz/anchor';
-
-// Add these helper functions
-const getSolJackpotAccounts = async (
-  poolAddress: PublicKey,
-  winner: PublicKey,
-  round: number,
-  program: Program
-) => {
-  // Get user account PDA
-  const [userAccountPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from('huifi-member'), winner.toBuffer()],
-    program.programId
-  );
-
-  // Get round result PDA
-  const [roundResultPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from('round-result'), poolAddress.toBuffer(), new Uint8Array([round])],
-    program.programId
-  );
-
-  return {
-    groupAccount: poolAddress,
-    roundResult: roundResultPda,
-    winner,
-    userAccount: userAccountPda,
-  };
-};
-
-const getSplJackpotAccounts = async (
-  poolAddress: PublicKey,
-  winner: PublicKey,
-  round: number,
-  program: Program
-) => {
-  // Get base accounts
-  const baseAccounts = await getSolJackpotAccounts(poolAddress, winner, round, program);
-  
-  // Fetch pool to get token mint
-  const pool = await (program.account as any).huifipool.fetch(poolAddress);
-  
-  // Get token accounts
-  const winnerTokenAccount = getAssociatedTokenAddressSync(pool.token_mint, winner);
-  const poolTokenAccount = getAssociatedTokenAddressSync(pool.token_mint, poolAddress);
-
-  return {
-    ...baseAccounts,
-    winnerTokenAccount,
-    poolTokenAccount,
-    tokenProgram: TOKEN_PROGRAM_ID,
-  };
-};
-
-export const useClaimJackpot = (poolAddress: PublicKey, isNativeSol: boolean) => {
->>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
   const { publicKey } = useWallet();
   const { program } = useHuifiProgram();
   const { addTransaction } = useTransactions();
@@ -76,7 +19,6 @@ export const useClaimJackpot = (poolAddress: PublicKey, isNativeSol: boolean) =>
       }
       
       try {
-<<<<<<< HEAD
         // Log available account types to debug
         console.log('Available account types:', Object.keys(program.account));
         
@@ -120,15 +62,6 @@ export const useClaimJackpot = (poolAddress: PublicKey, isNativeSol: boolean) =>
             userAccount: userAccountPda,
             tokenProgram: TOKEN_PROGRAM_ID,
           })
-=======
-        const accounts = isNativeSol
-          ? await getSolJackpotAccounts(poolAddress, publicKey, round, program)
-          : await getSplJackpotAccounts(poolAddress, publicKey, round, program);
-        
-        const signature = await program.methods
-          .claimJackpot(round)
-          .accounts(accounts)
->>>>>>> e2bd6cb0551c905b610c043cda1bfe18e063fd80
           .rpc();
           
         addTransaction(signature, `Claim Jackpot - Round ${round}`);
