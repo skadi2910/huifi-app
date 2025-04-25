@@ -2,12 +2,13 @@ pub const PROTOCOL_SEED: &[u8] = b"huifi-protocol";
 pub const POOL_SEED: &[u8] = b"huifi-pool";
 pub const MEMBER_SEED: &[u8] = b"huifi-member";
 pub const VAULT_SEED: &[u8] = b"huifi-vault";
+pub const VAULT_SOL_SEED: &[u8] = b"huifi-vault-sol";
 
-pub const MIN_PARTICIPANTS: u8 = 3;
+pub const MIN_PARTICIPANTS: u8 = 2;
 pub const MAX_PARTICIPANTS: u8 = 10;
 
-pub const MIN_CONTRIBUTION_AMOUNT: u64 = 10;
-pub const MAX_CONTRIBUTION_AMOUNT: u64 = 10000;
+pub const MIN_CONTRIBUTION_AMOUNT: u64 = 10_000_000;
+pub const MAX_CONTRIBUTION_AMOUNT: u64 = 10000_000_000;
 
 pub const MIN_CYCLE_DURATION: u64 = 3 * 24 * 60 * 60; // 3 days in seconds
 pub const MAX_CYCLE_DURATION: u64 = 28 * 24 * 60 * 60; // 28 days in seconds

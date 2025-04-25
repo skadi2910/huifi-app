@@ -78,3 +78,14 @@ export interface Vault {
   pool: PublicKey;
   bump: number;
 }
+
+export interface PoolConfig {
+  maxParticipants: number;
+  contributionAmount: BN;
+  cycleDurationSeconds: BN;
+  payoutDelaySeconds: BN;
+  earlyWithdrawalFeeBps: number;
+  collateralRequirementBps: number;
+  yieldStrategy: { none: {} } | { jitoSol: {} } | { kamino: {} };
+  isNativeSol: boolean;
+}

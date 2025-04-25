@@ -1,0 +1,29 @@
+#[derive(Accounts)]
+#[instruction(pool_config: PoolConfig, uuid: [u8; 6])]
+pub struct CreateSolPool<'info> {
+    #[account(mut)]
+    pub creator: Signer<'info>,
+
+    #[account(
+        init,
+        payer = creator,
+        space = 8 + std::mem::size_of::<GroupAccount>(),
+        seeds = [POOL_SEED, uuid.as_ref()],
+        bump,
+    )]
+    pub group_account: Account<'info, GroupAccount>,
+
+    /// CHECK: This is a PDA that will hold SOL
+    #[account(
+        mut,
+        seeds = [VAULT_SOL_SEED, group_account.key().as_ref()],
+        bump,
+    )]
+    pub vault_sol: UncheckedAccount<'info>,
+
+    #[account(seeds = [PROTOCOL_SEED], bump = protocol_settings.bump)]
+    pub protocol_settings: Account<'info, ProtocolSettings>,
+
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+}

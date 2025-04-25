@@ -55,4 +55,7 @@ pub enum HuiFiError {
     
     #[msg("Payout delay hasn't elapsed yet")]
     PayoutDelayNotElapsed,
+
+    #[msg("Protocol fee exceeds 10% maximum")]
+    ProtocolFeeExceedsLimit,
 }

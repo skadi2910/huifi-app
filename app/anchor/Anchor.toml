@@ -18,7 +18,7 @@ contracts_hui = "73N3XxT1FGJt2sZmtVbiuD3TcF2f6bLffMqUi7PJQZk9"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

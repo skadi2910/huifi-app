@@ -42,7 +42,7 @@ export const useHuifiPools = () => {
         
         try {
           // Check different possible case variants of the account name
-          const possibleAccountNames = ['HuifiPool', 'huifiPool', 'huifi_pool'];
+          const possibleAccountNames = ['HuifiPool', 'huifiPool', 'huifi_pool', 'groupAccount'];
           let anchorAccount: { all: () => Promise<AnchorAccountResult[]> } | undefined;
           
           for (const name of possibleAccountNames) {
@@ -83,11 +83,13 @@ export const useHuifiPools = () => {
             
             // Find the account with "pool" in its name (case insensitive)
             const poolAccount = program.idl.accounts.find(a => 
-              a.name.toLowerCase().includes('pool')
+              a.name === 'groupAccount'
             );
             
             if (!poolAccount) {
-              throw new Error("Could not find pool account in IDL");
+              console.error("Available accounts:", program.idl.accounts.map(a => a.name));
+              throw new Error("Could not find GroupAccount in IDL. Available accounts: " + 
+                program.idl.accounts.map(a => a.name).join(', '));
             }
             
             console.log("Found pool account in IDL:", poolAccount.name);
@@ -122,7 +124,7 @@ export const useHuifiPools = () => {
                 try {
                   // Decode using Anchor coder with the correct account name
                   const parsed = program.coder.accounts.decode(
-                    poolAccount.name,  // Use name from IDL
+                    'groupAccount',  // Use name from IDL
                     account.data
                   );
                   

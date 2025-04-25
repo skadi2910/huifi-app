@@ -1,0 +1,37 @@
+#[derive(Accounts)]
+#[instruction(pool_config: PoolConfig)] // Fixed: add instruction parameter to access max_participants
+pub struct CreatePool<'info> {
+    #[account(mut)]
+    pub creator: Signer<'info>,
+
+    #[account(
+        init,
+        payer = creator, 
+        space = 8 + HuifiPool::INIT_SPACE,
+        seeds = [
+            b"huifi-pool",
+            token_mint.key().as_ref(),
+            creator.key().as_ref(),
+            &[pool_config.max_participants] // Fixed: use parameter from pool_config
+        ],
+        bump
+    )]
+    pub group_account: Box<Account<'info, HuifiPool>>,
+
+    pub token_mint: Account<'info, token::Mint>,
+
+    #[account(
+        init,
+        payer = creator,
+        space = 8 + Vault::INIT_SPACE,
+        seeds = [b"huifi-vault", group_account.key().as_ref()],
+        bump
+    )]
+    pub vault: Box<Account<'info, Vault>>,
+
+    pub protocol_settings: Box<Account<'info, ProtocolSettings>>,
+
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
+}

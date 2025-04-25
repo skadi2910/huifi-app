@@ -6,14 +6,14 @@ import {
   SYSVAR_RENT_PUBKEY
 } from '@solana/web3.js';
 import { 
-  TOKEN_PROGRAM_ID, 
-  ASSOCIATED_TOKEN_PROGRAM_ID,
-  getAssociatedTokenAddress 
+  TOKEN_PROGRAM_ID
 } from '@solana/spl-token';
 import { BN } from '@coral-xyz/anchor';
 import { useHuifiProgram } from './useHuifiProgram';
 import { useTransactions } from '@/contexts/TransactionContext';
 import { useMemo } from 'react';
+import { generateRandomUUID } from '@/lib/types/utils';
+import { YieldPlatform } from '@/lib/types/program-types';
 
 // Define USDC addresses for different networks
 const USDC_ADDRESSES = {
@@ -67,101 +67,73 @@ export const useHuifiPoolCreation = () => {
         throw new Error('Wallet not connected or program not loaded');
       }
 
-      // Determine which network we're on
-      const currentNetwork = connection.rpcEndpoint.includes('devnet') 
-        ? 'devnet' 
-        : connection.rpcEndpoint.includes('testnet')
-          ? 'testnet'
-          : connection.rpcEndpoint.includes('localhost') || connection.rpcEndpoint.includes('127.0.0.1')
-            ? 'localnet'
-            : 'mainnet';
-      
-      // Use correct USDC address for network
-      const tokenMintAddress = USDC_ADDRESSES[currentNetwork];
-      const tokenMint = new PublicKey(tokenMintAddress);
-      
-      console.log(`Using ${currentNetwork} USDC address: ${tokenMintAddress}`);
+      // Generate a 6-byte UUID for the pool
+      const uuid = generateRandomUUID(6);  // Keep as Uint8Array
+      const uuidArray = Array.from(uuid);  // Convert to number[] only for program method
+      console.log('Generated UUID:', uuidArray);
 
-      // Verify token mint exists
-      try {
-        const tokenMintInfo = await connection.getAccountInfo(tokenMint);
-        if (!tokenMintInfo) {
-          throw new Error(`Token mint account for ${currentNetwork} USDC does not exist or could not be found. You may need to create your own test token.`);
-        }
-      } catch (err) {
-        console.error(`Error checking token mint (${tokenMintAddress}):`, err);
-        throw new Error(`Failed to verify token mint on ${currentNetwork}. If using devnet/testnet, you may need to create your own test token.`);
-      }
-
-      // Derive the groupAccount PDA
+      // Determine whitelist based on privacy setting
+      const whitelist = params.privacy === 'private' ? [] : null;
+      
+      // Derive the group account PDA with the UUID
       const groupPda = PublicKey.findProgramAddressSync(
         [
           Buffer.from('huifi-pool'),
-          tokenMint.toBuffer(),
-          publicKey.toBuffer(),
-          Buffer.from([params.maxPlayers]) 
+          uuid  // Use Uint8Array here
         ],
         program.programId
       )[0];
 
-      // Derive vault PDA
-      const vaultPda = PublicKey.findProgramAddressSync(
-        [Buffer.from('huifi-vault'), groupPda.toBuffer()],
+      // Derive vault SOL PDA
+      const vaultSolPda = PublicKey.findProgramAddressSync(
+        [Buffer.from('huifi-vault-sol'), groupPda.toBuffer()],
         program.programId
       )[0];
 
-      // Get vault token account address
-      const vaultTokenAccount = await getAssociatedTokenAddress(
-        tokenMint,        // mint
-        vaultPda,         // owner
-        true              // allowOwnerOffCurve: true for PDA as owner
-      );
-
-      const contributionAmount = new BN(params.entryFee * 1_000_000); // Assuming 6 decimals for USDC
+      const contributionAmount = new BN(params.entryFee * 1_000_000_000); // Convert to lamports
       const cycleDuration = getFrequencyInSeconds(params.frequency);
 
-      const yieldStrategy = { none: {} };
-
+      // Create pool config object based on IDL structure
       const poolConfig = {
         maxParticipants: params.maxPlayers,
         contributionAmount,
         cycleDurationSeconds: new BN(cycleDuration),
-        payoutDelaySeconds: new BN(3600), // 1 hour
-        earlyWithdrawalFeeBps: new BN(500), // 5%
-        collateralRequirementBps: new BN(1000), // 10%
-        yieldStrategy,
+        payoutDelaySeconds: new BN(86400), // Changed to 1 day (min allowed)
+        earlyWithdrawalFeeBps: 500, // 5%
+        collateralRequirementBps: 10000, // 100%
+        yieldStrategy: { none: {} },
+        isNativeSol: true
       };
 
-      console.log('Creating pool with:', {
+      console.log('Creating SOL pool with:', {
         creator: publicKey.toBase58(),
         groupPda: groupPda.toBase58(),
-        vaultPda: vaultPda.toBase58(),
-        vaultTokenAccount: vaultTokenAccount.toBase58(),
+        vaultSolPda: vaultSolPda.toBase58(),
         poolConfig,
+        uuid: uuidArray,
+        whitelist: whitelist ? 'Private' : 'Public'
       });
 
       try {
-        // Create the pool
+        // Create the SOL pool using the new create_sol_pool instruction
         const signature = await program.methods
-          .createPool(poolConfig)
+          .createSolPool(poolConfig, uuidArray, whitelist)  // Use number[] for program call
           .accounts({
             creator: publicKey,
             groupAccount: groupPda,
-            tokenMint: tokenMint,
-            vault: vaultPda,
+            vaultSol: vaultSolPda,
             protocolSettings: protocolSettingsPda,
-            tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
             rent: SYSVAR_RENT_PUBKEY,
           })
           .rpc();
 
         await connection.confirmTransaction(signature);
-        addTransaction(signature, 'Create Pool');
+        addTransaction(signature, 'Create SOL Pool');
 
         return signature;
       } catch (error) {
-        console.error('Error creating pool:', error);
+        console.error('Error creating SOL pool:', error);
         throw error;
       }
     },
