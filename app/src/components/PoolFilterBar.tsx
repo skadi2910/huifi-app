@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Dispatch, SetStateAction } from 'react';
+import React, { Dispatch, SetStateAction, useState } from 'react';
 import { Search, Filter, ChevronDown } from 'lucide-react';
 
 export interface PoolFilterBarProps {
@@ -16,12 +16,23 @@ export const PoolFilterBar: React.FC<PoolFilterBarProps> = ({
   searchQuery,
   setSearchQuery
 }) => {
-  const [showFilters, setShowFilters] = React.useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [poolType, setPoolType] = useState<'all' | 'spl' | 'sol'>('all');
+  const [privacyFilter, setPrivacyFilter] = useState<'all' | 'public' | 'private'>('all');
   const [frequencyFilter, setFrequencyFilter] = React.useState('');
   const [minEntryFee, setMinEntryFee] = React.useState('');
   const [maxEntryFee, setMaxEntryFee] = React.useState('');
   const [currencyFilter, setCurrencyFilter] = React.useState('');
   const [yieldFilter, setYieldFilter] = React.useState('');
+
+  // Add new filter handlers
+  const handlePoolTypeChange = (type: 'all' | 'spl' | 'sol') => {
+    setPoolType(type);
+  };
+
+  const handlePrivacyFilterChange = (privacy: 'all' | 'public' | 'private') => {
+    setPrivacyFilter(privacy);
+  };
 
   return (
     <div className="bg-[#010200]/50 border-4 border-[#ffdd00] p-6 rounded-lg">

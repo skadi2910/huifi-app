@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import {
   Users,
@@ -29,7 +29,12 @@ export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account }) => {
     cycleDurationSeconds,
     nextPayoutTimestamp,
     yieldBasisPoints,
-    totalValue
+    totalValue,
+    isNativeSol,
+    isPrivate,
+    whitelist,
+    payoutRecipients,
+    earlyPayoutRequests,
   } = account;
 
   const frequencyDays = cycleDurationSeconds?.toNumber
@@ -94,6 +99,21 @@ export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account }) => {
     : '0.00';
 
   const xpReward = 100; // Placeholder
+
+  const isWhitelisted = useMemo(() => {
+    if (!isPrivate || !publicKey) return true;
+    return whitelist.some(addr => addr.equals(publicKey));
+  }, [isPrivate, whitelist, publicKey]);
+
+  const hasReceivedPayout = useMemo(() => {
+    if (!publicKey) return false;
+    return payoutRecipients.some(addr => addr.equals(publicKey));
+  }, [payoutRecipients, publicKey]);
+
+  const hasRequestedEarlyPayout = useMemo(() => {
+    if (!publicKey) return false;
+    return earlyPayoutRequests.some(addr => addr.equals(publicKey));
+  }, [earlyPayoutRequests, publicKey]);
 
   return (
     <div className="card-glitch bg-[#ffdd00] border-4 border-black p-4 rounded-lg shadow-lg w-full sm:p-6">

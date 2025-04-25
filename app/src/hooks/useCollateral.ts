@@ -1,50 +1,51 @@
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { useMutation } from '@tanstack/react-query';
 import { PublicKey } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from '@solana/spl-token';
+import { useMutation } from '@tanstack/react-query';
 import { BN } from '@coral-xyz/anchor';
 import { useHuifiProgram } from './useHuifiProgram';
 import { useTransactions } from '@/contexts/TransactionContext';
 
-export const usePoolContribution = (poolAddress: PublicKey, isNativeSol: boolean) => {
-  const { connection } = useConnection();
+export const useCollateral = (poolAddress: PublicKey, isNativeSol: boolean) => {
   const { publicKey } = useWallet();
   const { program } = useHuifiProgram();
   const { addTransaction } = useTransactions();
 
-  // Mutation for making a contribution to the pool
-  const contributeMutation = useMutation({
-    mutationKey: ['contribute-pool', { pool: poolAddress.toString() }],
+  const depositCollateralMutation = useMutation({
+    mutationKey: ['deposit-collateral', { pool: poolAddress.toString() }],
     mutationFn: async ({ uuid, amount }: { uuid: number[]; amount: number }): Promise<string> => {
       if (!publicKey || !program) {
         throw new Error('Wallet not connected or program not loaded');
       }
-      
+
       try {
         const amountLamports = new BN(amount * 1_000_000);
         
         const signature = isNativeSol
           ? await program.methods
-              .contributeSol(uuid, amountLamports)
+              .depositSolCollateral(uuid, amountLamports)
               .accounts({
-                // ... SOL contribution accounts
+                groupAccount: poolAddress,
+                user: publicKey,
+                // Add other required accounts
               })
               .rpc()
           : await program.methods
-              .contributeSpl(uuid, amountLamports)
+              .depositSplCollateral(uuid, amountLamports)
               .accounts({
-                // ... SPL contribution accounts
+                groupAccount: poolAddress,
+                user: publicKey,
+                // Add other required accounts
               })
               .rpc();
-          
-        addTransaction(signature, 'Contribute to Pool');
+
+        addTransaction(signature, 'Deposit Collateral');
         return signature;
       } catch (error) {
-        console.error('Error contributing to pool:', error);
+        console.error('Error depositing collateral:', error);
         throw error;
       }
     }
   });
-  
-  return { contributeMutation };
-};
+
+  return { depositCollateralMutation };
+}; 

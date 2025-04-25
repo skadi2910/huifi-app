@@ -31,11 +31,15 @@ export default function CreatePoolPage() {
     maxPlayers: '',
     frequency: 'daily',
     entryFee: '',
-    currency: 'USDC',
+    currency: 'SOL',
     payoutMethod: 'predetermined',
     latePenalty: 'none',
     privacy: 'public',
     agreeTerms: false,
+    isNativeSol: false,
+    isPrivate: false,
+    whitelist: [] as string[],
+    collateralRequirement: '',
   });
 
   // Check SOL balance when wallet is connected
@@ -142,16 +146,14 @@ export default function CreatePoolPage() {
       });
       
       const signature = await createPoolMutation.mutateAsync({
-        name: formData.name,
-        description: formData.description,
-        maxPlayers: parseInt(formData.maxPlayers),
-        frequency: formData.frequency as 'daily' | 'weekly' | 'biweekly' | 'monthly',
+        ...formData,
+        currency: 'SOL', // Force SOL for now
+        maxPlayers: Number(formData.maxPlayers), // Ensure it's a number
         entryFee: parseFloat(formData.entryFee),
-        currency: formData.currency,
+        frequency: formData.frequency as 'daily' | 'weekly' | 'biweekly' | 'monthly',
         payoutMethod: formData.payoutMethod as 'predetermined' | 'bidding',
         latePenalty: formData.latePenalty as 'none' | 'small' | 'moderate' | 'strict',
         privacy: formData.privacy as 'public' | 'private',
-        creator: publicKey,
       });
   
       console.log("Pool creation successful, signature:", signature);
@@ -319,11 +321,13 @@ export default function CreatePoolPage() {
                     </div>
                     <div>
                       <label htmlFor="currency" className="block text-sm font-medium text-[#f8e555] mb-2">Currency</label>
-                      <select id="currency" name="currency" value={formData.currency} onChange={handleInputChange} className="w-full px-4 py-2 border border-[#e6ce04]/30 rounded-lg bg-[#252520] text-[#f8e555] focus:ring-2 focus:ring-[#e6ce04] focus:border-transparent">
-                        <option>USDC</option>
+                      <select id="currency" name="currency" value={formData.currency} onChange={handleInputChange}>
+                        <option value="SOL">SOL</option>
+                        {/* Comment out until SPL issues resolved */}
+                        {/* <option>USDC</option>
                         <option>ETH</option>
                         <option>DAI</option>
-                        <option>USDT</option>
+                        <option>USDT</option> */}
                       </select>
                     </div>
                   </div>

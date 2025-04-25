@@ -26,156 +26,44 @@ export const useHuifiPools = () => {
   const { addTransaction } = useTransactions();
   const [pools, setPools] = useState<PoolWithKey[]>([]);
   
-  // Query to fetch all pools
   const poolsQuery = useQuery({
     queryKey: ['huifi-pools'],
     queryFn: async () => {
       if (!program) {
         throw new Error('Program not loaded');
       }
-      
+
       try {
-        console.log("Fetching pools from program:", program.programId.toString());
-        
-        // Try the direct Anchor method first
-        let poolsData: PoolWithKey[] = [];
-        
-        try {
-          // Check different possible case variants of the account name
-          const possibleAccountNames = ['HuifiPool', 'huifiPool', 'huifi_pool'];
-          let anchorAccount: { all: () => Promise<AnchorAccountResult[]> } | undefined;
-          
-          for (const name of possibleAccountNames) {
-            // Use type assertion to tell TypeScript it's okay to index with a string
-            const accountsNamespace = program.account as Record<string, any>;
-            if (accountsNamespace[name] && typeof accountsNamespace[name].all === 'function') {
-              console.log(`Found Anchor account with name: ${name}`);
-              anchorAccount = accountsNamespace[name];
-              break;
+        // Fetch both SPL and SOL pools
+        const [splPools, solPools] = await Promise.all([
+          (program.account as any).huifipool.all([
+            {
+              memcmp: {
+                offset: 8 + 32 + 32, // Adjust offset based on account structure
+                bytes: bs58.encode(new Uint8Array([0])) // isNativeSol = false - using Uint8Array
+              }
             }
-          }
-          
-          if (anchorAccount) {
-            const anchorPools = await anchorAccount.all();
-            console.log("Anchor pools fetched:", anchorPools.length);
-            
-            poolsData = anchorPools.map((item: AnchorAccountResult) => ({
-              publicKey: item.publicKey,
-              account: item.account as unknown as HuifiPoolType
-            }));
-          } else {
-            // Use type assertion to safely access program.account properties
-            const accountKeys = Object.keys(program.account as Record<string, any>);
-            console.log("Available account types:", accountKeys);
-            throw new Error("Anchor method not available");
-          }
-        } catch (err) {
-          console.warn("Failed to fetch using Anchor method, using getProgramAccounts instead", err);
-          
-          try {
-            // Check if idl and accounts exist before accessing
-            if (!program.idl || !program.idl.accounts) {
-              throw new Error("Program IDL or accounts not available");
+          ]),
+          (program.account as any).huifipool.all([
+            {
+              memcmp: {
+                offset: 8 + 32 + 32, // Adjust offset based on account structure
+                bytes: bs58.encode(new Uint8Array([1])) // isNativeSol = true - using Uint8Array
+              }
             }
-            
-            // Log the IDL to inspect account names and discriminators
-            console.log("IDL accounts:", program.idl.accounts.map(a => a.name));
-            
-            // Find the account with "pool" in its name (case insensitive)
-            const poolAccount = program.idl.accounts.find(a => 
-              a.name.toLowerCase().includes('pool')
-            );
-            
-            if (!poolAccount) {
-              throw new Error("Could not find pool account in IDL");
-            }
-            
-            console.log("Found pool account in IDL:", poolAccount.name);
-            console.log("Discriminator:", poolAccount.discriminator);
-            
-            // Use the correct discriminator from IDL - handle possible undefined
-            const discriminator = poolAccount.discriminator 
-              ? Buffer.from(poolAccount.discriminator) 
-              : Buffer.from([]);
-              
-            const base58Discriminator = bs58.encode(discriminator);
-            
-            console.log("Using discriminator:", base58Discriminator);
-            
-            // Fallback to getProgramAccounts
-            const accounts = await connection.getProgramAccounts(program.programId, {
-              filters: [
-                {
-                  memcmp: {
-                    offset: 0,
-                    bytes: base58Discriminator
-                  }
-                }
-              ],
-            });
-            
-            console.log("Raw getProgramAccounts result:", accounts.length);
-            
-            // Use explicit types in Promise.all mapping
-            poolsData = await Promise.all(
-              accounts.map(async ({ pubkey, account }) => {
-                try {
-                  // Decode using Anchor coder with the correct account name
-                  const parsed = program.coder.accounts.decode(
-                    poolAccount.name,  // Use name from IDL
-                    account.data
-                  );
-                  
-                  return {
-                    publicKey: pubkey,
-                    account: parsed as unknown as HuifiPoolType
-                  };
-                } catch (decodeErr) {
-                  console.error("Failed to decode account:", pubkey.toString(), decodeErr);
-                  console.log("Account data:", account.data.slice(0, 20));
-                  throw decodeErr;
-                }
-              })
-            );
-          } catch (error) {
-            console.error("Failed to process accounts:", error);
-            throw error;
-          }
-        }
-        
-        // Transform and enrich the data - add explicit type to map parameter
-        const enrichedPools = poolsData.map(({ publicKey, account }: PoolWithKey) => {
-          console.log("Raw pool data:", account);
-          
-          // Add UI-friendly fields
-          const enriched = {
-            ...account,
-            name: `HuiFi Pool #${publicKey.toString().substring(0, 8)}`,
-            description: 'A rotating savings pool',
-            frequency: account.cycleDurationSeconds && 
-              typeof account.cycleDurationSeconds === 'object' && 
-              'gte' in account.cycleDurationSeconds
-                ? account.cycleDurationSeconds.gte(new BN(604800)) 
-                  ? 'weekly' 
-                  : 'daily'
-                : 'weekly',
-          };
-          
-          return {
-            publicKey,
-            account: enriched,
-          };
-        });
-        
-        console.log("Processed pools:", enrichedPools);
-        setPools(enrichedPools);
-        return enrichedPools;
-      } catch (error) {
-        console.error('Error fetching pools:', error);
-        throw error;
+          ])
+        ]);
+
+        return [...splPools, ...solPools].map(pool => ({
+          publicKey: pool.publicKey,
+          account: pool.account
+        }));
+      } catch (err) {
+        console.error("Failed to fetch pools:", err);
+        throw err;
       }
     },
-    enabled: !!program,
+    enabled: !!program
   });
   
   // Function to refresh pools

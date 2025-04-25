@@ -2,213 +2,11 @@
   "address": "5S8b4n1VwN3wasBcheSdUKSMyvVPLMgMe9FLxWLfBT8t",
   "metadata": {
     "name": "contracts_hui",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "spec": "0.1.0",
-    "description": "Created with Anchor"
+    "description": "HuiFi Rotating Savings Protocol"
   },
   "instructions": [
-    {
-      "name": "contribute",
-      "discriminator": [
-        82,
-        33,
-        68,
-        131,
-        32,
-        0,
-        205,
-        95
-      ],
-      "accounts": [
-        {
-          "name": "contributor",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "group_account",
-          "writable": true
-        },
-        {
-          "name": "member_account",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  109,
-                  101,
-                  109,
-                  98,
-                  101,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "group_account"
-              },
-              {
-                "kind": "account",
-                "path": "contributor"
-              }
-            ]
-          }
-        },
-        {
-          "name": "contributor_token_account",
-          "writable": true
-        },
-        {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "group_account"
-              }
-            ]
-          }
-        },
-        {
-          "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        }
-      ],
-      "args": [
-        {
-          "name": "amount",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "create_pool",
-      "discriminator": [
-        233,
-        146,
-        209,
-        142,
-        207,
-        104,
-        64,
-        188
-      ],
-      "accounts": [
-        {
-          "name": "creator",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "group_account",
-          "writable": true
-        },
-        {
-          "name": "token_mint"
-        },
-        {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "group_account"
-              }
-            ]
-          }
-        },
-        {
-          "name": "protocol_settings",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  112,
-                  114,
-                  111,
-                  116,
-                  111,
-                  99,
-                  111,
-                  108
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        },
-        {
-          "name": "rent",
-          "address": "SysvarRent111111111111111111111111111111111"
-        }
-      ],
-      "args": [
-        {
-          "name": "pool_config",
-          "type": {
-            "defined": {
-              "name": "PoolConfig"
-            }
-          }
-        }
-      ]
-    },
     {
       "name": "initialize_protocol",
       "discriminator": [
@@ -279,24 +77,18 @@
         {
           "name": "protocol_fee_bps",
           "type": "u16"
+        },
+        {
+          "name": "create_pool_fee",
+          "type": "u64"
         }
       ]
     },
     {
-      "name": "join_pool",
-      "discriminator": [
-        14,
-        65,
-        62,
-        16,
-        116,
-        17,
-        195,
-        107
-      ],
+      "name": "create_spl_pool",
       "accounts": [
         {
-          "name": "user",
+          "name": "creator",
           "writable": true,
           "signer": true
         },
@@ -305,7 +97,10 @@
           "writable": true
         },
         {
-          "name": "member_account",
+          "name": "token_mint"
+        },
+        {
+          "name": "vault",
           "writable": true,
           "pda": {
             "seeds": [
@@ -318,27 +113,30 @@
                   102,
                   105,
                   45,
-                  109,
-                  101,
-                  109,
-                  98,
-                  101,
-                  114
+                  115,
+                  112,
+                  108,
+                  45,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
                 ]
               },
               {
                 "kind": "account",
                 "path": "group_account"
-              },
-              {
-                "kind": "account",
-                "path": "user"
               }
             ]
           }
         },
         {
-          "name": "user_token_account"
+          "name": "protocol_settings"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
           "name": "system_program",
@@ -349,133 +147,404 @@
           "address": "SysvarRent111111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "pool_config",
+          "type": {
+            "defined": {
+              "name": "PoolConfig"
+            }
+          }
+        },
+        {
+          "name": "uuid",
+          "type": {
+            "array": ["u8", 6]
+          }
+        },
+        {
+          "name": "whitelist",
+          "type": {
+            "option": {
+              "vec": {
+                "defined": "PublicKey"
+              }
+            }
+          }
+        }
+      ]
     },
     {
-      "name": "process_payout",
-      "discriminator": [
-        48,
-        192,
-        129,
-        57,
-        230,
-        161,
-        233,
-        148
-      ],
+      "name": "create_sol_pool",
       "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "group_account",
+          "writable": true
+        },
+        {
+          "name": "sol_vault",
+          "writable": true
+        },
+        {
+          "name": "protocol_settings",
+          "writable": false
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "pool_config",
+          "type": {
+            "defined": {
+              "name": "PoolConfig"
+            }
+          }
+        },
+        {
+          "name": "uuid",
+          "type": {
+            "array": ["u8", 6]
+          }
+        },
+        {
+          "name": "whitelist",
+          "type": {
+            "option": {
+              "vec": {
+                "defined": "PublicKey"
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "create_user_account",
+      "accounts": [
+        {
+          "name": "user_account",
+          "writable": true,
+          "signer": false
+        },
         {
           "name": "user",
           "writable": true,
           "signer": true
         },
         {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "join_spl_pool",
+      "accounts": [
+        {
           "name": "group_account",
           "writable": true
         },
         {
-          "name": "recipient_account",
+          "name": "user",
           "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  109,
-                  101,
-                  109,
-                  98,
-                  101,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "group_account"
-              },
-              {
-                "kind": "account",
-                "path": "recipient"
-              }
-            ]
+          "signer": true
+        },
+        {
+          "name": "user_account",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "uuid",
+          "type": {
+            "array": ["u8", 6]
+          }
+        }
+      ]
+    },
+    {
+      "name": "join_sol_pool",
+      "accounts": [
+        {
+          "name": "group_account",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user_account",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "uuid",
+          "type": {
+            "array": ["u8", 6]
+          }
+        }
+      ]
+    },
+    {
+      "name": "contribute_spl",
+      "accounts": [
+        {
+          "name": "group_account",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user_account",
+          "writable": true
+        },
+        {
+          "name": "user_token_account",
+          "writable": true
+        },
+        {
+          "name": "pool_token_account",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "uuid",
+          "type": {
+            "array": ["u8", 6]
           }
         },
         {
-          "name": "recipient"
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "contribute_sol",
+      "accounts": [
+        {
+          "name": "group_account",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user_account",
+          "writable": true
+        },
+        {
+          "name": "pool_sol_vault",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "uuid",
+          "type": {
+            "array": ["u8", 6]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "deposit_spl_collateral",
+      "accounts": [
+        {
+          "name": "group_account",
+          "writable": false
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user_account",
+          "writable": true
+        },
+        {
+          "name": "user_token_account",
+          "writable": true
+        },
+        {
+          "name": "collateral_account",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "uuid",
+          "type": {
+            "array": ["u8", 6]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "deposit_sol_collateral",
+      "accounts": [
+        {
+          "name": "group_account",
+          "writable": false
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user_account",
+          "writable": true
+        },
+        {
+          "name": "collateral_account",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "uuid",
+          "type": {
+            "array": ["u8", 6]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "request_early_payout",
+      "accounts": [
+        {
+          "name": "group_account",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user_account",
+          "writable": false
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "process_sol_payout",
+      "accounts": [
+        {
+          "name": "group_account",
+          "writable": true
+        },
+        {
+          "name": "recipient",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "recipient_account",
+          "writable": true
+        },
+        {
+          "name": "pool_sol_vault",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "process_spl_payout",
+      "accounts": [
+        {
+          "name": "group_account",
+          "writable": true
+        },
+        {
+          "name": "recipient",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "recipient_account",
+          "writable": true
+        },
+        {
+          "name": "pool_token_account",
+          "writable": true
         },
         {
           "name": "recipient_token_account",
           "writable": true
         },
         {
-          "name": "collateral_token_account",
-          "writable": true
-        },
-        {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "group_account"
-              }
-            ]
-          }
-        },
-        {
-          "name": "protocol_settings",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  112,
-                  114,
-                  111,
-                  116,
-                  111,
-                  99,
-                  111,
-                  108
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "protocol_treasury",
-          "writable": true
-        },
-        {
           "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
@@ -487,124 +556,27 @@
       "args": []
     },
     {
-      "name": "request_early_payout",
-      "discriminator": [
-        21,
-        249,
-        224,
-        151,
-        77,
-        80,
-        37,
-        6
-      ],
+      "name": "place_bid",
       "accounts": [
         {
-          "name": "member",
-          "writable": true,
-          "signer": true
+          "name": "bid",
+          "writable": true
         },
         {
           "name": "group_account",
           "writable": true
         },
         {
-          "name": "member_account",
+          "name": "bidder",
           "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  109,
-                  101,
-                  109,
-                  98,
-                  101,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "group_account"
-              },
-              {
-                "kind": "account",
-                "path": "member"
-              }
-            ]
-          }
+          "signer": true
         },
         {
-          "name": "member_token_account",
+          "name": "bidder_token_account",
           "writable": true
         },
         {
-          "name": "collateral_token_account",
-          "writable": true
-        },
-        {
-          "name": "vault",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  118,
-                  97,
-                  117,
-                  108,
-                  116
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "group_account"
-              }
-            ]
-          }
-        },
-        {
-          "name": "protocol_settings",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  104,
-                  117,
-                  105,
-                  102,
-                  105,
-                  45,
-                  112,
-                  114,
-                  111,
-                  116,
-                  111,
-                  99,
-                  111,
-                  108
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "protocol_treasury",
+          "name": "pool_token_account",
           "writable": true
         },
         {
@@ -616,36 +588,74 @@
           "address": "11111111111111111111111111111111"
         }
       ],
+      "args": [
+        {
+          "name": "round",
+          "type": "u8"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "claim_jackpot",
+      "accounts": [
+        {
+          "name": "group_account",
+          "writable": true
+        },
+        {
+          "name": "round_result",
+          "writable": true
+        },
+        {
+          "name": "winner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "winner_token_account",
+          "writable": true
+        },
+        {
+          "name": "pool_token_account",
+          "writable": true
+        },
+        {
+          "name": "user_account",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        }
+      ],
+      "args": [
+        {
+          "name": "round",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "close_pool",
+      "accounts": [
+        {
+          "name": "group_account",
+          "writable": true
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        }
+      ],
       "args": []
     }
   ],
   "accounts": [
-    {
-      "name": "GroupAccount",
-      "discriminator": [
-        12,
-        42,
-        207,
-        53,
-        238,
-        29,
-        151,
-        111
-      ]
-    },
-    {
-      "name": "MemberAccount",
-      "discriminator": [
-        173,
-        25,
-        100,
-        97,
-        192,
-        177,
-        84,
-        139
-      ]
-    },
     {
       "name": "ProtocolSettings",
       "discriminator": [
@@ -657,146 +667,77 @@
         93,
         139,
         162
-      ]
-    }
-  ],
-  "errors": [
-    {
-      "code": 6000,
-      "name": "InvalidPoolConfig",
-      "msg": "Invalid pool configuration"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "publicKey"
+          },
+          {
+            "name": "treasury",
+            "type": "publicKey"
+          },
+          {
+            "name": "token_mint",
+            "type": "publicKey"
+          },
+          {
+            "name": "protocol_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "create_pool_fee",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
     },
     {
-      "code": 6001,
-      "name": "PoolFull",
-      "msg": "Pool is full"
-    },
-    {
-      "code": 6002,
-      "name": "InvalidPoolStatus",
-      "msg": "Pool is not in the correct status"
-    },
-    {
-      "code": 6003,
-      "name": "MemberAlreadyJoined",
-      "msg": "Member already joined"
-    },
-    {
-      "code": 6004,
-      "name": "Unauthorized",
-      "msg": "Unauthorized access"
-    },
-    {
-      "code": 6005,
-      "name": "InsufficientContribution",
-      "msg": "Insufficient contribution amount"
-    },
-    {
-      "code": 6006,
-      "name": "InvalidCycleForContribution",
-      "msg": "Invalid cycle - not ready for contribution"
-    },
-    {
-      "code": 6007,
-      "name": "AlreadyContributed",
-      "msg": "Member has already contributed for this cycle"
-    },
-    {
-      "code": 6008,
-      "name": "InsufficientCollateral",
-      "msg": "Insufficient collateral for early payout"
-    },
-    {
-      "code": 6009,
-      "name": "AlreadyReceivedPayout",
-      "msg": "Member already received payout"
-    },
-    {
-      "code": 6010,
-      "name": "NotEligibleForPayout",
-      "msg": "Not eligible for payout yet"
-    },
-    {
-      "code": 6011,
-      "name": "InsufficientVaultFunds",
-      "msg": "Pool vault has insufficient funds"
-    },
-    {
-      "code": 6012,
-      "name": "PendingContributions",
-      "msg": "Not all members have contributed for the current cycle"
-    },
-    {
-      "code": 6013,
-      "name": "InvalidPayoutAmount",
-      "msg": "Invalid payout amount calculation"
-    },
-    {
-      "code": 6014,
-      "name": "MemberNotFound",
-      "msg": "Member not found in the pool"
-    },
-    {
-      "code": 6015,
-      "name": "InvalidTokenAccountOwner",
-      "msg": "Invalid token account owner"
-    },
-    {
-      "code": 6016,
-      "name": "CycleDurationNotElapsed",
-      "msg": "Cycle duration hasn't elapsed yet"
-    },
-    {
-      "code": 6017,
-      "name": "PayoutDelayNotElapsed",
-      "msg": "Payout delay hasn't elapsed yet"
-    }
-  ],
-  "types": [
-    {
-      "name": "GroupAccount",
+      "name": "HuifiPool",
       "type": {
         "kind": "struct",
         "fields": [
           {
             "name": "creator",
-            "type": "pubkey"
+            "type": "publicKey"
           },
           {
             "name": "token_mint",
-            "type": "pubkey"
+            "type": "publicKey"
           },
           {
-            "name": "vault",
-            "type": "pubkey"
-          },
-          {
-            "name": "config",
-            "type": {
-              "defined": {
-                "name": "PoolConfig"
-              }
-            }
-          },
-          {
-            "name": "member_addresses",
-            "type": {
-              "vec": "pubkey"
-            }
-          },
-          {
-            "name": "payout_order",
-            "type": {
-              "vec": "pubkey"
-            }
-          },
-          {
-            "name": "current_cycle",
+            "name": "max_participants",
             "type": "u8"
           },
           {
-            "name": "total_cycles",
+            "name": "current_participants",
             "type": "u8"
+          },
+          {
+            "name": "contribution_amount",
+            "type": "u64"
+          },
+          {
+            "name": "cycle_duration_seconds",
+            "type": "u64"
+          },
+          {
+            "name": "payout_delay_seconds",
+            "type": "u64"
+          },
+          {
+            "name": "early_withdrawal_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "collateral_requirement_bps",
+            "type": "u16"
           },
           {
             "name": "status",
@@ -807,16 +748,70 @@
             }
           },
           {
-            "name": "total_contributions",
+            "name": "total_value",
             "type": "u64"
           },
           {
-            "name": "last_cycle_timestamp",
-            "type": "i64"
+            "name": "current_round",
+            "type": "u8"
           },
           {
             "name": "next_payout_timestamp",
-            "type": "i64"
+            "type": "u64"
+          },
+          {
+            "name": "start_time",
+            "type": "u64"
+          },
+          {
+            "name": "yield_basis_points",
+            "type": "u16"
+          },
+          {
+            "name": "yield_strategy",
+            "type": {
+              "defined": {
+                "name": "YieldPlatform"
+              }
+            }
+          },
+          {
+            "name": "participants",
+            "type": {
+              "array": ["publicKey", 20]
+            }
+          },
+          {
+            "name": "uuid",
+            "type": {
+              "array": ["u8", 6]
+            }
+          },
+          {
+            "name": "is_native_sol",
+            "type": "bool"
+          },
+          {
+            "name": "is_private",
+            "type": "bool"
+          },
+          {
+            "name": "whitelist",
+            "type": {
+              "vec": "publicKey"
+            }
+          },
+          {
+            "name": "payout_recipients",
+            "type": {
+              "array": ["publicKey", 20]
+            }
+          },
+          {
+            "name": "early_payout_requests",
+            "type": {
+              "array": ["publicKey", 20]
+            }
           },
           {
             "name": "bump",
@@ -826,45 +821,41 @@
       }
     },
     {
-      "name": "MemberAccount",
+      "name": "UserAccount",
       "type": {
         "kind": "struct",
         "fields": [
           {
             "name": "owner",
-            "type": "pubkey"
+            "type": "publicKey"
           },
           {
-            "name": "pool",
-            "type": "pubkey"
+            "name": "pools_joined",
+            "type": "u16"
           },
           {
-            "name": "contributions_made",
-            "type": "u8"
+            "name": "active_pools",
+            "type": "u16"
           },
           {
-            "name": "status",
-            "type": {
-              "defined": {
-                "name": "MemberStatus"
-              }
-            }
+            "name": "pools_created",
+            "type": "u16"
           },
           {
-            "name": "has_received_early_payout",
-            "type": "bool"
-          },
-          {
-            "name": "collateral_staked",
+            "name": "total_contribution",
             "type": "u64"
           },
           {
-            "name": "reputation_points",
+            "name": "total_winnings",
             "type": "u64"
           },
           {
-            "name": "last_contribution_timestamp",
-            "type": "i64"
+            "name": "collateral_deposited",
+            "type": "u64"
+          },
+          {
+            "name": "experience_points",
+            "type": "u32"
           },
           {
             "name": "bump",
@@ -874,21 +865,121 @@
       }
     },
     {
-      "name": "MemberStatus",
+      "name": "Vault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "publicKey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Bid",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bidder",
+            "type": "publicKey"
+          },
+          {
+            "name": "pool",
+            "type": "publicKey"
+          },
+          {
+            "name": "round",
+            "type": "u8"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RoundResult",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "publicKey"
+          },
+          {
+            "name": "round",
+            "type": "u8"
+          },
+          {
+            "name": "winner",
+            "type": "publicKey"
+          },
+          {
+            "name": "paid",
+            "type": "bool"
+          },
+          {
+            "name": "payout_amount",
+            "type": "u64"
+          },
+          {
+            "name": "payout_timestamp",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "PoolStatus",
       "type": {
         "kind": "enum",
         "variants": [
           {
+            "name": "Filling"
+          },
+          {
             "name": "Active"
           },
           {
-            "name": "ReceivedPayout"
+            "name": "Completed"
+          }
+        ]
+      }
+    },
+    {
+      "name": "YieldPlatform",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "None"
           },
           {
-            "name": "Late"
+            "name": "JitoSol"
           },
           {
-            "name": "Defaulted"
+            "name": "Kamino"
           }
         ]
       }
@@ -932,79 +1023,345 @@
           }
         ]
       }
+    }
+  ],
+  "events": [
+    {
+      "name": "PoolCreatedEvent",
+      "fields": [
+        {
+          "name": "pool",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "creator",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "max_participants",
+          "type": "u8",
+          "index": false
+        },
+        {
+          "name": "contribution_amount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "cycle_duration",
+          "type": "u64",
+          "index": false
+        }
+      ]
     },
     {
-      "name": "PoolStatus",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "Initializing"
-          },
-          {
-            "name": "Active"
-          },
-          {
-            "name": "Completed"
-          },
-          {
-            "name": "Defaulted"
-          }
-        ]
-      }
+      "name": "UserAccountCreatedEvent",
+      "fields": [
+        {
+          "name": "user",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
     },
     {
-      "name": "ProtocolSettings",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "authority",
-            "type": "pubkey"
-          },
-          {
-            "name": "treasury",
-            "type": "pubkey"
-          },
-          {
-            "name": "fee_bps",
-            "type": "u16"
-          },
-          {
-            "name": "total_fees_collected",
-            "type": "u64"
-          },
-          {
-            "name": "yield_generated",
-            "type": "u64"
-          },
-          {
-            "name": "reserve_buffer",
-            "type": "u64"
-          },
-          {
-            "name": "bump",
-            "type": "u8"
-          }
-        ]
-      }
+      "name": "PoolJoinedEvent",
+      "fields": [
+        {
+          "name": "pool",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "user",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "participants_count",
+          "type": "u8",
+          "index": false
+        }
+      ]
     },
     {
-      "name": "YieldPlatform",
-      "type": {
-        "kind": "enum",
-        "variants": [
-          {
-            "name": "None"
-          },
-          {
-            "name": "JitoSol"
-          },
-          {
-            "name": "Kamino"
-          }
-        ]
-      }
+      "name": "ContributionEvent",
+      "fields": [
+        {
+          "name": "pool",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "user",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "amount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "total_pool_value",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "BidPlacedEvent",
+      "fields": [
+        {
+          "name": "pool",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "bidder",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "round",
+          "type": "u8",
+          "index": false
+        },
+        {
+          "name": "amount",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "JackpotClaimedEvent",
+      "fields": [
+        {
+          "name": "pool",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "winner",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "round",
+          "type": "u8",
+          "index": false
+        },
+        {
+          "name": "amount",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "PoolClosedEvent",
+      "fields": [
+        {
+          "name": "pool",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "creator",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "CollateralDepositedEvent",
+      "fields": [
+        {
+          "name": "pool",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "user",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "amount",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "EarlyPayoutRequestedEvent",
+      "fields": [
+        {
+          "name": "pool",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "user",
+          "type": "publicKey",
+          "index": false
+        }
+      ]
+    },
+    {
+      "name": "PayoutProcessedEvent",
+      "fields": [
+        {
+          "name": "pool",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "recipient",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "amount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "is_early_payout",
+          "type": "bool",
+          "index": false
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "ProtocolFeeExceedsLimit",
+      "msg": "Protocol fee exceeds 10% maximum"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidParticipantCount",
+      "msg": "Invalid participant count, must be between 3 and 20"
+    },
+    {
+      "code": 6002,
+      "name": "ContributionTooSmall",
+      "msg": "Contribution amount is too small"
+    },
+    {
+      "code": 6003,
+      "name": "CycleDurationTooShort",
+      "msg": "Cycle duration is too short"
+    },
+    {
+      "code": 6004,
+      "name": "PoolNotAcceptingParticipants",
+      "msg": "Pool is not accepting participants"
+    },
+    {
+      "code": 6005,
+      "name": "PoolFull",
+      "msg": "Pool is already full"
+    },
+    {
+      "code": 6006,
+      "name": "AlreadyParticipant",
+      "msg": "User is already a participant"
+    },
+    {
+      "code": 6007,
+      "name": "PoolNotActive",
+      "msg": "Pool is not active"
+    },
+    {
+      "code": 6008,
+      "name": "NotParticipant",
+      "msg": "User is not a participant in this pool"
+    },
+    {
+      "code": 6009,
+      "name": "IncorrectContributionAmount",
+      "msg": "Incorrect contribution amount"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidRound",
+      "msg": "Invalid round number"
+    },
+    {
+      "code": 6011,
+      "name": "BidTooLow",
+      "msg": "Bid amount is too low"
+    },
+    {
+      "code": 6012,
+      "name": "NotRoundWinner",
+      "msg": "User is not the round winner"
+    },
+    {
+      "code": 6013,
+      "name": "JackpotAlreadyClaimed",
+      "msg": "Jackpot has already been claimed"
+    },
+    {
+      "code": 6014,
+      "name": "NotPoolCreator",
+      "msg": "User is not the pool creator"
+    },
+    {
+      "code": 6015,
+      "name": "PoolStillActive",
+      "msg": "Pool is still active"
+    },
+    {
+      "code": 6016,
+      "name": "NotWhitelisted",
+      "msg": "Not whitelisted"
+    },
+    {
+      "code": 6017,
+      "name": "InsufficientCollateral",
+      "msg": "Insufficient collateral for early payout"
+    },
+    {
+      "code": 6018,
+      "name": "AlreadyReceivedPayout",
+      "msg": "Member already received payout"
+    },
+    {
+      "code": 6019,
+      "name": "NotEligibleForPayout",
+      "msg": "Not eligible for payout yet"
+    },
+    {
+      "code": 6020,
+      "name": "InsufficientPoolFunds",
+      "msg": "Pool vault has insufficient funds"
+    },
+    {
+      "code": 6021,
+      "name": "InvalidPoolUuid",
+      "msg": "Invalid pool UUID"
+    },
+    {
+      "code": 6022,
+      "name": "InvalidPoolType",
+      "msg": "Invalid pool type"
+    },
+    {
+      "code": 6023,
+      "name": "InsufficientCollateralAmount",
+      "msg": "Insufficient collateral amount"
+    },
+    {
+      "code": 6024,
+      "name": "WhitelistTooLarge",
+      "msg": "Whitelist too large"
     }
   ]
 }

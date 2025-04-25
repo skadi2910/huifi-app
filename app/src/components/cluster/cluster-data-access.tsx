@@ -115,3 +115,4 @@ function getClusterUrlParam(cluster: Cluster): string {
 
   return suffix.length ? `?cluster=${suffix}` : ''
 }
+
