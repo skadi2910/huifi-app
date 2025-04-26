@@ -18,7 +18,8 @@ export interface HuifiPool {
   config: PoolConfig;
   memberAddresses: PublicKey[];
   totalContributions: BN;
-  
+  currentWinner: PublicKey | null;    // Add this line
+  currentBidAmount: BN | null;   
   creator: PublicKey;
   tokenMint: PublicKey;
   maxParticipants: number;

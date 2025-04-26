@@ -1,143 +1,832 @@
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { useMutation } from '@tanstack/react-query';
-import {
-  PublicKey,
-  SystemProgram,
-  SYSVAR_RENT_PUBKEY
-} from '@solana/web3.js';
-import { 
-  TOKEN_PROGRAM_ID
-} from '@solana/spl-token';
-import { BN } from '@coral-xyz/anchor';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { PublicKey, SystemProgram } from '@solana/web3.js';
 import { useHuifiProgram } from './useHuifiProgram';
 import { useTransactions } from '@/contexts/TransactionContext';
-import { useMemo } from 'react';
-import { generateRandomUUID } from '@/lib/types/utils';
-import { YieldPlatform } from '@/lib/types/program-types';
+import { useEffect, useState, useCallback } from 'react';
+import { BN,Program,Idl } from '@coral-xyz/anchor';
+import bs58 from 'bs58';
+import { HuifiPool as HuifiPoolType } from '@/lib/types/program-types';
 
-// Define USDC addresses for different networks
-const USDC_ADDRESSES = {
-  mainnet: '',
-  devnet: '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU', 
-  testnet: '', 
-  localnet: '',
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const INITIAL_BACKOFF_MS = 1000;
+const MAX_BACKOFF_MS = 10000;
+const JITTER_FACTOR = 0.1;
+const getBackoffTime = (attempt: number) => {
+  const backoff = Math.min(
+    INITIAL_BACKOFF_MS * Math.pow(2, attempt),
+    MAX_BACKOFF_MS
+  );
+  const jitter = backoff * JITTER_FACTOR * (Math.random() * 2 - 1);
+  return backoff + jitter;
+};
+export type MemberAccountData = {
+  owner: PublicKey;
+  pool: PublicKey;
+  contributionsMade: number;
+  status: any; // You might want to define a proper type for MemberStatus
+  hasReceivedPayout: boolean;
+  eligibleForPayout: boolean;
+  collateralStaked: BN;
+  reputationPoints: BN;
+  lastContributionTimestamp: BN;
+  bump: number;
+};
+export type PoolWithKey = {
+  publicKey: PublicKey;
+  account: HuifiPoolType;
 };
 
-interface CreatePoolParams {
-  name: string;
-  description: string;
-  maxPlayers: number;
-  frequency: 'daily' | 'weekly' | 'biweekly' | 'monthly';
-  entryFee: number;
-  currency: string;
-  payoutMethod: 'predetermined' | 'bidding';
-  latePenalty: 'none' | 'small' | 'moderate' | 'strict';
-  privacy: 'public' | 'private';
-  creator: PublicKey;
-}
-
-function getFrequencyInSeconds(frequency: string): number {
-  switch (frequency) {
-    case 'daily': return 60 * 60 * 24;
-    case 'weekly': return 60 * 60 * 24 * 7;
-    case 'biweekly': return 60 * 60 * 24 * 14;
-    case 'monthly': return 60 * 60 * 24 * 30;
-    default: return 60 * 60 * 24;
-  }
-}
-
-export const useHuifiPoolCreation = () => {
-  const { publicKey } = useWallet();
+type AnchorAccountResult = {
+  publicKey: PublicKey;
+  account: any;
+};
+// Define your program's account types
+type HuifiAccounts = {
+  memberAccount: {
+    fetch(address: PublicKey): Promise<MemberAccountData>;
+  };
+  groupAccount: {
+    fetch(address: PublicKey): Promise<any>;
+  };
+  bidState: {
+    fetch(address: PublicKey): Promise<any>;
+  };
+  priceUpdateV2: {
+    fetch(address: PublicKey): Promise<any>;
+  };
+  protocolSettings: {
+    fetch(address: PublicKey): Promise<any>;
+  };
+};
+// Define the program type
+type HuifiProgram = Program<Idl> & {
+  account: HuifiAccounts;
+};
+export const useHuifiPools = () => {
+  
   const { connection } = useConnection();
-  const { program } = useHuifiProgram();
+  const { publicKey } = useWallet();
+  // Update the program type here
+  const { program } = useHuifiProgram() as { program: HuifiProgram | null };
   const { addTransaction } = useTransactions();
+  const [pools, setPools] = useState<PoolWithKey[]>([]);
+  
+  // Query to fetch all pools
+   const poolsQuery = useQuery({
+    queryKey: ['huifi-pools'],
+    queryFn: async () => {
+      if (!program) {
+        throw new Error('Program not loaded');
+      }
+      
+      let attempt = 0;
+      const MAX_ATTEMPTS = 5;
+      
+      while (attempt < MAX_ATTEMPTS) {
+        try {
+          console.log("Fetching pools from program:", program.programId.toString());
+          let poolsData: PoolWithKey[] = [];
+          
+          try {
+            const possibleAccountNames = ['HuifiPool', 'huifiPool', 'huifi_pool', 'groupAccount'];
+            let anchorAccount: { all: () => Promise<AnchorAccountResult[]> } | undefined;
+            
+            for (const name of possibleAccountNames) {
+              const accountsNamespace = program.account as Record<string, any>;
+              if (accountsNamespace[name] && typeof accountsNamespace[name].all === 'function') {
+                console.log(`Found Anchor account with name: ${name}`);
+                anchorAccount = accountsNamespace[name];
+                break;
+              }
+            }
+            
+            if (anchorAccount) {
+              const anchorPools = await anchorAccount.all();
+              console.log("Anchor pools fetched:", anchorPools.length);
+              
+              poolsData = anchorPools.map((item: AnchorAccountResult) => ({
+                publicKey: item.publicKey,
+                account: item.account as unknown as HuifiPoolType
+              }));
+            } else {
+              const accountKeys = Object.keys(program.account as Record<string, any>);
+              console.log("Available account types:", accountKeys);
+              throw new Error("Anchor method not available");
+            }
+          } catch (err) {
+            console.warn("Failed to fetch using Anchor method, using getProgramAccounts instead", err);
+            
+            try {
+              if (!program.idl || !program.idl.accounts) {
+                throw new Error("Program IDL or accounts not available");
+              }
+              
+              console.log("IDL accounts:", program.idl.accounts.map(a => a.name));
+              
+              const poolAccount = program.idl.accounts.find(a => 
+                a.name === 'groupAccount'
+              );
+              
+              if (!poolAccount) {
+                console.error("Available accounts:", program.idl.accounts.map(a => a.name));
+                throw new Error("Could not find GroupAccount in IDL");
+              }
+              
+              console.log("Found pool account in IDL:", poolAccount.name);
+              console.log("Discriminator:", poolAccount.discriminator);
+              
+              const discriminator = poolAccount.discriminator 
+                ? Buffer.from(poolAccount.discriminator) 
+                : Buffer.from([]);
+                
+              const base58Discriminator = bs58.encode(discriminator);
+              
+              console.log("Using discriminator:", base58Discriminator);
+              
+              const accounts = await connection.getProgramAccounts(program.programId, {
+                filters: [
+                  {
+                    memcmp: {
+                      offset: 0,
+                      bytes: base58Discriminator
+                    }
+                  }
+                ],
+              });
+              
+              console.log("Raw getProgramAccounts result:", accounts.length);
+              
+              poolsData = await Promise.all(
+                accounts.map(async ({ pubkey, account }) => {
+                  try {
+                    const parsed = program.coder.accounts.decode(
+                      'groupAccount',
+                      account.data
+                    );
+                    
+                    return {
+                      publicKey: pubkey,
+                      account: parsed as unknown as HuifiPoolType
+                    };
+                  } catch (decodeErr) {
+                    console.error("Failed to decode account:", pubkey.toString(), decodeErr);
+                    throw decodeErr;
+                  }
+                })
+              );
+            } catch (error) {
+              console.error("Failed to process accounts:", error);
+              throw error;
+            }
+          }
+          
+          const enrichedPools = poolsData.map(({ publicKey, account }: PoolWithKey) => {
+            // console.log("Raw pool data:", account);
+            
+            const enriched = {
+              ...account,
+              name: `HuiFi Pool #${publicKey.toString().substring(0, 8)}`,
+              description: 'A rotating savings pool',
+              frequency: account.cycleDurationSeconds && 
+                typeof account.cycleDurationSeconds === 'object' && 
+                'gte' in account.cycleDurationSeconds
+                  ? account.cycleDurationSeconds.gte(new BN(604800)) 
+                    ? 'weekly' 
+                    : 'daily'
+                  : 'weekly',
+            };
+            
+            return {
+              publicKey,
+              account: enriched,
+            };
+          });
+          
+          console.log("Processed pools:", enrichedPools);
+          setPools(enrichedPools);
+          return enrichedPools;
+        } catch (error) {
+          attempt++;
+          
+          if (error instanceof Error && error.message.includes('429')) {
+            if (attempt === MAX_ATTEMPTS) {
+              throw new Error('Max retries reached for rate limit');
+            }
+            
+            const backoffTime = getBackoffTime(attempt);
+            console.log(`Rate limited, attempt ${attempt}/${MAX_ATTEMPTS}. Waiting ${backoffTime}ms...`);
+            await delay(backoffTime);
+            continue;
+          }
+          
+          throw error;
+        }
+      }
+      
+      throw new Error('Failed to fetch pools after max attempts');
+    },
+    enabled: !!program,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    staleTime: 30000, // Consider data fresh for 30 seconds
+    gcTime: 5 * 60 * 1000, // Cache for 5 minutes
+    retry: (failureCount, error) => {
+      if (error instanceof Error && error.message.includes('429')) {
+        return failureCount < 5;
+      }
+      return failureCount < 3;
+    },
+    retryDelay: (attemptIndex) => getBackoffTime(attemptIndex),
+  });
 
-  const protocolSettingsPda = useMemo(() => {
-    if (!program) return null;
-    return PublicKey.findProgramAddressSync(
-      [Buffer.from('huifi-protocol')],
-      program.programId
-    )[0];
-  }, [program]);
+  const fetchPoolDetails = async (address: PublicKey): Promise<PoolWithKey | null> => {
+    if (!program) {
+      throw new Error('Program not loaded');
+    }
 
-  const createPoolMutation = useMutation({
-    mutationKey: ['create-pool'],
-    mutationFn: async (params: CreatePoolParams): Promise<string> => {
-      if (!publicKey || !program || !protocolSettingsPda) {
+    // First check if we have the pool in our current state
+    const cachedPool = pools.find(
+      pool => pool.publicKey.toString() === address.toString()
+    );
+    
+    if (cachedPool) {
+      return cachedPool;
+    }
+
+    let attempt = 0;
+    const MAX_ATTEMPTS = 3;
+
+    while (attempt < MAX_ATTEMPTS) {
+      try {
+        const allPools = await poolsQuery.refetch();
+        const matchingPool = allPools.data?.find(
+          pool => pool.publicKey.toString() === address.toString()
+        );
+
+        if (matchingPool) {
+          return matchingPool;
+        }
+
+        // If we didn't find the pool, wait before trying again
+        attempt++;
+        if (attempt < MAX_ATTEMPTS) {
+          const backoffTime = getBackoffTime(attempt);
+          await delay(backoffTime);
+        }
+      } catch (error) {
+        attempt++;
+        if (error instanceof Error && error.message.includes('429')) {
+          if (attempt === MAX_ATTEMPTS) {
+            console.error('Max retries reached for rate limit');
+            return null;
+          }
+          const backoffTime = getBackoffTime(attempt);
+          await delay(backoffTime);
+          continue;
+        }
+        console.error('Error fetching pool details:', error);
+        return null;
+      }
+    }
+
+    return null;
+  };
+
+ 
+  const MEMBER_SEED = "huifi-member";
+
+  const fetchMemberAccountDetail = async (poolData: PoolWithKey, userWallet: PublicKey): Promise<MemberAccountData | null> => {
+    const maxRetries = 3;
+    const baseDelay = 1000;
+  
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        if (!poolData || !userWallet || !program) {
+          console.log('Missing required data:', {
+            hasPoolData: !!poolData,
+            hasUserWallet: !!userWallet,
+            hasProgram: !!program
+          });
+          return null;
+        }
+  
+        // Debug: Log available accounts
+        console.log("Available accounts:", Object.keys(program.account));
+        if (program.idl && program.idl.accounts) {
+          console.log("Program IDL accounts:", program.idl.accounts.map(a => a.name));
+        } else {
+          console.log("Program IDL accounts not available");
+        }
+  
+        const [memberPda] = PublicKey.findProgramAddressSync(
+          [
+            Buffer.from(MEMBER_SEED, 'utf-8'),
+            poolData.publicKey.toBuffer(),
+            userWallet.toBuffer()
+          ],
+          program.programId
+        );
+  
+        console.log('Attempting to fetch member account:', {
+          memberPda: memberPda.toString(),
+          pool: poolData.publicKey.toString(),
+          user: userWallet.toString(),
+          attempt: attempt + 1
+        });
+  
+        if (attempt > 0) {
+          const retryDelay = baseDelay * Math.pow(2, attempt);
+          console.log(`Retry attempt ${attempt + 1}, waiting ${retryDelay}ms...`);
+          await delay(retryDelay);
+        }
+  
+        const memberAccount = await program.account.memberAccount.fetch(memberPda);
+        
+        
+        if (!memberAccount) {
+          console.log('Member account not found');
+          return null;
+        }
+  
+        console.log('Member account found:', {
+          owner: memberAccount.owner.toString(),
+          pool: memberAccount.pool.toString(),
+          contributionsMade: memberAccount.contributionsMade,
+          hasReceivedPayout: memberAccount.hasReceivedPayout,
+          eligibleForPayout: memberAccount.eligibleForPayout,
+          collateralStaked: memberAccount.collateralStaked.toString(),
+          status: memberAccount.status
+        });
+  
+        return memberAccount as MemberAccountData;
+  
+      } catch (error) {
+        if (error instanceof Error) {
+          if (error.message.includes('429')) {
+            if (attempt === maxRetries - 1) {
+              console.error('Max retries reached for rate limit');
+              return null;
+            }
+            continue;
+          } else if (error.message.includes('Account does not exist')) {
+            console.log('Member account does not exist');
+            return null;
+          }
+        }
+        console.error('Error in fetchMemberAccountDetail:', error);
+        if (attempt === maxRetries - 1) return null;
+      }
+    }
+  
+    return null;
+  };
+  
+  const refreshPools = useCallback(async () => {
+    console.log("Refreshing pools...");
+    await delay(getBackoffTime(0)); // Add initial delay
+    return poolsQuery.refetch();
+  }, [poolsQuery]);
+  const joinPoolMutation = useMutation({
+    mutationKey: ['join-pool'],
+    mutationFn: async (poolAddress: PublicKey): Promise<string> => {
+      if (!publicKey || !program) {
         throw new Error('Wallet not connected or program not loaded');
       }
-
-      // Generate a 6-byte UUID for the pool
-      const uuid = generateRandomUUID(6);  // Keep as Uint8Array
-      const uuidArray = Array.from(uuid);  // Convert to number[] only for program method
-      console.log('Generated UUID:', uuidArray);
-
-      // Determine whitelist based on privacy setting
-      const whitelist = params.privacy === 'private' ? [] : null;
       
-      // Derive the group account PDA with the UUID
-      const groupPda = PublicKey.findProgramAddressSync(
-        [
-          Buffer.from('huifi-pool'),
-          uuid  // Use Uint8Array here
-        ],
-        program.programId
-      )[0];
-
-      // Derive vault SOL PDA
-      const vaultSolPda = PublicKey.findProgramAddressSync(
-        [Buffer.from('huifi-vault-sol'), groupPda.toBuffer()],
-        program.programId
-      )[0];
-
-      const contributionAmount = new BN(params.entryFee * 1_000_000_000); // Convert to lamports
-      const cycleDuration = getFrequencyInSeconds(params.frequency);
-
-      // Create pool config object based on IDL structure
-      const poolConfig = {
-        maxParticipants: params.maxPlayers,
-        contributionAmount,
-        cycleDurationSeconds: new BN(cycleDuration),
-        payoutDelaySeconds: new BN(86400), // Changed to 1 day (min allowed)
-        earlyWithdrawalFeeBps: 500, // 5%
-        collateralRequirementBps: 10000, // 100%
-        yieldStrategy: { none: {} },
-        isNativeSol: true
-      };
-
-      console.log('Creating SOL pool with:', {
-        creator: publicKey.toBase58(),
-        groupPda: groupPda.toBase58(),
-        vaultSolPda: vaultSolPda.toBase58(),
-        poolConfig,
-        uuid: uuidArray,
-        whitelist: whitelist ? 'Private' : 'Public'
-      });
-
       try {
-        // Create the SOL pool using the new create_sol_pool instruction
+        const [userAccountPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from('huifi-member'), publicKey.toBuffer()],
+          program.programId
+        );
+        
         const signature = await program.methods
-          .createSolPool(poolConfig, uuidArray, whitelist)  // Use number[] for program call
+          .joinPool()
           .accounts({
-            creator: publicKey,
-            groupAccount: groupPda,
-            vaultSol: vaultSolPda,
-            protocolSettings: protocolSettingsPda,
+            groupAccount: poolAddress,
+            user: publicKey,
+            userAccount: userAccountPda,
             systemProgram: SystemProgram.programId,
-            rent: SYSVAR_RENT_PUBKEY,
           })
           .rpc();
-
-        await connection.confirmTransaction(signature);
-        addTransaction(signature, 'Create SOL Pool');
-
+          
+        addTransaction(signature, 'Join Pool');
         return signature;
       } catch (error) {
-        console.error('Error creating SOL pool:', error);
+        console.error('Error joining pool:', error);
         throw error;
       }
     },
+    onSuccess: async () => {
+      await delay(30000);
+      await refreshPools();
+    }
   });
 
-  return { createPoolMutation };
+  const errorMessage = poolsQuery.error 
+    ? poolsQuery.error instanceof Error
+      ? poolsQuery.error.message
+      : 'An unknown error occurred' 
+    : null;
+  
+  return {
+    pools,
+    isLoading: poolsQuery.isLoading || !pools,
+    error: errorMessage,
+    refreshPools,
+    joinPoolMutation,
+    fetchPoolDetails,
+    fetchMemberAccountDetail
+  };
 };
+
+
+
+// import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+// import { useMutation, useQuery } from '@tanstack/react-query';
+// import { PublicKey, SystemProgram } from '@solana/web3.js';
+// import { useHuifiProgram } from './useHuifiProgram';
+// import { useTransactions } from '@/contexts/TransactionContext';
+// import { useEffect, useState, useCallback } from 'react';
+// import { BN } from '@coral-xyz/anchor';
+// import bs58 from 'bs58';
+// import { HuifiPool as HuifiPoolType } from '@/lib/types/program-types';
+// // Add at the top of useHuifiPools.ts
+// const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+// export type PoolWithKey = {
+//   publicKey: PublicKey;
+//   account: HuifiPoolType;
+// };
+
+// // Type for anchor account function return
+// type AnchorAccountResult = {
+//   publicKey: PublicKey;
+//   account: any;
+// };
+
+// export const useHuifiPools = () => {
+//   const { connection } = useConnection();
+//   const { publicKey } = useWallet();
+//   const { program } = useHuifiProgram();
+//   const { addTransaction } = useTransactions();
+//   const [pools, setPools] = useState<PoolWithKey[]>([]);
+  
+//   // Query to fetch all pools
+//   const poolsQuery = useQuery({
+//     queryKey: ['huifi-pools'],
+//     queryFn: async () => {
+//       if (!program) {
+//         throw new Error('Program not loaded');
+//       }
+      
+//       try {
+//         console.log("Fetching pools from program:", program.programId.toString());
+        
+//         // Try the direct Anchor method first
+//         let poolsData: PoolWithKey[] = [];
+        
+//         try {
+//           // Check different possible case variants of the account name
+//           const possibleAccountNames = ['HuifiPool', 'huifiPool', 'huifi_pool', 'groupAccount'];
+//           let anchorAccount: { all: () => Promise<AnchorAccountResult[]> } | undefined;
+          
+//           for (const name of possibleAccountNames) {
+//             // Use type assertion to tell TypeScript it's okay to index with a string
+//             const accountsNamespace = program.account as Record<string, any>;
+//             if (accountsNamespace[name] && typeof accountsNamespace[name].all === 'function') {
+//               console.log(`Found Anchor account with name: ${name}`);
+//               anchorAccount = accountsNamespace[name];
+//               break;
+//             }
+//           }
+          
+//           if (anchorAccount) {
+//             const anchorPools = await anchorAccount.all();
+//             console.log("Anchor pools fetched:", anchorPools.length);
+            
+//             poolsData = anchorPools.map((item: AnchorAccountResult) => ({
+//               publicKey: item.publicKey,
+//               account: item.account as unknown as HuifiPoolType
+//             }));
+//           } else {
+//             // Use type assertion to safely access program.account properties
+//             const accountKeys = Object.keys(program.account as Record<string, any>);
+//             console.log("Available account types:", accountKeys);
+//             throw new Error("Anchor method not available");
+//           }
+//         } catch (err) {
+//           console.warn("Failed to fetch using Anchor method, using getProgramAccounts instead", err);
+          
+//           try {
+//             // Check if idl and accounts exist before accessing
+//             if (!program.idl || !program.idl.accounts) {
+//               throw new Error("Program IDL or accounts not available");
+//             }
+            
+//             // Log the IDL to inspect account names and discriminators
+//             console.log("IDL accounts:", program.idl.accounts.map(a => a.name));
+            
+//             // Find the account with "pool" in its name (case insensitive)
+//             const poolAccount = program.idl.accounts.find(a => 
+//               a.name === 'groupAccount'
+//             );
+            
+//             if (!poolAccount) {
+//               console.error("Available accounts:", program.idl.accounts.map(a => a.name));
+//               throw new Error("Could not find GroupAccount in IDL. Available accounts: " + 
+//                 program.idl.accounts.map(a => a.name).join(', '));
+//             }
+            
+//             console.log("Found pool account in IDL:", poolAccount.name);
+//             console.log("Discriminator:", poolAccount.discriminator);
+            
+//             // Use the correct discriminator from IDL - handle possible undefined
+//             const discriminator = poolAccount.discriminator 
+//               ? Buffer.from(poolAccount.discriminator) 
+//               : Buffer.from([]);
+              
+//             const base58Discriminator = bs58.encode(discriminator);
+            
+//             console.log("Using discriminator:", base58Discriminator);
+            
+//             // Fallback to getProgramAccounts
+//             const accounts = await connection.getProgramAccounts(program.programId, {
+//               filters: [
+//                 {
+//                   memcmp: {
+//                     offset: 0,
+//                     bytes: base58Discriminator
+//                   }
+//                 }
+//               ],
+//             });
+            
+//             console.log("Raw getProgramAccounts result:", accounts.length);
+            
+//             // Use explicit types in Promise.all mapping
+//             poolsData = await Promise.all(
+//               accounts.map(async ({ pubkey, account }) => {
+//                 try {
+//                   // Decode using Anchor coder with the correct account name
+//                   const parsed = program.coder.accounts.decode(
+//                     'groupAccount',  // Use name from IDL
+//                     account.data
+//                   );
+                  
+//                   return {
+//                     publicKey: pubkey,
+//                     account: parsed as unknown as HuifiPoolType
+//                   };
+//                 } catch (decodeErr) {
+//                   console.error("Failed to decode account:", pubkey.toString(), decodeErr);
+//                   console.log("Account data:", account.data.slice(0, 20));
+//                   throw decodeErr;
+//                 }
+//               })
+//             );
+//           } catch (error) {
+//             console.error("Failed to process accounts:", error);
+//             throw error;
+//           }
+//         }
+        
+//         // Transform and enrich the data - add explicit type to map parameter
+//         const enrichedPools = poolsData.map(({ publicKey, account }: PoolWithKey) => {
+//           console.log("Raw pool data:", account);
+          
+//           // Add UI-friendly fields
+//           const enriched = {
+//             ...account,
+//             name: `HuiFi Pool #${publicKey.toString().substring(0, 8)}`,
+//             description: 'A rotating savings pool',
+//             frequency: account.cycleDurationSeconds && 
+//               typeof account.cycleDurationSeconds === 'object' && 
+//               'gte' in account.cycleDurationSeconds
+//                 ? account.cycleDurationSeconds.gte(new BN(604800)) 
+//                   ? 'weekly' 
+//                   : 'daily'
+//                 : 'weekly',
+//           };
+          
+//           return {
+//             publicKey,
+//             account: enriched,
+//           };
+//         });
+        
+//         console.log("Processed pools:", enrichedPools);
+//         setPools(enrichedPools);
+//         return enrichedPools;
+//       } catch (error) {
+//         console.error('Error fetching pools:', error);
+//         throw error;
+//       }
+//     },
+//     enabled: !!program,
+//   });
+// // Modify fetchPoolDetails to include retry logic
+// const fetchPoolDetails = async (address: PublicKey): Promise<PoolWithKey | null> => {
+//   if (!program) {
+//     throw new Error('Program not loaded');
+//   }
+
+//   const maxRetries = 3;
+//   const baseDelay = 1000; // 1 second
+
+//   for (let attempt = 0; attempt < maxRetries; attempt++) {
+//     try {
+//       // Add initial delay to prevent rate limiting
+//       if (attempt > 0) {
+//         const retryDelay = baseDelay * Math.pow(2, attempt); // Exponential backoff
+//         console.log(`Retry attempt ${attempt + 1}, waiting ${retryDelay}ms...`);
+//         await delay(retryDelay);
+//       }
+
+//       const allPools = await poolsQuery.refetch();
+//       const matchingPool = allPools.data?.find(
+//         (pool: PoolWithKey) => pool.publicKey.toString() === address.toString()
+//       );
+
+//       if (matchingPool) {
+//         return matchingPool;
+//       }
+//     } catch (error) {
+//       if (error instanceof Error && error.message.includes('429')) {
+//         if (attempt === maxRetries - 1) {
+//           console.error('Max retries reached for rate limit');
+//           return null;
+//         }
+//         continue; // Try again with longer delay
+//       }
+//       console.error('Error fetching pool details:', error);
+//       return null;
+//     }
+//   }
+
+//   console.log("Pool not found with address:", address.toString());
+//   return null;
+// };
+// const refreshPools = useCallback(async () => {
+//   console.log("Refreshing pools...");
+//   // Add delay before refresh to prevent rate limiting
+//   await delay(10000);
+//   return poolsQuery.refetch();
+// }, [poolsQuery]);
+
+// // Listen for program events to update pools
+// useEffect(() => {
+//   if (!program || !connection) return;
+  
+//   try {
+//     const eventName = 'PoolCreatedEvent';
+//     console.log("Setting up listener for event:", eventName);
+    
+//     // Add debounce for event handling
+//     let refreshTimeout: NodeJS.Timeout;
+    
+//     const listener = program.addEventListener(eventName, (event) => {
+//       console.log('New pool created event received:', event);
+//       // Clear any pending refresh
+//       clearTimeout(refreshTimeout);
+//       // Set new delayed refresh
+//       refreshTimeout = setTimeout(() => refreshPools(), 50000);
+//     });
+    
+//     // Initial refresh with longer delay
+//     const initialRefreshTimeout = setTimeout(() => refreshPools(), 30000);
+    
+//     return () => {
+//       program.removeEventListener(listener);
+//       clearTimeout(refreshTimeout);
+//       clearTimeout(initialRefreshTimeout);
+//     };
+//   } catch (err) {
+//     console.error("Failed to set up event listener:", err);
+//   }
+// }, [program, connection, refreshPools]);
+
+// // Join pool mutation
+// const joinPoolMutation = useMutation({
+//   mutationKey: ['join-pool'],
+//   mutationFn: async (poolAddress: PublicKey): Promise<string> => {
+//     if (!publicKey || !program) {
+//       throw new Error('Wallet not connected or program not loaded');
+//     }
+    
+//     try {
+//       const [userAccountPda] = PublicKey.findProgramAddressSync(
+//         [Buffer.from('huifi-member'), publicKey.toBuffer()],
+//         program.programId
+//       );
+      
+//       const signature = await program.methods
+//         .joinPool()
+//         .accounts({
+//           groupAccount: poolAddress,
+//           user: publicKey,
+//           userAccount: userAccountPda,
+//           systemProgram: SystemProgram.programId,
+//         })
+//         .rpc();
+        
+//       addTransaction(signature, 'Join Pool');
+//       return signature;
+//     } catch (error) {
+//       console.error('Error joining pool:', error);
+//       throw error;
+//     }
+//   },
+//   onSuccess: async () => {
+//     // Add delay before refreshing after join
+//     await delay(30000);
+//     await refreshPools();
+//   }
+// });
+//   // Function to refresh pools
+//   // const refreshPools = () => {
+//   //   console.log("Refreshing pools...");
+//   //   poolsQuery.refetch();
+//   // };
+//   // const refreshPools = useCallback(() => {
+//   //   console.log("Refreshing pools...");
+//   //   poolsQuery.refetch();
+//   // }, [poolsQuery]);
+//   // // Listen for program events to update pools
+//   // useEffect(() => {
+//   //   if (!program || !connection) return;
+    
+//   //   try {
+//   //     // Set up listeners for relevant events
+//   //     const eventName = 'PoolCreatedEvent';
+//   //     console.log("Setting up listener for event:", eventName);
+      
+//   //     const listener = program.addEventListener(eventName, (event) => {
+//   //       console.log('New pool created event received:', event);
+//   //       refreshPools();
+//   //     });
+      
+//   //     // Explicitly refresh once at the beginning
+//   //     setTimeout(() => refreshPools(), 200000);
+      
+//   //     return () => {
+//   //       program.removeEventListener(listener);
+//   //     };
+//   //   } catch (err) {
+//   //     console.error("Failed to set up event listener:", err);
+//   //   }
+//   // }, [program, connection,refreshPools]);
+  
+//   // // Join pool mutation
+//   // const joinPoolMutation = useMutation({
+//   //   mutationKey: ['join-pool'],
+//   //   mutationFn: async (poolAddress: PublicKey): Promise<string> => {
+//   //     if (!publicKey || !program) {
+//   //       throw new Error('Wallet not connected or program not loaded');
+//   //     }
+      
+//   //     try {
+//   //       // Get user account PDA with correct seed
+//   //       const [userAccountPda] = PublicKey.findProgramAddressSync(
+//   //         [Buffer.from('huifi-member'), publicKey.toBuffer()],
+//   //         program.programId
+//   //       );
+        
+//   //       const signature = await program.methods
+//   //         .joinPool()
+//   //         .accounts({
+//   //           groupAccount: poolAddress,
+//   //           user: publicKey,
+//   //           userAccount: userAccountPda,
+//   //           systemProgram: SystemProgram.programId,
+//   //         })
+//   //         .rpc();
+          
+//   //       addTransaction(signature, 'Join Pool');
+//   //       return signature;
+//   //     } catch (error) {
+//   //       console.error('Error joining pool:', error);
+//   //       throw error;
+//   //     }
+//   //   },
+//   //   onSuccess: () => {
+//   //     refreshPools();
+//   //   }
+//   // });
+  
+//   // Format the error as a string if it exists
+//   const errorMessage = poolsQuery.error 
+//     ? poolsQuery.error instanceof Error
+//       ? poolsQuery.error.message
+//       : 'An unknown error occurred' 
+//     : null;
+  
+//   return {
+//     pools,
+//     isLoading: poolsQuery.isLoading || !pools,
+//     error: errorMessage,
+//     refreshPools,
+//     joinPoolMutation,
+//     fetchPoolDetails,
+//   };
+// };
