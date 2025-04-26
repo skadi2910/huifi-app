@@ -159,7 +159,7 @@ export default function PoolsPage() {
       // Refresh pools after a small delay
       setTimeout(() => {
         refreshPools();
-      }, 2000);
+      }, 50000);
     } catch (error) {
       console.error('Failed to join pool:', error);
       
