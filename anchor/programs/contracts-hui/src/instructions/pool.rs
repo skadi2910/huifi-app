@@ -438,7 +438,15 @@ pub struct CreateSolPool<'info> {
         bump,
     )]
     pub vault_sol: UncheckedAccount<'info>,
-    
+     // Add member account initialization for the creator
+     #[account(
+        init,
+        payer = creator,
+        space = 8 + std::mem::size_of::<MemberAccount>(),
+        seeds = [MEMBER_SEED, group_account.key().as_ref(), creator.key().as_ref()],
+        bump,
+    )]
+    pub member_account: Account<'info, MemberAccount>,   
     #[account(seeds = [PROTOCOL_SEED], bump = protocol_settings.bump)]
     pub protocol_settings: Account<'info, ProtocolSettings>,
     
@@ -458,6 +466,8 @@ pub fn create_sol_pool(
     let current_timestamp = Clock::get()?.unix_timestamp;
     let group_account = &mut ctx.accounts.group_account;
     let bump = ctx.bumps.group_account;
+    let member_account = &mut ctx.accounts.member_account;
+    let member_bump = ctx.bumps.member_account;
     // Create a copy of pool_config instead of modifying the original
     let mut config = pool_config.clone();
     // Mark as SOL pool
@@ -483,7 +493,18 @@ pub fn create_sol_pool(
     group_account.current_bid_amount = None;
     group_account.current_winner = None;
     group_account.bump = bump;
-    
+
+    // Initialize the creator's member account
+    member_account.owner = ctx.accounts.creator.key();
+    member_account.pool = group_account.key();
+    member_account.contributions_made = 0;
+    member_account.status = MemberStatus::Active;
+    member_account.has_received_payout = false;
+    member_account.eligible_for_payout = false;
+    member_account.collateral_staked = 0;
+    member_account.reputation_points = 0;
+    member_account.last_contribution_timestamp = 0;
+    member_account.bump = member_bump;   
     // Add creator as the first member
     group_account.member_addresses.push(ctx.accounts.creator.key());
     
@@ -565,6 +586,7 @@ pub fn create_spl_pool(
     group_account.current_winner = None;
     group_account.bump = bump;
     
+
     // Add creator as the first member
     group_account.member_addresses.push(ctx.accounts.creator.key());
     
