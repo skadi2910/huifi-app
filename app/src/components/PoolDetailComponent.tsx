@@ -23,6 +23,9 @@ import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
 import { getStatusString, formatDurationHours, lamportsToSol, bpsToPercentage } from "@/lib/utils";
 import { useWallet } from "@solana/wallet-adapter-react";
+import { useContributeSol } from "@/hooks/useContributeSol";
+import { toast } from "react-hot-toast";
+
 // Assuming MOCK_POOL_DATA is either passed in or replaced by actual data structure
 // If MOCK_POOL_DATA is truly static, you might keep its definition here or import it.
 // If it represents the *structure* of the fetched data, use the actual data passed in props.
@@ -135,6 +138,8 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
   const [statusString, setStatusString] = useState<string>('Unknown');
   // Use the passed-in initialData
   // const data = initialData;
+  const { contributeSolMutation } = useContributeSol();
+
   useEffect(() => {
     const loadPoolData = async () => {
       try {
@@ -198,14 +203,42 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
       `Performing action: ${activeAction} with amount: ${actionAmount}`
     );
     setIsProcessing(true);
-    // Replace with actual async action call (e.g., interacting with Solana)
-    // await someActionFromHook(publicKey, actionAmount);
-    await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate async work
-    setIsProcessing(false);
-    setActiveAction(null);
-    setActionAmount("");
-    // Optionally refresh data or show success message
-    // router.refresh(); // Re-fetch server data and re-render
+    
+    try {
+      if (activeAction === "contribute" && poolData) {
+        if (!actionAmount || parseFloat(actionAmount) <= 0) {
+          throw new Error("Please enter a valid amount");
+        }
+        
+        // Extract uuid from the pool data
+        // This assumes the poolData has a uuid field or something similar
+        // If your data structure is different, you'll need to adjust this
+        const uuid = poolData.account.uuid || [];
+        
+        await contributeSolMutation.mutateAsync({
+          poolId: poolPublicKey,
+          uuid: uuid,
+          amount: parseFloat(actionAmount)
+        });
+        
+        // Success message
+        toast.success("Successfully contributed to the pool!");
+        
+        // Refresh the pool data to show updated balances
+        const data = await fetchPoolDetails(poolPublicKey);
+        setPoolData(data);
+      } else {
+        // For other actions, implement their specific logic here
+        await new Promise((resolve) => setTimeout(resolve, 2000)); // Placeholder
+      }
+    } catch (error) {
+      console.error("Error performing action:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to complete action");
+    } finally {
+      setIsProcessing(false);
+      setActiveAction(null);
+      setActionAmount("");
+    }
   };
   
   // Action modal component
