@@ -18,6 +18,11 @@ pub struct DepositSolCollateral<'info> {
         seeds = [POOL_SEED, uuid.as_ref()],
         bump = group_account.bump,
         constraint = group_account.config.is_native_sol @ HuiFiError::InvalidPoolType,
+        // Add phase validation - collateral can be deposited during Contributing phase
+        constraint = matches!(
+            group_account.status,
+            PoolStatus::Active { phase: CyclePhase::ReadyForPayout }
+        ) @ HuiFiError::InvalidPhase,
     )]
     pub group_account: Account<'info, GroupAccount>,
 
@@ -25,6 +30,8 @@ pub struct DepositSolCollateral<'info> {
         mut,
         seeds = [MEMBER_SEED, group_account.key().as_ref(), user.key().as_ref()],
         bump = member_account.bump,
+        // Add validation that member is the winner
+        constraint = Some(user.key()) == group_account.current_winner @ HuiFiError::NotPoolWinner,
     )]
     pub member_account: Account<'info, MemberAccount>,
 
@@ -55,7 +62,11 @@ pub fn deposit_sol_collateral(
     );
 
     require!(amount >= min_required, HuiFiError::InsufficientCollateral);
-
+    // After collateral check and before transfer
+    msg!("🛡️ Collateral status - Required: {}, Staked: {}", 
+        min_required,
+        member.collateral_staked
+    );
     let ix = system_instruction::transfer(
         &ctx.accounts.user.key(),
         &ctx.accounts.collateral_vault_sol.key(),
@@ -78,80 +89,85 @@ pub fn deposit_sol_collateral(
 
 // ========== SPL Collateral ==========
 
-#[derive(Accounts)]
-#[instruction(uuid: [u8; 6])]
-pub struct DepositSplCollateral<'info> {
-    #[account(mut)]
-    pub user: Signer<'info>,
+// #[derive(Accounts)]
+// #[instruction(uuid: [u8; 6])]
+// pub struct DepositSplCollateral<'info> {
+//     #[account(mut)]
+//     pub user: Signer<'info>,
 
-    #[account(
-        mut,
-        seeds = [POOL_SEED, uuid.as_ref()],
-        bump = group_account.bump,
-        constraint = !group_account.config.is_native_sol @ HuiFiError::InvalidPoolType,
-    )]
-    pub group_account: Account<'info, GroupAccount>,
+//     #[account(
+//         mut,
+//         seeds = [POOL_SEED, uuid.as_ref()],
+//         bump = group_account.bump,
+//         constraint = !group_account.config.is_native_sol @ HuiFiError::InvalidPoolType,
+//         // Add phase validation - collateral can be deposited during Contributing phase
+//         constraint = matches!(
+//             group_account.status,
+//             PoolStatus::Active { phase: CyclePhase::Contributing }
+//         ) @ HuiFiError::InvalidPhase,
+//     )]
+//     pub group_account: Account<'info, GroupAccount>,
 
-    #[account(
-        mut,
-        seeds = [MEMBER_SEED, group_account.key().as_ref(), user.key().as_ref()],
-        bump = member_account.bump,
-    )]
-    pub member_account: Account<'info, MemberAccount>,
+//     #[account(
+//         mut,
+//         seeds = [MEMBER_SEED, group_account.key().as_ref(), user.key().as_ref()],
+//         bump = member_account.bump,
+//     )]
+//     pub member_account: Account<'info, MemberAccount>,
 
-    #[account(mut)]
-    pub user_token_account: Account<'info, TokenAccount>,
+//     #[account(mut)]
+//     pub user_token_account: Account<'info, TokenAccount>,
 
-    #[account(
-        mut,
-        seeds = [COLLATERAL_VAULT_SPL_SEED, group_account.key().as_ref(), user.key().as_ref()],
-        bump,
-    )]
-    pub collateral_vault_spl: Account<'info, TokenAccount>,
+//     #[account(
+//         mut,
+//         seeds = [COLLATERAL_VAULT_SPL_SEED, group_account.key().as_ref(), user.key().as_ref()],
+//         bump,
+//     )]
+//     pub collateral_vault_spl: Account<'info, TokenAccount>,
 
-    #[account(
-        constraint = token_mint.key() == group_account.token_mint @ HuiFiError::InvalidTokenMint
-    )]
-    pub token_mint: Account<'info, Mint>,
+//     #[account(
+//         constraint = token_mint.key() == group_account.token_mint @ HuiFiError::InvalidTokenMint
+//     )]
+//     pub token_mint: Account<'info, Mint>,
 
-    pub token_program: Program<'info, Token>,
-    pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
-}
+//     pub token_program: Program<'info, Token>,
+//     pub system_program: Program<'info, System>,
+//     pub rent: Sysvar<'info, Rent>,
+// }
 
-pub fn deposit_spl_collateral(
-    ctx: Context<DepositSplCollateral>,
-    _uuid: [u8; 6],
-    amount: u64
-) -> Result<()> {
-    let group = &ctx.accounts.group_account;
-    let member = &mut ctx.accounts.member_account;
+// pub fn deposit_spl_collateral(
+//     ctx: Context<DepositSplCollateral>,
+//     _uuid: [u8; 6],
+//     amount: u64
+// ) -> Result<()> {
+//     let group = &ctx.accounts.group_account;
+//     let member = &mut ctx.accounts.member_account;
 
-    let min_required = calculate_required_collateral(
-        group.config.contribution_amount,
-        group.config.max_participants,
-        member.contributions_made,
-        group.config.collateral_requirement_bps as u64,
-    );
+//     let min_required = calculate_required_collateral(
+//         group.config.contribution_amount,
+//         group.config.max_participants,
+//         member.contributions_made,
+//         group.config.collateral_requirement_bps as u64,
+//     );
 
-    require!(amount >= min_required, HuiFiError::InsufficientCollateral);
+//     require!(amount >= min_required, HuiFiError::InsufficientCollateral);
 
-    let cpi_ctx = CpiContext::new(
-        ctx.accounts.token_program.to_account_info(),
-        Transfer {
-            from: ctx.accounts.user_token_account.to_account_info(),
-            to: ctx.accounts.collateral_vault_spl.to_account_info(),
-            authority: ctx.accounts.user.to_account_info(),
-        },
-    );
+//     let cpi_ctx = CpiContext::new(
+//         ctx.accounts.token_program.to_account_info(),
+//         Transfer {
+//             from: ctx.accounts.user_token_account.to_account_info(),
+//             to: ctx.accounts.collateral_vault_spl.to_account_info(),
+//             authority: ctx.accounts.user.to_account_info(),
+//         },
+//     );
 
-    token::transfer(cpi_ctx, amount)?;
-    member.collateral_staked += amount;
+//     token::transfer(cpi_ctx, amount)?;
+//     member.collateral_staked += amount;
 
-    msg!("✅ Deposited {} SPL tokens as collateral", amount);
+//     msg!("✅ Deposited {} SPL tokens as collateral", amount);
 
-    Ok(())
-}
+//     Ok(())
+// }
 // ==================== SLASH COLLATERAL ====================
 
 #[derive(Accounts)]
@@ -164,7 +180,11 @@ pub struct SlashCollateral<'info> {
         mut,
         seeds = [POOL_SEED, uuid.as_ref()],
         bump = group_account.bump,
-        constraint = group_account.status == PoolStatus::Active @ HuiFiError::InvalidPoolStatus,
+        // Validate phase - slashing can happen during ReadyForPayout
+        constraint = matches!(
+            group_account.status,
+            PoolStatus::Active { phase: CyclePhase::ReadyForPayout }
+        ) @ HuiFiError::InvalidPhase,
     )]
     pub group_account: Account<'info, GroupAccount>,
 

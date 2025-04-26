@@ -38,7 +38,7 @@ pub enum HuiFiError {
     #[msg("Pool vault has insufficient funds")]
     InsufficientVaultFunds,
     
-    #[msg("Not all members have contributed for the current cycle")]
+    #[msg("Pending contributions from members")]
     PendingContributions,
     
     #[msg("Invalid payout amount calculation")]
@@ -110,4 +110,31 @@ pub enum HuiFiError {
     #[msg("Missing token program")]
     MissingTokenProgram,
 
+    #[msg("Invalid winner account provided")]
+    InvalidWinnerAccount,
+    
+    #[msg("Invalid phase transition")]
+    InvalidPhaseTransition,
+
+    #[msg("Cycle not ready for advancement")]
+    CycleNotReadyForAdvancement,
+
+    #[msg("Invalid cycle phase")]
+    InvalidCyclePhase,
+
+    #[msg("Invalid phase")]
+    InvalidPhase,
+
+    #[msg("Not a pool member")]
+    NotPoolMember,
+    #[msg("Bid amount exceeds maximum allowed")]
+    BidTooHigh,
+    #[msg("Not pool winner")]
+    NotPoolWinner,
+    #[msg("Collateral required")]
+    CollateralRequired,
+    // #[msg("Cannot transition to next phase")]
+    // InvalidPhaseTransition,
+    #[msg("All members must contribute before advancing")]
+    ContributionsPending,
 }

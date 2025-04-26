@@ -4,10 +4,11 @@ pub mod payout;
 pub mod collateral;
 pub mod contribution;
 pub mod bidding;
-
+pub mod cycle_management;
 pub use protocol::*;
 pub use pool::*;
 pub use payout::*;
 pub use collateral::*;
 pub use contribution::*;
 pub use bidding::*;
+pub use cycle_management::*;

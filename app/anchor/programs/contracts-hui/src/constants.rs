@@ -30,3 +30,4 @@ pub const BASIS_POINTS_DIVISOR: u64 = 10000; // 100% in basis points
 pub const MAXIMUM_AGE: u64 = 60 * 60; // 1 hour in seconds
 
 pub const BID_STATE_SEED: &[u8] = b"huifi-bid-state";
+pub const MAX_BID_AMOUNT: u64 = 1000000000000000000; // 1 SOL in lamports

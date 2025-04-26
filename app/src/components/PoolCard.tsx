@@ -16,32 +16,39 @@ import BN from 'bn.js';
 export interface PoolCardProps {
   publicKey: PublicKey;
   account: HuifiPool;
+  onJoinPool?: (poolId: PublicKey, uuid: number[]) => Promise<void>;
 }
 
-export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account }) => {
+export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account, onJoinPool }) => {
   const {
-    name,
-    currentParticipants,
-    maxParticipants,
-    contributionAmount,
-    status,
-    frequency,
-    cycleDurationSeconds,
+    config,
+    memberAddresses,
+    totalContributions,
+    status: rawStatus,
     nextPayoutTimestamp,
-    yieldBasisPoints,
-    totalValue
+    uuid
   } = account;
 
-  const frequencyDays = cycleDurationSeconds?.toNumber
-    ? Math.floor(cycleDurationSeconds.toNumber() / 86400)
-    : frequency === 'weekly'
-    ? 7
-    : frequency === 'daily'
-    ? 1
-    : 7;
+  const maxParticipants = config?.maxParticipants || 0;
+  const contributionAmount = config?.contributionAmount || new BN(0);
+  const cycleDurationSeconds = config?.cycleDurationSeconds || new BN(0);
+  const currentParticipants = memberAddresses?.length || 0;
+  const totalValue = totalContributions || new BN(0);
+
+  const frequencyInSeconds = cycleDurationSeconds.toNumber();
+  const frequency = 
+  frequencyInSeconds <= 86400 ? 'daily' :
+  frequencyInSeconds <= 604800 ? 'weekly' :
+  frequencyInSeconds <= 1209600 ? 'biweekly' : 'monthly';
+
+// Use default yield if not available in the data
+  const yieldBasisPoints = 0;
+
+  const name =
+    `HuiFi Pool ${Array.from(uuid).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 6)}`;
 
   const getStatusString = (): 'Active' | 'Filling' | 'Completed' => {
-    switch (status) {
+    switch (rawStatus) {
       case 1:
         return 'Active';
       case 2:
@@ -95,6 +102,19 @@ export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account }) => {
 
   const xpReward = 100; // Placeholder
 
+  // Add a handler for the join button click
+  const handleJoinClick = async (e: React.MouseEvent) => {
+    if (statusString === 'Filling' && onJoinPool) {
+      e.preventDefault();
+      try {
+        await onJoinPool(publicKey, Array.from(uuid));
+      } catch (error) {
+        // Error handling is now centralized in the parent component
+        console.error('Join action failed:', error);
+      }
+    }
+  };
+
   return (
     <div className="card-glitch bg-[#ffdd00] border-4 border-black p-4 rounded-lg shadow-lg w-full sm:p-6">
       <div className="p-2 sm:p-4">
@@ -130,7 +150,7 @@ export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account }) => {
           </div>
           <div className="flex items-center">
             <Calendar className="w-5 h-5 mr-2" />
-            <span className="font-medium">Every {frequencyDays} days Rounds</span>
+            <span className="font-medium">Every {frequency} days Rounds</span>
           </div>
           <div className="flex items-center">
             <Clock className="w-5 h-5 mr-2" />
@@ -169,21 +189,19 @@ export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account }) => {
 
           {statusString !== 'Completed' &&
             (statusString === 'Filling' ? (
-              <Link
-                href={`${poolDetailUrl}?action=join`}
+              <button
+                onClick={handleJoinClick}
                 className="flex justify-center items-center btn-glitch px-3 py-2 text-sm sm:text-base text-center"
               >
                 <span>// JOIN GAME_ ⇒</span>
-              </Link>
+              </button>
             ) : (
-              <Link
-                href={`${poolDetailUrl}?action=join`}
+              <button
+                disabled
                 className="flex justify-center items-center bg-[#ffef80] text-black/40 border-2 border-black/20 rounded-lg px-3 py-2 text-sm sm:text-base font-mono font-bold text-center cursor-not-allowed"
-                aria-disabled
-                onClick={(e) => e.preventDefault()}
               >
                 <span>// JOIN GAME_ ⇒</span>
-              </Link>
+              </button>
             ))}
         </div>
       </div>

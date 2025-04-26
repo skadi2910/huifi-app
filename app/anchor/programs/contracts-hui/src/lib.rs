@@ -76,13 +76,13 @@ pub mod contracts_hui {
     ) -> Result<()> {
         instructions::contribution::contribute_sol(ctx, uuid, amount)
     }
-    pub fn contribute_spl(
-        ctx: Context<ContributeSpl>,
-        uuid: [u8; 6],
-        amount: u64
-    ) -> Result<()> {
-        instructions::contribution::contribute_spl(ctx, uuid, amount)
-    }
+    // pub fn contribute_spl(
+    //     ctx: Context<ContributeSpl>,
+    //     uuid: [u8; 6],
+    //     amount: u64
+    // ) -> Result<()> {
+    //     instructions::contribution::contribute_spl(ctx, uuid, amount)
+    // }
     pub fn deposit_sol_collateral(
         ctx: Context<DepositSolCollateral>,
         uuid: [u8; 6],
@@ -90,13 +90,13 @@ pub mod contracts_hui {
     ) -> Result<()> {
         instructions::collateral::deposit_sol_collateral(ctx, uuid, amount)
     }
-    pub fn deposit_spl_collateral(
-        ctx: Context<DepositSplCollateral>,
-        uuid: [u8; 6],
-        amount: u64
-    ) -> Result<()> {
-        instructions::collateral::deposit_spl_collateral(ctx, uuid, amount)
-    }
+    // pub fn deposit_spl_collateral(
+    //     ctx: Context<DepositSplCollateral>,
+    //     uuid: [u8; 6],
+    //     amount: u64
+    // ) -> Result<()> {
+    //     instructions::collateral::deposit_spl_collateral(ctx, uuid, amount)
+    // }
     pub fn slash_collateral(
         ctx: Context<SlashCollateral>,
         uuid: [u8; 6],
@@ -123,7 +123,17 @@ pub mod contracts_hui {
     ) -> Result<()> {
         instructions::bidding::finalize_bidding(ctx)
     }
-
+    pub fn advance_cycle(
+        ctx: Context<AdvanceCycle>
+    ) -> Result<()> {
+        instructions::cycle_management::advance_cycle(ctx)
+    }
+    
+    pub fn check_cycle_status(
+        ctx: Context<CheckCycleStatus>
+    ) -> Result<()> {
+        instructions::cycle_management::check_cycle_status(ctx)
+    }
     // Commenting out until withdraw structures are implemented
     /*
     pub fn withdraw_sol_collateral(

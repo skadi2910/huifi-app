@@ -15,7 +15,11 @@ pub struct ProcessPayout<'info> {
         mut,
         seeds = [POOL_SEED, uuid.as_ref()],
         bump = group_account.bump,
-        constraint = group_account.status == PoolStatus::Active @ HuiFiError::InvalidPoolStatus,
+        // Update phase validation
+        constraint = matches!(
+            group_account.status,
+            PoolStatus::Active { phase: CyclePhase::ReadyForPayout }
+        ) @ HuiFiError::InvalidPhase,
     )]
     pub group_account: Account<'info, GroupAccount>,
 
@@ -23,7 +27,10 @@ pub struct ProcessPayout<'info> {
         mut,
         seeds = [MEMBER_SEED, group_account.key().as_ref(), recipient.key().as_ref()],
         bump = recipient_account.bump,
-        constraint = recipient_account.pool == group_account.key() @ HuiFiError::MemberNotFound,
+        // Add validation that recipient is the winner
+        constraint = Some(recipient.key()) == group_account.current_winner @ HuiFiError::NotPoolWinner,
+        constraint = recipient_account.eligible_for_payout @ HuiFiError::NotEligibleForPayout,
+        constraint = !recipient_account.has_received_payout @ HuiFiError::AlreadyReceivedPayout,
     )]
     pub recipient_account: Account<'info, MemberAccount>,
 
@@ -67,14 +74,18 @@ pub fn process_payout(ctx: Context<ProcessPayout>, uuid: [u8; 6], required_colla
 
     require!(recipient_account.eligible_for_payout, HuiFiError::NotEligibleForPayout);
     require!(!recipient_account.has_received_payout, HuiFiError::AlreadyReceivedPayout);
+
+    // Check timing
     require!(current_timestamp >= group_account.next_payout_timestamp, HuiFiError::PayoutDelayNotElapsed);
 
+    // Calculate amounts
     let is_final_cycle = group_account.current_cycle == group_account.total_cycles - 1;
     let total_payout = group_account.config.contribution_amount
         .saturating_mul(group_account.total_cycles as u64);
 
     require!(ctx.accounts.vault.amount >= total_payout, HuiFiError::InsufficientVaultFunds);
 
+    // Calculate fee for early payout
     let fee_amount = if !is_final_cycle {
         total_payout
             .saturating_mul(group_account.config.early_withdrawal_fee_bps as u64)
@@ -82,58 +93,98 @@ pub fn process_payout(ctx: Context<ProcessPayout>, uuid: [u8; 6], required_colla
     } else {
         0
     };
+  // Check collateral requirement for non-final cycles
+  if !is_final_cycle {
+    let required_collateral = required_collateral.ok_or(HuiFiError::CollateralRequired)?;
+    require!(
+        recipient_account.collateral_staked >= required_collateral,
+        HuiFiError::InsufficientCollateral
+    );
+}
+    // if let Some(collateral) = required_collateral {
+    //     recipient_account.collateral_staked = collateral;
+    // } else {
+    //     msg!("🛡️ Final payout — skipping collateral requirement.");
+    // }
 
-    if let Some(collateral) = required_collateral {
-        recipient_account.collateral_staked = collateral;
-    } else {
-        msg!("🛡️ Final payout — skipping collateral requirement.");
-    }
-
+    // Process transfers
     let payout_amount = total_payout.saturating_sub(fee_amount);
     let vault_key = group_account.key();
     let seeds = &[VAULT_SEED, vault_key.as_ref(), &[ctx.bumps.vault]];
     let signer = &[&seeds[..]];
 
+    // Transfer payout
     let cpi_accounts = Transfer {
         from: ctx.accounts.vault.to_account_info(),
         to: ctx.accounts.recipient_token_account.to_account_info(),
         authority: ctx.accounts.vault.to_account_info(),
     };
-
-    let cpi_program = ctx.accounts.token_program.to_account_info();
-    let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+    let cpi_ctx = CpiContext::new_with_signer(
+        ctx.accounts.token_program.to_account_info(),
+        cpi_accounts,
+        signer,
+    );
     token::transfer(cpi_ctx, payout_amount)?;
 
+    // Transfer fee if applicable
     if fee_amount > 0 {
         let cpi_accounts = Transfer {
             from: ctx.accounts.vault.to_account_info(),
             to: ctx.accounts.protocol_treasury.to_account_info(),
             authority: ctx.accounts.vault.to_account_info(),
         };
-
-        let cpi_ctx = CpiContext::new_with_signer(ctx.accounts.token_program.to_account_info(), cpi_accounts, signer);
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            cpi_accounts,
+            signer,
+        );
         token::transfer(cpi_ctx, fee_amount)?;
     }
 
+    // Update accounts
     recipient_account.has_received_payout = true;
     recipient_account.eligible_for_payout = false;
     recipient_account.status = MemberStatus::Withdrawed;
 
-    group_account.current_cycle = group_account.current_cycle.saturating_add(1);
-    group_account.last_cycle_timestamp = current_timestamp;
-
-    if group_account.current_cycle >= group_account.total_cycles {
+    // Update pool status
+    if group_account.current_cycle + 1 >= group_account.total_cycles {
         group_account.status = PoolStatus::Completed;
+        msg!("🎉 Pool completed! Final payout processed.");
     } else {
-        group_account.next_payout_timestamp = current_timestamp
-            .saturating_add(group_account.config.cycle_duration_seconds as i64);
+        // Prepare for next cycle
+        group_account.status = PoolStatus::Active {
+            phase: CyclePhase::Bidding
+        };
+        group_account.current_cycle += 1;
+        group_account.last_cycle_timestamp = current_timestamp;
+        group_account.current_winner = None;
+        group_account.current_bid_amount = None;
+        msg!("➡️ Advanced to cycle {} - Bidding phase", group_account.current_cycle);
     }
 
-    msg!("✅ Processed payout of {} tokens to {}", payout_amount, ctx.accounts.recipient.key());
-
+    msg!("✅ Processed payout of {} tokens to {}", 
+        payout_amount, 
+        ctx.accounts.recipient.key()
+    );
+    // After successful payout
+    emit!(PayoutProcessed {
+    pool: group_account.key(),
+    recipient: ctx.accounts.recipient.key(),
+    amount: payout_amount,
+    cycle: group_account.current_cycle,
+    timestamp: current_timestamp,
+});
     Ok(())
 }
-
+// Add event struct
+#[event]
+pub struct PayoutProcessed {
+    pub pool: Pubkey,
+    pub recipient: Pubkey,
+    pub amount: u64,
+    pub cycle: u8,
+    pub timestamp: i64,
+}
 
 
 

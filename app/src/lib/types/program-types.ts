@@ -14,6 +14,11 @@ export enum YieldPlatform {
 }
 
 export interface HuifiPool {
+  uuid: number[];
+  config: PoolConfig;
+  memberAddresses: PublicKey[];
+  totalContributions: BN;
+  
   creator: PublicKey;
   tokenMint: PublicKey;
   maxParticipants: number;

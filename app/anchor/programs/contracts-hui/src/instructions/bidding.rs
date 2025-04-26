@@ -5,13 +5,18 @@ use crate::errors::*;
 
 pub fn submit_bid(ctx: Context<SubmitBid>, bid_amount: u64) -> Result<()> {
     let bid_state = &mut ctx.accounts.bid_state;
-
+    let group_account = &ctx.accounts.group_account;
+    // Basic validations    
     require!(bid_amount > 0, HuiFiError::InvalidBidAmount);
     require!(
         !bid_state.bids.iter().any(|b| b.bidder == ctx.accounts.bidder.key()),
         HuiFiError::AlreadyBid
     );
-
+    // Check if member is part of the pool
+    require!(
+        group_account.member_addresses.contains(&ctx.accounts.bidder.key()),
+        HuiFiError::NotPoolMember
+    );
     bid_state.bids.push(BidEntry {
         bidder: ctx.accounts.bidder.key(),
         amount: bid_amount,
@@ -27,35 +32,54 @@ pub fn submit_bid(ctx: Context<SubmitBid>, bid_amount: u64) -> Result<()> {
 }
 pub fn finalize_bidding(ctx: Context<FinalizeBidding>) -> Result<()> {
     let bid_state = &mut ctx.accounts.bid_state;
+    let group_account = &mut ctx.accounts.group_account;
 
+    // Ensure we have bids
     require!(!bid_state.bids.is_empty(), HuiFiError::NoBids);
 
-    // 1. Sort first (mutable borrow)
+    // Sort bids by amount (highest first)
     bid_state.bids.sort_by(|a, b| b.amount.cmp(&a.amount));
 
-    // 2. Clone winner outside of borrow scope
+    // Get winner
     let winner_entry = bid_state
         .bids
         .first()
-        .cloned()   // Clone the entry to avoid reference
+        .cloned()
         .ok_or(HuiFiError::NoBids)?;
 
-    // 3. Mutate state
+    // Update bid state
     bid_state.winner = Some(winner_entry.bidder);
 
-    let group_account = &mut ctx.accounts.group_account;
+    // Update group account
     group_account.current_winner = Some(winner_entry.bidder);
     group_account.current_bid_amount = Some(winner_entry.amount);
 
+    // Update winner's member account
     let member = &mut ctx.accounts.winner_member_account;
-    member.eligible_for_payout = true;
-    msg!(
-        "🏆 Bidding finalized for pool {} cycle {}. Winner: {}, Amount: {}",
-        group_account.key(),
-        group_account.current_cycle,
-        winner_entry.bidder,
-        winner_entry.amount
+    require!(
+        member.owner == winner_entry.bidder,
+        HuiFiError::InvalidWinnerAccount
     );
+    member.eligible_for_payout = true;
+
+    // Transition to Contributing phase
+    group_account.status = PoolStatus::Active {
+        phase: CyclePhase::Contributing
+    };
+
+    // Set the timestamp for the next phase
+    let clock = Clock::get()?;
+    group_account.last_cycle_timestamp = clock.unix_timestamp;
+
+    msg!(
+        "🏆 Bidding finalized for pool {} cycle {}",
+        group_account.key(),
+        group_account.current_cycle
+    );
+    msg!("👑 Winner: {}", winner_entry.bidder);
+    msg!("💰 Winning bid amount: {}", winner_entry.amount);
+    msg!("➡️ Pool entering Contributing phase");
+
     Ok(())
 }
 
@@ -74,7 +98,12 @@ pub struct SubmitBid<'info> {
     #[account(
         seeds = [POOL_SEED, group_account.uuid.as_ref()],
         bump = group_account.bump,
-        constraint = group_account.status == PoolStatus::Active @ HuiFiError::InvalidPoolStatus,
+        // Add validation for bid amount and check if pool is in bidding phase
+        constraint = matches!(
+            group_account.status,
+            PoolStatus::Active { phase: CyclePhase::Bidding }
+        ) @ HuiFiError::InvalidPhase,        
+        // constraint = group_account.status == PoolStatus::Active @ HuiFiError::InvalidPoolStatus,
     )]
     pub group_account: Account<'info, GroupAccount>,
 }
@@ -95,6 +124,11 @@ pub struct FinalizeBidding<'info> {
         mut,
         seeds = [POOL_SEED, group_account.uuid.as_ref()],
         bump = group_account.bump,
+        // Add phase validation
+        constraint = matches!(
+            group_account.status,
+            PoolStatus::Active { phase: CyclePhase::Bidding }
+        ) @ HuiFiError::InvalidPhase,
     )]
     pub group_account: Account<'info, GroupAccount>,
     #[account(

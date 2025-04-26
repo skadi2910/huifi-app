@@ -645,7 +645,7 @@ pub fn join_sol_pool(ctx: Context<JoinSolPool>, uuid: [u8; 6]) -> Result<()> {
     
     // If the pool is now full, change status to Active and set payout order
     if group_account.member_addresses.len() as u8 == group_account.total_cycles {
-        group_account.status = PoolStatus::Active;
+        group_account.status = PoolStatus::Active { phase: CyclePhase::Bidding };
         group_account.payout_order = group_account.member_addresses.clone();
     }
     
@@ -654,7 +654,13 @@ pub fn join_sol_pool(ctx: Context<JoinSolPool>, uuid: [u8; 6]) -> Result<()> {
         group_account.member_addresses.len(),
         group_account.total_cycles
     );
-    
+     // If the pool is now full, change status to Active and start first cycle
+     if group_account.member_addresses.len() as u8 == group_account.total_cycles {
+        group_account.initialize_active_status()?;
+        group_account.current_cycle = 0;
+        group_account.last_cycle_timestamp = Clock::get()?.unix_timestamp;
+        msg!("🎮 Pool is now active and entering bidding phase");
+    }   
     Ok(())
 }
 
@@ -733,7 +739,7 @@ pub fn join_spl_pool(ctx: Context<JoinSplPool>, uuid: [u8; 6]) -> Result<()> {
     
     // If the pool is now full, change status to Active and set payout order
     if group_account.member_addresses.len() as u8 == group_account.total_cycles {
-        group_account.status = PoolStatus::Active;
+        group_account.status = PoolStatus::Active { phase: CyclePhase::Bidding };
         group_account.payout_order = group_account.member_addresses.clone();
     }
     
