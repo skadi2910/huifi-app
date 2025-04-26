@@ -80,8 +80,8 @@ export const useHuifiPoolCreation = () => {
         [
           Buffer.from('huifi-pool'),
           uuid  // Use Uint8Array here
-        ],
-        program.programId
+          ],
+          program.programId
       )[0];
 
       // Derive vault SOL PDA
@@ -118,7 +118,7 @@ export const useHuifiPoolCreation = () => {
       try {
         // Create the SOL pool using the new create_sol_pool instruction
         const signature = await program.methods
-          .createSolPool(poolConfig, uuidArray, whitelist)
+          .createSolPool(poolConfig, uuidArray, whitelist)  
           .accounts({
             creator: publicKey,
             groupAccount: groupPda,
@@ -128,7 +128,7 @@ export const useHuifiPoolCreation = () => {
             rent: SYSVAR_RENT_PUBKEY,
           })
           .rpc();
-
+          
         await connection.confirmTransaction(signature);
         addTransaction(signature, 'Create SOL Pool');
 

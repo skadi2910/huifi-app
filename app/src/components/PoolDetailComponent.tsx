@@ -25,6 +25,7 @@ import { getStatusString, formatDurationHours, lamportsToSol, bpsToPercentage } 
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useContributeSol } from "@/hooks/useContributeSol";
 import { toast } from "react-hot-toast";
+import { useAdvanceCycle } from "@/hooks/useAdvanceCycle";
 
 // Assuming MOCK_POOL_DATA is either passed in or replaced by actual data structure
 // If MOCK_POOL_DATA is truly static, you might keep its definition here or import it.
@@ -134,11 +135,9 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
   const [memberDetails, setMemberDetails] = useState<MemberAccountData | null>(null);
   const { fetchPoolDetails, fetchMemberAccountDetail } = useHuifiPools();
   const poolPublicKey = useMemo(() => new PublicKey(publicKey), [publicKey]);
-  // Add statusString to component state
   const [statusString, setStatusString] = useState<string>('Unknown');
-  // Use the passed-in initialData
-  // const data = initialData;
   const { contributeSolMutation } = useContributeSol();
+  const { advanceCycleMutation } = useAdvanceCycle();
 
   useEffect(() => {
     const loadPoolData = async () => {
@@ -197,7 +196,13 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
   }, [poolData, userWallet, fetchMemberAccountDetail]);// Client-side hooks for actions (example)
   // const { someActionFromHook } = useHuifiPools();
 
-  // Mock action handlers (replace with actual logic using wallet connection, etc.)
+  // Check if the current user is the creator of the pool
+  const isPoolCreator = useMemo(() => {
+    if (!poolData || !userWallet) return false;
+    return poolData.account.creator.toString() === userWallet.toString();
+  }, [poolData, userWallet]);
+
+  // Update the handle action function to include progress functionality
   const handleAction = async () => {
     console.log(
       `Performing action: ${activeAction} with amount: ${actionAmount}`
@@ -210,9 +215,6 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
           throw new Error("Please enter a valid amount");
         }
         
-        // Extract uuid from the pool data
-        // This assumes the poolData has a uuid field or something similar
-        // If your data structure is different, you'll need to adjust this
         const uuid = poolData.account.uuid || [];
         
         await contributeSolMutation.mutateAsync({
@@ -221,13 +223,30 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
           amount: parseFloat(actionAmount)
         });
         
-        // Success message
         toast.success("Successfully contributed to the pool!");
         
-        // Refresh the pool data to show updated balances
         const data = await fetchPoolDetails(poolPublicKey);
         setPoolData(data);
-      } else {
+      } 
+      else if (activeAction === "progress" && poolData) {
+        // Check if user is the creator
+        if (!isPoolCreator) {
+          throw new Error("Only the pool creator can progress the pool");
+        }
+        
+        // Call the advance cycle function
+        await advanceCycleMutation.mutateAsync({
+          pool: poolData
+        });
+        
+        toast.success("Successfully progressed the pool to the next phase!");
+        
+        // Refresh the pool data to show updated status
+        const data = await fetchPoolDetails(poolPublicKey);
+        setPoolData(data);
+        setStatusString(getStatusString(data?.account.status));
+      } 
+      else {
         // For other actions, implement their specific logic here
         await new Promise((resolve) => setTimeout(resolve, 2000)); // Placeholder
       }
@@ -810,25 +829,26 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
           </button>
         </div>
 
-        {/* Progress Pool Button - Conditionally Render */}
-        {/* TODO: Add logic to check if the connected user is the creator */}
-        <div className="mt-12 flex justify-center items-center w-full">
-          <div className="text-center max-w-md mx-auto">
-            <p className="text-base text-white mb-3 font-medium">
-              Pool Creator Controls
-            </p>
-            <button
-              onClick={() => setActiveAction("progress")}
-              className="bg-red-600 hover:bg-red-700 text-white py-4 px-10 rounded-lg flex items-center justify-center font-bold text-base md:text-xl w-full"
-            >
-              Progress Pool
-              <ArrowRight className="w-5 h-5 ml-2" />
-            </button>
-            <p className="text-sm text-gray-400 mt-3">
-              Only the pool creator can progress the pool
-            </p>
+        {/* Bottom section with the Progress Pool button */}
+        {isPoolCreator && (
+          <div className="mt-12 flex justify-center items-center w-full">
+            <div className="text-center max-w-md mx-auto">
+              <p className="text-base text-white mb-3 font-medium">
+                Pool Creator Controls
+              </p>
+              <button
+                onClick={() => setActiveAction("progress")}
+                className="bg-red-600 hover:bg-red-700 text-white py-4 px-10 rounded-lg flex items-center justify-center font-bold text-base md:text-xl w-full"
+              >
+                Progress Pool
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </button>
+              <p className="text-sm text-gray-400 mt-3">
+                Only the pool creator can progress the pool
+              </p>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </main>
   );
