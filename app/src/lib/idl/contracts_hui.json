@@ -353,6 +353,39 @@
           }
         },
         {
+          "name": "member_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              },
+              {
+                "kind": "account",
+                "path": "creator"
+              }
+            ]
+          }
+        },
+        {
           "name": "protocol_settings",
           "pda": {
             "seeds": [
@@ -804,6 +837,122 @@
           }
         }
       ]
+    },
+    {
+      "name": "force_advance_cycle",
+      "discriminator": [
+        43,
+        87,
+        20,
+        85,
+        12,
+        110,
+        235,
+        117
+      ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "group_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account.uuid",
+                "account": "GroupAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "bid_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  98,
+                  105,
+                  100,
+                  45,
+                  115,
+                  116,
+                  97,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "winner_member_account",
+          "writable": true,
+          "optional": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              },
+              {
+                "kind": "account",
+                "path": "bid_state.winner",
+                "account": "BidState"
+              }
+            ]
+          }
+        }
+      ],
+      "args": []
     },
     {
       "name": "initialize_protocol",
