@@ -2,7 +2,7 @@ import { PublicKey } from '@solana/web3.js';
 import { BN } from '@coral-xyz/anchor';
 
 export enum PoolStatus {
-  Filling = 0,
+  Initializing = 0,
   Active = 1,
   Completed = 2,
 }
@@ -30,7 +30,8 @@ export interface HuifiPool {
   collateralRequirementBps: number;
   status: PoolStatus;
   totalValue: BN;
-  currentRound: number;
+  currentCycle: number;
+  totalCycles: number;
   nextPayoutTimestamp: BN;
   startTime: BN;
   yieldBasisPoints: number;
@@ -93,4 +94,5 @@ export interface PoolConfig {
   collateralRequirementBps: number;
   yieldStrategy: { none: {} } | { jitoSol: {} } | { kamino: {} };
   isNativeSol: boolean;
+  status: PoolStatus;
 }
