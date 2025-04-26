@@ -13,6 +13,7 @@ import {
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui'
 import { ReactNode, useCallback, useMemo } from 'react'
 import { useCluster } from '../cluster/cluster-data-access'
+// @ts-ignore
 import { 
   PhantomWalletAdapter, 
   SolflareWalletAdapter, 
@@ -51,5 +52,17 @@ export function useAnchorProvider() {
   const { connection } = useConnection()
   const wallet = useWallet()
 
-  return new AnchorProvider(connection, wallet as AnchorWallet, { commitment: 'confirmed' })
+  return useMemo(() => 
+    wallet 
+      ? new AnchorProvider(
+          connection, 
+          {
+            publicKey: wallet.publicKey!,
+            signTransaction: wallet.signTransaction as any,
+            signAllTransactions: wallet.signAllTransactions as any,
+          }, 
+          { commitment: 'confirmed' }
+        ) 
+      : new AnchorProvider(connection, null as any, { commitment: 'confirmed' })
+  , [connection, wallet])
 }

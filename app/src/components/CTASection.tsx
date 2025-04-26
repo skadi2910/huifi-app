@@ -42,7 +42,7 @@ export const CTASection: React.FC = () => {
                 href="/app/pools"
                 className="btn-glitch relative z-10"
               >
-                <span className="text">// Start Playing</span>
+                <span className="text">{"// Start Playing"}</span>
                 <span className="text-decoration">_</span>
                 <span className="decoration">⇒</span>
               </Link>
@@ -53,7 +53,7 @@ export const CTASection: React.FC = () => {
               href="/learn/how-it-works"
               className="btn-glitch-dark"
             >
-              <span className="text">// Game Guide</span>
+              <span className="text">{"// Game Guide"}</span>
               <span className="text-decoration">_</span>
               <span className="decoration">⇒</span>
             </Link>

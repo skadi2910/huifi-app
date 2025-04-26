@@ -184,7 +184,7 @@ export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account, onJoinPo
             href={poolDetailUrl}
             className="flex justify-center items-center btn-glitch-dark px-3 py-2 text-sm sm:text-base text-center"
           >
-            <span>// VIEW GAME_</span>
+            <span>{"// VIEW GAME_"}</span>
           </Link>
 
           {statusString !== 'Completed' &&
@@ -193,14 +193,14 @@ export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account, onJoinPo
                 onClick={handleJoinClick}
                 className="flex justify-center items-center btn-glitch px-3 py-2 text-sm sm:text-base text-center"
               >
-                <span>// JOIN GAME_ ⇒</span>
+                <span>{"// JOIN GAME_ ⇒"}</span>
               </button>
             ) : (
               <button
                 disabled
                 className="flex justify-center items-center bg-[#ffef80] text-black/40 border-2 border-black/20 rounded-lg px-3 py-2 text-sm sm:text-base font-mono font-bold text-center cursor-not-allowed"
               >
-                <span>// JOIN GAME_ ⇒</span>
+                <span>{"// JOIN GAME_ ⇒"}</span>
               </button>
             ))}
         </div>

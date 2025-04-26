@@ -44,7 +44,7 @@ export const HeroSection: React.FC = () => {
                   href="/app/pools"
                   className="btn-glitch relative z-10"
                 >
-                  <span className="text">// Explore Games</span>
+                  <span className="text">{"// Explore Games"}</span>
                   <span className="text-decoration">_</span>
                   <span className="decoration">⇒</span>
                 </Link>
@@ -53,7 +53,7 @@ export const HeroSection: React.FC = () => {
                 href="/learn/how-it-works"
                 className="btn-glitch-dark"
               >
-                <span className="text">// How To Play</span>
+                <span className="text">{"// How To Play"}</span>
                 <span className="text-decoration">_</span>
                 <span className="decoration">⇒</span>
               </Link>

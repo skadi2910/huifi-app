@@ -226,9 +226,9 @@ const PoolDetailPage = () => {
                 <p className="text-[#f8e555]/70 text-base mb-1">Round</p>
                 <p className="text-2xl font-bold text-[#e6ce04]">{MOCK_POOL_DATA.rounds.current}/{MOCK_POOL_DATA.rounds.total}</p>
               </div>
-            </div>
+              </div>
 
-            {/* Tabs */}
+              {/* Tabs */}
             <div className="bg-[#1a1a18] rounded-xl border border-[#e6ce04]/20">
               <div className="border-b border-[#e6ce04]/20">
                 <nav className="flex space-x-4 px-4" aria-label="Tabs">
@@ -330,7 +330,7 @@ const PoolDetailPage = () => {
                           <div className="w-8 h-8 bg-[#1a1a18] rounded-full flex items-center justify-center">
                             <Users className="w-4 h-4 text-[#e6ce04]" />
                           </div>
-                          <div>
+                  <div>
                             <p className="text-[#e6ce04]">Member #{index + 1}</p>
                             <p className="text-sm text-[#f8e555]/70">Joined {MOCK_POOL_DATA.dates.started}</p>
                           </div>
@@ -352,7 +352,7 @@ const PoolDetailPage = () => {
                           <div className="w-8 h-8 bg-[#1a1a18] rounded-full flex items-center justify-center">
                             <History className="w-4 h-4 text-[#e6ce04]" />
                           </div>
-                          <div>
+                  <div>
                             <p className="text-[#e6ce04]">{event.type}</p>
                             <p className="text-sm text-[#f8e555]/70">{event.date}</p>
                           </div>
@@ -361,10 +361,10 @@ const PoolDetailPage = () => {
                           <div className="text-right">
                             <p className="text-[#e6ce04]">{event.amount}</p>
                             <p className="text-sm text-[#f8e555]/70">{event.recipient}</p>
-                          </div>
+                            </div>
                         )}
-                      </div>
-                    ))}
+                            </div>
+                        ))}
                   </div>
                 )}
 
@@ -392,7 +392,7 @@ const PoolDetailPage = () => {
                       </div>
                     </div>
 
-                    <div>
+                  <div>
                       <h3 className="text-xl font-medium text-[#e6ce04] mb-3">Security Information</h3>
                       <div className="bg-[#010200] p-4 rounded-lg border border-[#e6ce04]/20">
                         <div className="space-y-3 text-base">
@@ -431,7 +431,7 @@ const PoolDetailPage = () => {
             <div className="bg-[#1a1a18] rounded-xl p-6 border border-[#e6ce04]/20">
               <div className="text-center">
                 <h3 className="text-xl font-bold text-[#e6ce04] mb-2">Next Payout In</h3>
-                <p className="text-4xl font-mono font-bold text-[#e6ce04] mb-3">
+                  <p className="text-4xl font-mono font-bold text-[#e6ce04] mb-3">
                   {MOCK_POOL_DATA.timing.nextPayoutIn}
                 </p>
                 <p className="text-base text-[#f8e555]/70">

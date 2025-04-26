@@ -429,7 +429,7 @@ export default function CreatePoolPage() {
                   {/* Info Box */}
                   <div className="flex items-center p-4 bg-[#e6ce04]/10 border border-[#e6ce04]/20 rounded-lg">
                     <InfoIcon className="w-5 h-5 text-[#e6ce04] mr-3 flex-shrink-0" />
-                    <p className="text-sm text-[#f8e555]">By creating this game, you will earn 500 XP and the "Game Creator" achievement badge!</p>
+                    <p className="text-sm text-[#f8e555]">By creating this game, you will earn 500 XP and the &quot;Game Creator&quot; achievement badge!</p>
                   </div>
                   {/* Terms Agreement */}
                   <div className="flex items-center">

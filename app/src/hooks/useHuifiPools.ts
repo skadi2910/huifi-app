@@ -209,7 +209,7 @@ export const useHuifiPools = () => {
     } catch (err) {
       console.error("Failed to set up event listener:", err);
     }
-  }, [program, connection]);
+  }, [program, connection,refreshPools]);
   
   // Join pool mutation
   const joinPoolMutation = useMutation({
