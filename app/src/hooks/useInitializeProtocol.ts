@@ -37,11 +37,14 @@ export const useInitializeProtocol = () => {
   
       try {
         // Create a keypair for the treasury account
-        const treasuryKeypair = Keypair.generate();
-        
+        // const treasuryKeypair = Keypair.generate();
+        // const treasuryUsdcKeypair = Keypair.generate();
+        // const treasuryUsdtKeypair = Keypair.generate();
+        // const treasuryJitosolKeypair = Keypair.generate();
+        // Define mint addresses based on network
+        const endpoint = connection.rpcEndpoint;
         // Determine the appropriate token mint based on the network
         let tokenMint: PublicKey;
-        const endpoint = connection.rpcEndpoint;
         
         if (endpoint.includes('devnet')) {
           // Use devnet USDC address
@@ -102,10 +105,19 @@ export const useInitializeProtocol = () => {
           [Buffer.from('huifi-protocol')], // Matches the seed in lib.rs
           program.programId
         );
-  
+         // Find the Treasury SOL PDA
+         const [treasurySolPda] = PublicKey.findProgramAddressSync(
+          [Buffer.from('huifi-treasury'), Buffer.from('sol')],
+          program.programId
+        );
+               // Convert the fee to the correct type (u16)
+               const protocolFeeBpsU16 = parseInt(protocolFeeBps.toString());
+        
+               // Convert create_pool_fee to a BN (u64)
+               const createPoolFee = new BN(100000000); // 0.1 SOL in lamports
         console.log('Initializing protocol with settings:', {
           admin: wallet.publicKey.toString(),
-          treasury: treasuryKeypair.publicKey.toString(),
+          // treasury: treasuryKeypair.publicKey.toString(),
           tokenMint: tokenMint.toString(),
           protocolFeeBps,
           protocolSettingsPda: protocolSettingsPda.toString()
@@ -113,17 +125,18 @@ export const useInitializeProtocol = () => {
         
         // Call the initialize_protocol instruction
         const signature = await program.methods
-          .initializeProtocol(protocolFeeBps)
+          .initializeProtocol(protocolFeeBpsU16,createPoolFee)
           .accounts({
             admin: wallet.publicKey,
             protocolSettings: protocolSettingsPda,
-            treasury: treasuryKeypair.publicKey,
+            // treasury: treasuryKeypair.publicKey,
+            treasurySol: treasurySolPda,
             tokenMint: tokenMint,
             tokenProgram: TOKEN_PROGRAM_ID,
             systemProgram: SystemProgram.programId,
             rent: SYSVAR_RENT_PUBKEY,
           })
-          .signers([treasuryKeypair])
+          // .signers([treasuryKeypair])
           .rpc();
           
         console.log('Protocol initialized successfully:', signature);

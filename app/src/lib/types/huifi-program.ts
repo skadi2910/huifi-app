@@ -2,7 +2,7 @@ import { Idl, Program } from '@coral-xyz/anchor';
 import idl from '@/lib/idl/contracts_hui.json';
 import { UserAccount, HuifiPool, RoundResult, ProtocolSettings, Bid, Vault, PoolConfig } from './program-types';
 import { PublicKey } from '@solana/web3.js';
-
+import { BN } from '@coral-xyz/anchor';
 // Define account methods structure to match Anchor-generated types
 export interface HuifiAccounts {
   GroupAccount: {  // Changed from HuifiPool to GroupAccount
@@ -45,7 +45,7 @@ export interface HuifiMethods {
   placeBid(round: number, amount: any): any;
   claimJackpot(round: number): any;
   closePool(): any;
-  initializeProtocol(protocolFeeBps: number): any;
+  initializeProtocol(protocolFeeBps: number, createPoolFee: BN): any;
 }
 
 // Define the HuifiProgram type correctly

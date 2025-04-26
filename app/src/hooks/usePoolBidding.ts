@@ -21,7 +21,7 @@ export const usePoolBidding = (poolAddress: PublicKey) => {
       
       try {
         // Fetch the pool to get token mint
-        const poolAccount = await program.account.huifiPool.fetch(poolAddress);
+        const poolAccount = await program.account.HuifiPool.fetch(poolAddress);
         const tokenMint = poolAccount.tokenMint;
         
         // Calculate bid PDA

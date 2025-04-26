@@ -1,12 +1,285 @@
 {
-  "address": "73N3XxT1FGJt2sZmtVbiuD3TcF2f6bLffMqUi7PJQZk9",
+  "address": "3EpcS5dv1G71CDER3d77L7jAh7dn9zKpJNo7wSSwn7kA",
   "metadata": {
     "name": "contracts_hui",
     "version": "0.1.0",
     "spec": "0.1.0",
-    "description": "HuiFi - Solana Rotating Savings Smart Contract"
+    "description": "Created with Anchor"
   },
   "instructions": [
+    {
+      "name": "contribute_sol",
+      "discriminator": [
+        186,
+        36,
+        137,
+        50,
+        25,
+        152,
+        8,
+        5
+      ],
+      "accounts": [
+        {
+          "name": "contributor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "group_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "uuid"
+              }
+            ]
+          }
+        },
+        {
+          "name": "member_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              },
+              {
+                "kind": "account",
+                "path": "contributor"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_sol",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  45,
+                  115,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "price_update"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "uuid",
+          "type": {
+            "array": [
+              "u8",
+              6
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "contribute_spl",
+      "discriminator": [
+        56,
+        201,
+        213,
+        12,
+        65,
+        27,
+        3,
+        245
+      ],
+      "accounts": [
+        {
+          "name": "contributor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "group_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "uuid"
+              }
+            ]
+          }
+        },
+        {
+          "name": "member_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              },
+              {
+                "kind": "account",
+                "path": "contributor"
+              }
+            ]
+          }
+        },
+        {
+          "name": "contributor_token_account",
+          "writable": true
+        },
+        {
+          "name": "vault_spl",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  45,
+                  115,
+                  112,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "uuid",
+          "type": {
+            "array": [
+              "u8",
+              6
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
     {
       "name": "create_sol_pool",
       "discriminator": [
@@ -148,10 +421,558 @@
       ]
     },
     {
-      "name": "initialize_protocol",
-      "docs": [
-        "Initialize the protocol settings"
+      "name": "create_spl_pool",
+      "discriminator": [
+        104,
+        30,
+        199,
+        57,
+        90,
+        50,
+        128,
+        216
       ],
+      "accounts": [
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "group_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "uuid"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_mint"
+        },
+        {
+          "name": "vault_spl",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  45,
+                  115,
+                  112,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "protocol_settings",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "pool_config",
+          "type": {
+            "defined": {
+              "name": "PoolConfig"
+            }
+          }
+        },
+        {
+          "name": "uuid",
+          "type": {
+            "array": [
+              "u8",
+              6
+            ]
+          }
+        },
+        {
+          "name": "whitelist",
+          "type": {
+            "option": {
+              "vec": "pubkey"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "deposit_sol_collateral",
+      "discriminator": [
+        162,
+        250,
+        21,
+        43,
+        181,
+        44,
+        221,
+        230
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "group_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "uuid"
+              }
+            ]
+          }
+        },
+        {
+          "name": "member_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "collateral_vault_sol",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  99,
+                  111,
+                  108,
+                  108,
+                  97,
+                  116,
+                  101,
+                  114,
+                  97,
+                  108,
+                  45,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  45,
+                  115,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "uuid",
+          "type": {
+            "array": [
+              "u8",
+              6
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "deposit_spl_collateral",
+      "discriminator": [
+        195,
+        147,
+        227,
+        34,
+        194,
+        187,
+        186,
+        28
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "group_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "uuid"
+              }
+            ]
+          }
+        },
+        {
+          "name": "member_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_token_account",
+          "writable": true
+        },
+        {
+          "name": "collateral_vault_spl",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  99,
+                  111,
+                  108,
+                  108,
+                  97,
+                  116,
+                  101,
+                  114,
+                  97,
+                  108,
+                  45,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  45,
+                  115,
+                  112,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_mint"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "uuid",
+          "type": {
+            "array": [
+              "u8",
+              6
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "finalize_bidding",
+      "discriminator": [
+        195,
+        68,
+        231,
+        22,
+        0,
+        239,
+        95,
+        227
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "bid_state",
+          "writable": true
+        },
+        {
+          "name": "group_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account.uuid",
+                "account": "GroupAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "winner_member_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              },
+              {
+                "kind": "account",
+                "path": "winner_member_account.owner",
+                "account": "MemberAccount"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "uuid",
+          "type": {
+            "array": [
+              "u8",
+              6
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "initialize_protocol",
       "discriminator": [
         188,
         233,
@@ -196,12 +1017,39 @@
           }
         },
         {
-          "name": "treasury",
+          "name": "treasury_sol",
           "writable": true,
-          "signer": true
-        },
-        {
-          "name": "token_mint"
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  116,
+                  114,
+                  101,
+                  97,
+                  115,
+                  117,
+                  114,
+                  121
+                ]
+              },
+              {
+                "kind": "const",
+                "value": [
+                  115,
+                  111,
+                  108
+                ]
+              }
+            ]
+          }
         },
         {
           "name": "token_program",
@@ -220,11 +1068,610 @@
         {
           "name": "protocol_fee_bps",
           "type": "u16"
+        },
+        {
+          "name": "create_pool_fee",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "join_sol_pool",
+      "discriminator": [
+        43,
+        31,
+        158,
+        52,
+        92,
+        100,
+        84,
+        238
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "group_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "uuid"
+              }
+            ]
+          }
+        },
+        {
+          "name": "member_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "uuid",
+          "type": {
+            "array": [
+              "u8",
+              6
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "join_spl_pool",
+      "discriminator": [
+        184,
+        188,
+        187,
+        87,
+        166,
+        226,
+        191,
+        41
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "group_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "uuid"
+              }
+            ]
+          }
+        },
+        {
+          "name": "member_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user_token_account"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "uuid",
+          "type": {
+            "array": [
+              "u8",
+              6
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "process_payout",
+      "discriminator": [
+        48,
+        192,
+        129,
+        57,
+        230,
+        161,
+        233,
+        148
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "group_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "uuid"
+              }
+            ]
+          }
+        },
+        {
+          "name": "recipient_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              },
+              {
+                "kind": "account",
+                "path": "recipient"
+              }
+            ]
+          }
+        },
+        {
+          "name": "recipient"
+        },
+        {
+          "name": "recipient_token_account",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "protocol_settings",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  112,
+                  114,
+                  111,
+                  116,
+                  111,
+                  99,
+                  111,
+                  108
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "protocol_treasury",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "uuid",
+          "type": {
+            "array": [
+              "u8",
+              6
+            ]
+          }
+        },
+        {
+          "name": "required_collateral",
+          "type": {
+            "option": "u64"
+          }
+        }
+      ]
+    },
+    {
+      "name": "slash_collateral",
+      "discriminator": [
+        48,
+        90,
+        11,
+        43,
+        179,
+        65,
+        184,
+        4
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "group_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "uuid"
+              }
+            ]
+          }
+        },
+        {
+          "name": "member_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              },
+              {
+                "kind": "account",
+                "path": "member_account.owner",
+                "account": "MemberAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "member_wallet",
+          "writable": true
+        },
+        {
+          "name": "collateral_vault_sol",
+          "docs": [
+            "Vault holding SOL collateral (optional)"
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "collateral_vault_spl",
+          "docs": [
+            "Vault holding SPL collateral (optional)"
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "treasury_usdc",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "treasury_usdt",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "treasury_jitosol",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "treasury_sol",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "pool_vault",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "optional": true,
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "uuid",
+          "type": {
+            "array": [
+              "u8",
+              6
+            ]
+          }
+        },
+        {
+          "name": "payout_amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "submit_bid",
+      "discriminator": [
+        19,
+        164,
+        237,
+        254,
+        64,
+        139,
+        237,
+        93
+      ],
+      "accounts": [
+        {
+          "name": "bidder",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "bid_state",
+          "writable": true
+        },
+        {
+          "name": "group_account",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account.uuid",
+                "account": "GroupAccount"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "bid_amount",
+          "type": "u64"
         }
       ]
     }
   ],
   "accounts": [
+    {
+      "name": "BidState",
+      "discriminator": [
+        155,
+        197,
+        5,
+        97,
+        189,
+        60,
+        8,
+        183
+      ]
+    },
     {
       "name": "GroupAccount",
       "discriminator": [
@@ -236,6 +1683,32 @@
         29,
         151,
         111
+      ]
+    },
+    {
+      "name": "MemberAccount",
+      "discriminator": [
+        173,
+        25,
+        100,
+        97,
+        192,
+        177,
+        84,
+        139
+      ]
+    },
+    {
+      "name": "PriceUpdateV2",
+      "discriminator": [
+        34,
+        241,
+        35,
+        99,
+        157,
+        126,
+        244,
+        205
       ]
     },
     {
@@ -345,11 +1818,148 @@
     },
     {
       "code": 6018,
-      "name": "ProtocolFeeExceedsLimit",
-      "msg": "Protocol fee exceeds 10% maximum"
+      "name": "TreasuryAccountAlreadyExists",
+      "msg": "Treasury account already exists"
+    },
+    {
+      "code": 6019,
+      "name": "InvalidTreasuryAccount",
+      "msg": "Invalid treasury account"
+    },
+    {
+      "code": 6020,
+      "name": "NotWhitelisted",
+      "msg": "Not whitelisted"
+    },
+    {
+      "code": 6021,
+      "name": "InvalidSlashAmount",
+      "msg": "Invalid slash amount"
+    },
+    {
+      "code": 6022,
+      "name": "MemberNotDefaulted",
+      "msg": "Member not defaulted"
+    },
+    {
+      "code": 6023,
+      "name": "MemberNotPaidYet",
+      "msg": "Member not paid yet"
+    },
+    {
+      "code": 6024,
+      "name": "UnsupportedToken",
+      "msg": "Unsupported token"
+    },
+    {
+      "code": 6025,
+      "name": "InvalidVault",
+      "msg": "Invalid vault"
+    },
+    {
+      "code": 6026,
+      "name": "InvalidPoolType",
+      "msg": "Invalid pool type"
+    },
+    {
+      "code": 6027,
+      "name": "InvalidTokenMint",
+      "msg": "Invalid token mint"
+    },
+    {
+      "code": 6028,
+      "name": "InvalidPoolUUID",
+      "msg": "Invalid pool UUID"
+    },
+    {
+      "code": 6029,
+      "name": "NoBids",
+      "msg": "No bids"
+    },
+    {
+      "code": 6030,
+      "name": "AlreadyBid",
+      "msg": "Already bid"
+    },
+    {
+      "code": 6031,
+      "name": "InvalidBidAmount",
+      "msg": "Invalid bid amount"
+    },
+    {
+      "code": 6032,
+      "name": "MissingCollateralVault",
+      "msg": "Missing collateral vault"
+    },
+    {
+      "code": 6033,
+      "name": "MissingTreasury",
+      "msg": "Missing treasury"
+    },
+    {
+      "code": 6034,
+      "name": "MissingPoolVault",
+      "msg": "Missing pool vault"
+    },
+    {
+      "code": 6035,
+      "name": "MissingTokenProgram",
+      "msg": "Missing token program"
     }
   ],
   "types": [
+    {
+      "name": "BidEntry",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bidder",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "BidState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "cycle",
+            "type": "u8"
+          },
+          {
+            "name": "bids",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "BidEntry"
+                }
+              }
+            }
+          },
+          {
+            "name": "winner",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
     {
       "name": "GroupAccount",
       "type": {
@@ -423,6 +2033,10 @@
             "type": "u64"
           },
           {
+            "name": "unclaimed_payout",
+            "type": "u64"
+          },
+          {
             "name": "last_cycle_timestamp",
             "type": "i64"
           },
@@ -431,8 +2045,101 @@
             "type": "i64"
           },
           {
+            "name": "price_feed_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "current_winner",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "current_bid_amount",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
             "name": "bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MemberAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "contributions_made",
+            "type": "u8"
+          },
+          {
+            "name": "status",
+            "type": {
+              "defined": {
+                "name": "MemberStatus"
+              }
+            }
+          },
+          {
+            "name": "has_received_payout",
+            "type": "bool"
+          },
+          {
+            "name": "eligible_for_payout",
+            "type": "bool"
+          },
+          {
+            "name": "collateral_staked",
+            "type": "u64"
+          },
+          {
+            "name": "reputation_points",
+            "type": "u64"
+          },
+          {
+            "name": "last_contribution_timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MemberStatus",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Active"
+          },
+          {
+            "name": "Late"
+          },
+          {
+            "name": "Defaulted"
+          },
+          {
+            "name": "Withdrawed"
           }
         ]
       }
@@ -475,8 +2182,21 @@
             }
           },
           {
+            "name": "is_private",
+            "type": "bool"
+          },
+          {
             "name": "is_native_sol",
             "type": "bool"
+          },
+          {
+            "name": "feed_id",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
           }
         ]
       }
@@ -502,6 +2222,114 @@
       }
     },
     {
+      "name": "PriceFeedMessage",
+      "repr": {
+        "kind": "c"
+      },
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "feed_id",
+            "docs": [
+              "`FeedId` but avoid the type alias because of compatibility issues with Anchor's `idl-build` feature."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "price",
+            "type": "i64"
+          },
+          {
+            "name": "conf",
+            "type": "u64"
+          },
+          {
+            "name": "exponent",
+            "type": "i32"
+          },
+          {
+            "name": "publish_time",
+            "docs": [
+              "The timestamp of this price update in seconds"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "prev_publish_time",
+            "docs": [
+              "The timestamp of the previous price update. This field is intended to allow users to",
+              "identify the single unique price update for any moment in time:",
+              "for any time t, the unique update is the one such that prev_publish_time < t <= publish_time.",
+              "",
+              "Note that there may not be such an update while we are migrating to the new message-sending logic,",
+              "as some price updates on pythnet may not be sent to other chains (because the message-sending",
+              "logic may not have triggered). We can solve this problem by making the message-sending mandatory",
+              "(which we can do once publishers have migrated over).",
+              "",
+              "Additionally, this field may be equal to publish_time if the message is sent on a slot where",
+              "where the aggregation was unsuccesful. This problem will go away once all publishers have",
+              "migrated over to a recent version of pyth-agent."
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "ema_price",
+            "type": "i64"
+          },
+          {
+            "name": "ema_conf",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PriceUpdateV2",
+      "docs": [
+        "A price update account. This account is used by the Pyth Receiver program to store a verified price update from a Pyth price feed.",
+        "It contains:",
+        "- `write_authority`: The write authority for this account. This authority can close this account to reclaim rent or update the account to contain a different price update.",
+        "- `verification_level`: The [`VerificationLevel`] of this price update. This represents how many Wormhole guardian signatures have been verified for this price update.",
+        "- `price_message`: The actual price update.",
+        "- `posted_slot`: The slot at which this price update was posted."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "write_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "verification_level",
+            "type": {
+              "defined": {
+                "name": "VerificationLevel"
+              }
+            }
+          },
+          {
+            "name": "price_message",
+            "type": {
+              "defined": {
+                "name": "PriceFeedMessage"
+              }
+            }
+          },
+          {
+            "name": "posted_slot",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
       "name": "ProtocolSettings",
       "type": {
         "kind": "struct",
@@ -511,20 +2339,101 @@
             "type": "pubkey"
           },
           {
-            "name": "treasury",
-            "type": "pubkey"
+            "name": "treasury_accounts",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "TreasuryAccount"
+                }
+              }
+            }
           },
           {
-            "name": "token_mint",
-            "type": "pubkey"
-          },
-          {
-            "name": "protocol_fee_bps",
+            "name": "penalty_bps",
             "type": "u16"
+          },
+          {
+            "name": "fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "create_pool_fee",
+            "type": "u64"
+          },
+          {
+            "name": "total_fees_collected",
+            "type": "u64"
+          },
+          {
+            "name": "yield_generated",
+            "type": "u64"
+          },
+          {
+            "name": "reserve_buffer",
+            "type": "u64"
           },
           {
             "name": "bump",
             "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TreasuryAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "token_mint",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "total_collected",
+            "type": "u64"
+          },
+          {
+            "name": "is_native_sol",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "VerificationLevel",
+      "docs": [
+        "Pyth price updates are bridged to all blockchains via Wormhole.",
+        "Using the price updates on another chain requires verifying the signatures of the Wormhole guardians.",
+        "The usual process is to check the signatures for two thirds of the total number of guardians, but this can be cumbersome on Solana because of the transaction size limits,",
+        "so we also allow for partial verification.",
+        "",
+        "This enum represents how much a price update has been verified:",
+        "- If `Full`, we have verified the signatures for two thirds of the current guardians.",
+        "- If `Partial`, only `num_signatures` guardian signatures have been checked.",
+        "",
+        "# Warning",
+        "Using partially verified price updates is dangerous, as it lowers the threshold of guardians that need to collude to produce a malicious price update."
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Partial",
+            "fields": [
+              {
+                "name": "num_signatures",
+                "type": "u8"
+              }
+            ]
+          },
+          {
+            "name": "Full"
           }
         ]
       }

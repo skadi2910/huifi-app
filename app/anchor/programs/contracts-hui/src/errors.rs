@@ -56,6 +56,58 @@ pub enum HuiFiError {
     #[msg("Payout delay hasn't elapsed yet")]
     PayoutDelayNotElapsed,
 
-    #[msg("Protocol fee exceeds 10% maximum")]
-    ProtocolFeeExceedsLimit,
+    #[msg("Treasury account already exists")]
+    TreasuryAccountAlreadyExists,
+
+    #[msg("Invalid treasury account")]
+    InvalidTreasuryAccount,
+
+    #[msg("Not whitelisted")]
+    NotWhitelisted,
+
+    #[msg("Invalid slash amount")]
+    InvalidSlashAmount,
+
+    #[msg("Member not defaulted")]
+    MemberNotDefaulted,
+
+    #[msg("Member not paid yet")]
+    MemberNotPaidYet,
+
+    #[msg("Unsupported token")]
+    UnsupportedToken,
+
+    #[msg("Invalid vault")]
+    InvalidVault,
+
+    #[msg("Invalid pool type")]
+    InvalidPoolType,
+
+    #[msg("Invalid token mint")]
+    InvalidTokenMint,
+
+    #[msg("Invalid pool UUID")]
+    InvalidPoolUUID,
+
+    #[msg("No bids")]
+    NoBids,
+
+    #[msg("Already bid")]
+    AlreadyBid,
+
+    #[msg("Invalid bid amount")]
+    InvalidBidAmount,
+
+    #[msg("Missing collateral vault")]
+    MissingCollateralVault,
+
+    #[msg("Missing treasury")]
+    MissingTreasury,
+
+    #[msg("Missing pool vault")]
+    MissingPoolVault,
+
+    #[msg("Missing token program")]
+    MissingTokenProgram,
+
 }

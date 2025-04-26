@@ -36,8 +36,11 @@ pub struct PoolConfig {
     pub cycle_duration_seconds: u64,  // Duration of each cycle in seconds
     pub payout_delay_seconds: u64,    // Delay before payout to generate yield
     pub early_withdrawal_fee_bps: u16, // Early withdrawal fee in basis points
-    pub collateral_requirement_bps: u16, // Collateral requirement in % of payout
+    pub collateral_requirement_bps: u16, // Collateral requirement in % of payout / Can be 0 for private bool
     pub yield_strategy: YieldPlatform, // Strategy for generating yield
+    pub is_private: bool, // Whether the pool is private
+    pub is_native_sol: bool, // Whether the pool is native SOL
+    pub feed_id: [u8; 32], // Price feed ID
 }
 
 impl Default for PoolConfig {
@@ -50,6 +53,9 @@ impl Default for PoolConfig {
             early_withdrawal_fee_bps: 200,            // 2%
             collateral_requirement_bps: 20000,        // 200%
             yield_strategy: YieldPlatform::None,
+            is_private: false,
+            is_native_sol: false,
+            feed_id: [0; 32],
         }
     }
 }
@@ -57,6 +63,8 @@ impl Default for PoolConfig {
 #[account]
 #[derive(Default)]
 pub struct GroupAccount {
+    pub uuid: [u8; 6],                  // NEW: 6-character alphanumeric
+    pub whitelist: Vec<Pubkey>,         // NEW: optional whitelist
     pub creator: Pubkey,                // Creator of the pool
     pub token_mint: Pubkey,             // Token used for the pool (SOL, USDC, etc.)
     pub vault: Pubkey,                  // Pool's token vault
@@ -67,7 +75,11 @@ pub struct GroupAccount {
     pub total_cycles: u8,               // Total cycles (equal to max_participants)
     pub status: PoolStatus,             // Current status of the pool
     pub total_contributions: u64,       // Total contributions made
+    pub unclaimed_payout: u64,          // Unclaimed payout
     pub last_cycle_timestamp: i64,      // Timestamp of the last cycle
     pub next_payout_timestamp: i64,     // Timestamp when next payout is available
+    pub price_feed_id: [u8; 32],        // Price feed ID
+    pub current_winner: Option<Pubkey>,  // Current winner
+    pub current_bid_amount: Option<u64>, // Current bid amount
     pub bump: u8,                       // PDA bump
 }
