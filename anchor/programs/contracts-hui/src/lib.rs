@@ -134,6 +134,11 @@ pub mod contracts_hui {
     ) -> Result<()> {
         instructions::cycle_management::check_cycle_status(ctx)
     }
+    pub fn force_advance_cycle(
+        ctx: Context<ForceAdvanceCycle>
+    ) -> Result<()> {
+        instructions::cycle_management::force_advance_cycle(ctx)
+    }
     // Commenting out until withdraw structures are implemented
     /*
     pub fn withdraw_sol_collateral(
