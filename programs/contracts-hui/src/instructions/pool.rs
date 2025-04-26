@@ -476,8 +476,12 @@ pub fn create_sol_pool(
     group_account.total_cycles = pool_config.max_participants;
     group_account.status = PoolStatus::Initializing;
     group_account.total_contributions = 0;
+    group_account.unclaimed_payout = 0;
     group_account.last_cycle_timestamp = current_timestamp;
     group_account.next_payout_timestamp = 0;
+    group_account.price_feed_id = pool_config.feed_id;
+    group_account.current_bid_amount = None;
+    group_account.current_winner = None;
     group_account.bump = bump;
     
     // Add creator as the first member
@@ -556,6 +560,9 @@ pub fn create_spl_pool(
     group_account.total_contributions = 0;
     group_account.last_cycle_timestamp = current_timestamp;
     group_account.next_payout_timestamp = 0;
+    group_account.price_feed_id = pool_config.feed_id;
+    group_account.current_bid_amount = None;
+    group_account.current_winner = None;
     group_account.bump = bump;
     
     // Add creator as the first member
@@ -626,7 +633,8 @@ pub fn join_sol_pool(ctx: Context<JoinSolPool>, uuid: [u8; 6]) -> Result<()> {
     member_account.pool = group_account.key();
     member_account.contributions_made = 0;
     member_account.status = MemberStatus::Active;
-    member_account.has_received_early_payout = false;
+    member_account.has_received_payout = false;
+    member_account.eligible_for_payout = false;
     member_account.collateral_staked = 0;
     member_account.reputation_points = 0;
     member_account.last_contribution_timestamp = 0;
@@ -713,7 +721,8 @@ pub fn join_spl_pool(ctx: Context<JoinSplPool>, uuid: [u8; 6]) -> Result<()> {
     member_account.pool = group_account.key();
     member_account.contributions_made = 0;
     member_account.status = MemberStatus::Active;
-    member_account.has_received_early_payout = false;
+    member_account.has_received_payout = false;
+    member_account.eligible_for_payout = false;
     member_account.collateral_staked = 0;
     member_account.reputation_points = 0;
     member_account.last_contribution_timestamp = 0;

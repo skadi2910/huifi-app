@@ -85,4 +85,29 @@ pub enum HuiFiError {
 
     #[msg("Invalid token mint")]
     InvalidTokenMint,
+
+    #[msg("Invalid pool UUID")]
+    InvalidPoolUUID,
+
+    #[msg("No bids")]
+    NoBids,
+
+    #[msg("Already bid")]
+    AlreadyBid,
+
+    #[msg("Invalid bid amount")]
+    InvalidBidAmount,
+
+    #[msg("Missing collateral vault")]
+    MissingCollateralVault,
+
+    #[msg("Missing treasury")]
+    MissingTreasury,
+
+    #[msg("Missing pool vault")]
+    MissingPoolVault,
+
+    #[msg("Missing token program")]
+    MissingTokenProgram,
+
 }

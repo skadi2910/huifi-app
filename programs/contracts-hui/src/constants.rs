@@ -26,3 +26,7 @@ pub const DEFAULT_COLLATERAL_REQUIREMENT_BPS: u16 = 20000; // 200%
 pub const MIN_COLLATERAL_REQUIREMENT_BPS: u16 = 10000; // 100%
 
 pub const BASIS_POINTS_DIVISOR: u64 = 10000; // 100% in basis points
+
+pub const MAXIMUM_AGE: u64 = 60 * 60; // 1 hour in seconds
+
+pub const BID_STATE_SEED: &[u8] = b"huifi-bid-state";

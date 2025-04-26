@@ -97,6 +97,33 @@ pub mod contracts_hui {
     ) -> Result<()> {
         instructions::collateral::deposit_spl_collateral(ctx, uuid, amount)
     }
+    pub fn slash_collateral(
+        ctx: Context<SlashCollateral>,
+        uuid: [u8; 6],
+        payout_amount: u64
+    ) -> Result<()> {
+        instructions::collateral::slash_collateral(ctx, uuid, payout_amount)
+    }
+    pub fn process_payout(
+        ctx: Context<ProcessPayout>,
+        uuid: [u8; 6],  
+        required_collateral: Option<u64>
+    ) -> Result<()> {
+        instructions::payout::process_payout(ctx, uuid, required_collateral)
+    }
+    pub fn submit_bid(
+        ctx: Context<SubmitBid>,
+        bid_amount: u64
+    ) -> Result<()> {
+        instructions::bidding::submit_bid(ctx, bid_amount)
+    }
+    pub fn finalize_bidding(
+        ctx: Context<FinalizeBidding>,
+        uuid: [u8; 6]
+    ) -> Result<()> {
+        instructions::bidding::finalize_bidding(ctx)
+    }
+
     // Commenting out until withdraw structures are implemented
     /*
     pub fn withdraw_sol_collateral(
@@ -126,18 +153,18 @@ pub mod contracts_hui {
     // }
 
     // Request early payout with collateral
-    pub fn request_early_payout(
-        ctx: Context<RequestEarlyPayout>,
-    ) -> Result<()> {
-        instructions::payout::request_early_payout(ctx)
-    }
+    // pub fn request_early_payout(
+    //     ctx: Context<RequestEarlyPayout>,
+    // ) -> Result<()> {
+    //     instructions::payout::request_early_payout(ctx)
+    // }
 
-    // Process payout to the selected recipient
-    pub fn process_payout(
-        ctx: Context<ProcessPayout>,
-    ) -> Result<()> {
-        instructions::payout::process_payout(ctx)
-    }
+    // // Process payout to the selected recipient
+    // pub fn process_payout(
+    //     ctx: Context<ProcessPayout>,
+    // ) -> Result<()> {
+    //     instructions::payout::process_payout(ctx)
+    // }
 
 }
 
