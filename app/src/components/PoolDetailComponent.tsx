@@ -18,10 +18,11 @@ import {
   History,
   ArrowRight,
 } from "lucide-react";
-import { useHuifiPools, PoolWithKey } from "@/hooks/useHuifiPools";
+import { useHuifiPools, PoolWithKey, MemberAccountData } from "@/hooks/useHuifiPools";
 import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
-
+import { getStatusString, formatDurationHours, lamportsToSol, bpsToPercentage } from "@/lib/utils";
+import { useWallet } from "@solana/wallet-adapter-react";
 // Assuming MOCK_POOL_DATA is either passed in or replaced by actual data structure
 // If MOCK_POOL_DATA is truly static, you might keep its definition here or import it.
 // If it represents the *structure* of the fetched data, use the actual data passed in props.
@@ -96,38 +97,39 @@ type ActionConfig = {
   max?: string;
 };
 // Helper function to get status string
-const getStatusString = (status: any): string => {
-  // Check if status exists
-  if (!status) return 'Unknown';
+// const getStatusString = (status: any): string => {
+//   // Check if status exists
+//   if (!status) return 'Unknown';
   
-  // Check which key exists in the status object
-  try {
-    if ('initializing' in status) return 'Initializing';
-    if ('active' in status) return 'Active';
-    if ('completed' in status) return 'Completed';
-    return 'Unknown'; // fallback
-  } catch (error) {
-    console.error('Error parsing status:', status);
-    return 'Unknown';
-  }
-};
-const formatDurationHours = (cycleDurationSeconds: BN): string => {
-  const seconds = Number(cycleDurationSeconds.toString());
-  const hours = seconds / 3600;
-  return `${Math.floor(hours)} hours`;
-};
+//   // Check which key exists in the status object
+//   try {
+//     if ('initializing' in status) return 'Initializing';
+//     if ('active' in status) return 'Active';
+//     if ('completed' in status) return 'Completed';
+//     return 'Unknown'; // fallback
+//   } catch (error) {
+//     console.error('Error parsing status:', status);
+//     return 'Unknown';
+//   }
+// };
+// const formatDurationHours = (cycleDurationSeconds: BN): string => {
+//   const seconds = Number(cycleDurationSeconds.toString());
+//   const hours = seconds / 3600;
+//   return `${Math.floor(hours)} hours`;
+// };
 export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
   initialData,
   publicKey,
 }) => {
   const router = useRouter();
+  const { publicKey: userWallet } = useWallet();
   const [activeAction, setActiveAction] = useState<string | null>(null);
   const [actionAmount, setActionAmount] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [poolData, setPoolData] = useState<PoolWithKey | null>(null);
-
-  const { fetchPoolDetails } = useHuifiPools();
+  const [memberDetails, setMemberDetails] = useState<MemberAccountData | null>(null);
+  const { fetchPoolDetails, fetchMemberAccountDetail } = useHuifiPools();
   const poolPublicKey = useMemo(() => new PublicKey(publicKey), [publicKey]);
   // Add statusString to component state
   const [statusString, setStatusString] = useState<string>('Unknown');
@@ -147,7 +149,47 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
 
     loadPoolData();
   }, [poolPublicKey, fetchPoolDetails]);
-  // Client-side hooks for actions (example)
+  useEffect(() => {
+    const checkMembership = async () => {
+      if (!poolData || !userWallet) {
+        console.log('Missing required data for membership check:', {
+          hasPoolData: !!poolData,
+          hasUserWallet: !!userWallet
+        });
+        return;
+      }
+  
+      try {
+        console.log('Checking membership for:', {
+          pool: poolData.publicKey.toString(),
+          user: userWallet.toString()
+        });
+  
+        const memberDetails = await fetchMemberAccountDetail(poolData, userWallet);
+        
+        if (memberDetails) {
+          console.log('Member details:', {
+            owner: memberDetails.owner.toString(),
+            pool: memberDetails.pool.toString(),
+            contributionsMade: memberDetails.contributionsMade,
+            hasReceivedPayout: memberDetails.hasReceivedPayout,
+            eligibleForPayout: memberDetails.eligibleForPayout,
+            collateralStaked: memberDetails.collateralStaked.toString(),
+            status: memberDetails.status
+          });
+          setMemberDetails(memberDetails);
+        } else {
+          console.log('User is not a member of this pool');
+          setMemberDetails(null);
+        }
+      } catch (error) {
+        console.error('Error checking membership:', error);
+        setMemberDetails(null);
+      }
+    };
+  
+    checkMembership();
+  }, [poolData, userWallet, fetchMemberAccountDetail]);// Client-side hooks for actions (example)
   // const { someActionFromHook } = useHuifiPools();
 
   // Mock action handlers (replace with actual logic using wallet connection, etc.)
@@ -309,7 +351,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
             <div className="bg-[#1a1a18] px-4 py-2 rounded-lg border border-[#e6ce04]/20">
               <span className="text-[#f8e555]/70 mr-2">Pool Status:</span>
               {/* Use dynamic data */}
-              <span className="text-[#e6ce04] font-bold">{"STATUS"}</span>
+              <span className="text-[#e6ce04] font-bold">{statusString.toUpperCase()}</span>
             </div>
           </div>
         </div>
@@ -427,7 +469,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                               Entry Amount
                             </span>
                             <span className="text-[#e6ce04]">
-                              {poolData.account.config.contributionAmount.toString()} SOL
+                              {lamportsToSol(poolData.account.config.contributionAmount).toString()}
                             </span>
                           </p>
                           <p className="flex justify-between">
@@ -435,7 +477,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                               Total Contributed
                             </span>
                             <span className="text-[#e6ce04]">
-                              {"data.financials.totalContributed"}
+                              {lamportsToSol(poolData.account.totalContributions).toString()}
                             </span>
                           </p>
                           <p className="flex justify-between">
@@ -443,7 +485,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                               Yield Earned
                             </span>
                             <span className="text-[#e6ce04]">
-                              {"data.financials.yieldEarned"}
+                              {"0 SOL"}
                             </span>
                           </p>
                           <p className="flex justify-between">
@@ -451,14 +493,14 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                               Early Withdraw Fee
                             </span>
                             <span className="text-[#e6ce04]">
-                              {"data.financials.earlyWithdrawalFee"}
+                            {bpsToPercentage(poolData.account.config.earlyWithdrawalFeeBps)}
                             </span>
                           </p>
                         </div>
                       </div>
                     </div>
                     {/* Your Position */}
-                    <div>
+                    {/* <div>
                       <h3 className="text-lg md:text-xl font-medium text-[#e6ce04] mb-3">
                         Your Position
                       </h3>
@@ -467,7 +509,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                           <div>
                             <p className="text-[#f8e555]/70 mb-1">Position</p>
                             <p className="text-md md:text-lg font-medium text-[#e6ce04]">
-                              #{"POSITION"}
+                              #{}
                             </p>
                           </div>
                           <div>
@@ -494,7 +536,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                           </div>
                         </div>
                       </div>
-                    </div>
+                    </div> */}
                   </div>
                 )}
 
@@ -592,7 +634,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                             Total Members
                           </p>
                           <p className="text-[#e6ce04] font-medium">
-                            {"data.stats.totalMembers"}
+                            {poolData.account.memberAddresses.length}
                           </p>
                         </div>
                         <div className="bg-[#010200] p-3 rounded-lg border border-[#e6ce04]/20">
@@ -600,7 +642,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                             Total Payouts
                           </p>
                           <p className="text-[#e6ce04] font-medium">
-                            {"data.stats.totalPayouts"}
+                            {/* {poolData.account.totalPayouts} */}
                           </p>
                         </div>
                         <div className="bg-[#010200] p-3 rounded-lg border border-[#e6ce04]/20">
@@ -608,7 +650,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                             Average Yield
                           </p>
                           <p className="text-[#e6ce04] font-medium">
-                            {"data.stats.averageYield"}
+                            {}
                           </p>
                         </div>
                         <div className="bg-[#010200] p-3 rounded-lg border border-[#e6ce04]/20">
@@ -616,7 +658,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                             Completed Rounds
                           </p>
                           <p className="text-[#e6ce04] font-medium">
-                            {"data.stats.completedRounds"}
+                            {poolData.account.currentCycle}/{poolData.account.totalCycles}
                           </p>
                         </div>
                       </div>
@@ -630,16 +672,16 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                         <div className="space-y-3 text-xs md:text-base break-all">
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-[#f8e555]/70">
-                              Contract Address
+                              Pool Address
                             </span>
                             <span className="text-[#e6ce04]">
-                              {"data.security.contract"}
+                              {poolData.publicKey.toString()}
                             </span>
                           </div>
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-[#f8e555]/70">Creator</span>
                             <span className="text-[#e6ce04]">
-                              {"data.security.creator"}
+                              {poolData.account.creator.toString()}
                             </span>
                           </div>
                           <div className="flex items-center justify-between gap-2">
@@ -672,10 +714,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                   Next Payout In
                 </h3>
                 <p className="text-3xl md:text-4xl font-mono font-bold text-[#e6ce04] mb-3">
-                  {"data.timing.nextPayoutIn"}
-                </p>
-                <p className="text-sm md:text-base text-[#f8e555]/70">
-                  Your position: #{"data.user.position"}
+                  {formatDurationHours(poolData.account.nextPayoutTimestamp)}
                 </p>
               </div>
             </div>
@@ -689,19 +728,19 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                 <div className="flex justify-between items-center text-sm md:text-base">
                   <span className="text-[#f8e555]/70">Contributed</span>
                   <span className="text-[#e6ce04] font-bold text-base md:text-lg">
-                    {"data.user.contributed"}
+                    {memberDetails?.contributionsMade} {"SOL"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-sm md:text-base">
-                  <span className="text-[#f8e555]/70">Earned</span>
+                  <span className="text-[#f8e555]/70">Collateral Staked</span>
                   <span className="text-[#e6ce04] font-bold text-base md:text-lg">
-                    {"data.user.earned"}
+                    {memberDetails?.collateralStaked.toString()} {"SOL"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-sm md:text-base">
                   <span className="text-[#f8e555]/70">Status</span>
                   <span className="text-[#e6ce04] font-bold text-base md:text-lg">
-                    {"data.user.status"}
+                    {getStatusString(memberDetails?.status)}
                   </span>
                 </div>
               </div>
