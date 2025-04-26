@@ -1,5 +1,5 @@
-import HuifidappFeature from '@/components/huifidapp/huifidapp-feature'
+// import HuifidappFeature from '@/components/huifidapp/huifidapp-feature'
 
 export default function Page() {
-  return <HuifidappFeature />
+  // return <HuifidappFeature />
 }
