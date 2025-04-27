@@ -58,15 +58,28 @@ pub struct ContributeSol<'info> {
 pub fn contribute_sol(ctx: Context<ContributeSol>, uuid: [u8; 6], amount: u64) -> Result<()> {
     let group_account = &mut ctx.accounts.group_account;
     let member_account = &mut ctx.accounts.member_account;
+     // Convert input SOL to lamports
     
     // 🛡️ Enforce UUID matches
     require!(
         group_account.uuid == uuid, 
         HuiFiError::InvalidPoolUUID
     );    
+    require!(
+        member_account.has_contributed == true,
+        HuiFiError::HasAlreadyContributed
+    );
+    require!(
+        member_account.status == MemberStatus::Defaulted,
+        HuiFiError::MemberHadDefaulted
+    );
 
-    let discount = if Some(ctx.accounts.contributor.key()) == group_account.current_winner {
-        group_account.current_bid_amount.unwrap_or(0)
+    
+    let discount_in_lamports = if Some(ctx.accounts.contributor.key()) == group_account.current_winner {
+        group_account.current_bid_amount
+            .unwrap_or(0)
+            .checked_mul(LAMPORTS_PER_SOL)  // Convert bid discount to lamports
+            .unwrap()
     } else {
         0
     };
@@ -74,8 +87,11 @@ pub fn contribute_sol(ctx: Context<ContributeSol>, uuid: [u8; 6], amount: u64) -
     let required_contribution = group_account
         .config
         .contribution_amount
-        .saturating_sub(discount);
-    // Validate the contribution amount
+        .checked_mul(LAMPORTS_PER_SOL)  // Convert contribution amount to lamports
+        .unwrap()
+        .saturating_sub(discount_in_lamports);  // Subtract discount (already in lamports)
+
+    // Validate the contribution amount in lamports
     require!(
         amount == required_contribution,
         HuiFiError::InsufficientContribution
@@ -114,20 +130,23 @@ pub fn contribute_sol(ctx: Context<ContributeSol>, uuid: [u8; 6], amount: u64) -
     
     // Update member account
     member_account.contributions_made = member_account.contributions_made.saturating_add(1);
+    member_account.total_contributions = member_account.total_contributions.saturating_add(amount);
     member_account.last_contribution_timestamp = current_timestamp;
-    
+    member_account.has_contributed = true;
     // Update pool account
     group_account.total_contributions = group_account.total_contributions.saturating_add(amount);
     
     msg!("Contribution of {} SOL received from {}", 
-        amount, 
+        amount as f64 / LAMPORTS_PER_SOL as f64,  // Convert lamports to SOL for display
         ctx.accounts.contributor.key()
     );
+    
     // After successful contribution
-    msg!("💰 Contribution received: {} (Winner discount: {})", 
-        amount,
-        group_account.current_bid_amount.unwrap_or(0)
+    msg!("💰 Contribution received: {} SOL (Winner discount: {} SOL)", 
+        amount as f64 / LAMPORTS_PER_SOL as f64,  // Convert lamports to SOL for display
+        group_account.current_bid_amount.unwrap_or(0) as f64 / LAMPORTS_PER_SOL as f64  // Convert discount to SOL for display
     );    
+    
     // After successful contribution, check if all members have contributed
     if group_account.all_members_contributed() {
         msg!("✅ All members have contributed for cycle {}", group_account.current_cycle);

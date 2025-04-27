@@ -70,7 +70,8 @@ pub enum HuiFiError {
 
     #[msg("Member not defaulted")]
     MemberNotDefaulted,
-
+    #[msg("Member had already defaulted")]
+    MemberHadDefaulted,
     #[msg("Member not paid yet")]
     MemberNotPaidYet,
 
@@ -137,4 +138,16 @@ pub enum HuiFiError {
     // InvalidPhaseTransition,
     #[msg("All members must contribute before advancing")]
     ContributionsPending,
+    #[msg("Cycle out of bounds")]
+    CycleOutOfBounds,
+    #[msg("Unclaimed payouts")]
+    UnclaimedPayouts,
+    #[msg("Overflow")]
+    Overflow,
+    #[msg("Has already contributed")]
+    HasAlreadyContributed,
+    #[msg("Already deposited collateral")]
+    AlreadyDepositedCollateral,
+    #[msg("Has not deposited collateral")]
+    CollateralNotDeposited,
 }

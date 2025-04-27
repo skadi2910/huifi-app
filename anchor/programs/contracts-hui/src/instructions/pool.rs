@@ -431,15 +431,33 @@ pub struct CreateSolPool<'info> {
     )]
     pub group_account: Account<'info, GroupAccount>,
     
-    /// CHECK: This is a PDA that will hold SOL
+    /// CHECK: This is a PDA that will hold SOL contributions
     #[account(
         mut,
         seeds = [VAULT_SOL_SEED, group_account.key().as_ref()],
         bump,
     )]
-    pub vault_sol: UncheckedAccount<'info>,
-     // Add member account initialization for the creator
-     #[account(
+    pub vault_sol: AccountInfo<'info>,
+
+    /// CHECK: This is a PDA that will hold SOL collateral for the group
+    #[account(
+        mut,
+        seeds = [COLLATERAL_VAULT_SOL_SEED, group_account.key().as_ref()],
+        bump,
+    )]
+    pub collateral_vault: AccountInfo<'info>,
+
+    /// Current bid state account
+    #[account(
+        init,
+        payer = creator,
+        space = 8 + std::mem::size_of::<BidState>(),
+        seeds = [BID_STATE_SEED, group_account.key().as_ref()],
+        bump,
+    )]
+    pub current_bid_state: Account<'info, BidState>,
+
+    #[account(
         init,
         payer = creator,
         space = 8 + std::mem::size_of::<MemberAccount>(),
@@ -447,6 +465,7 @@ pub struct CreateSolPool<'info> {
         bump,
     )]
     pub member_account: Account<'info, MemberAccount>,   
+
     #[account(seeds = [PROTOCOL_SEED], bump = protocol_settings.bump)]
     pub protocol_settings: Account<'info, ProtocolSettings>,
     
@@ -460,17 +479,14 @@ pub fn create_sol_pool(
     uuid: [u8; 6],
     whitelist: Option<Vec<Pubkey>>,
 ) -> Result<()> {
-    // Validate pool configuration
-    // validate_pool_config(&pool_config)?;
-    
     let current_timestamp = Clock::get()?.unix_timestamp;
     let group_account = &mut ctx.accounts.group_account;
     let bump = ctx.bumps.group_account;
     let member_account = &mut ctx.accounts.member_account;
     let member_bump = ctx.bumps.member_account;
-    // Create a copy of pool_config instead of modifying the original
+    
+    // Create a copy of pool_config and mark as SOL pool
     let mut config = pool_config.clone();
-    // Mark as SOL pool
     config.is_native_sol = true;
     
     // Initialize the group account
@@ -479,6 +495,7 @@ pub fn create_sol_pool(
     group_account.whitelist = whitelist.unwrap_or_default();
     group_account.token_mint = anchor_spl::token::spl_token::native_mint::id();
     group_account.vault = ctx.accounts.vault_sol.key();
+ 
     group_account.config = config;
     group_account.member_addresses = Vec::new();
     group_account.payout_order = Vec::new();
@@ -494,6 +511,14 @@ pub fn create_sol_pool(
     group_account.current_winner = None;
     group_account.bump = bump;
 
+    // Initialize current bid state
+    let current_bid_state = &mut ctx.accounts.current_bid_state;
+    current_bid_state.pool = group_account.key();
+    current_bid_state.cycle = 0;
+    current_bid_state.bids = Vec::new();
+    current_bid_state.winner = None;
+    current_bid_state.bump = ctx.bumps.current_bid_state;
+
     // Initialize the creator's member account
     member_account.owner = ctx.accounts.creator.key();
     member_account.pool = group_account.key();
@@ -502,14 +527,54 @@ pub fn create_sol_pool(
     member_account.has_received_payout = false;
     member_account.eligible_for_payout = false;
     member_account.collateral_staked = 0;
+    member_account.has_deposited_collateral = false;
     member_account.reputation_points = 0;
     member_account.last_contribution_timestamp = 0;
+    member_account.total_contributions = 0;
+    member_account.has_bid = false;
+    member_account.has_contributed = false;
+    member_account.has_deposited_collateral = false;
     member_account.bump = member_bump;   
+
+    // Create the vaults as PDAs
+    let vault_lamports = Rent::get()?.minimum_balance(0);
+    
+    // Create main vault
+    invoke(
+        &system_instruction::transfer(
+            &ctx.accounts.creator.key(),
+            &ctx.accounts.vault_sol.key(),
+            vault_lamports,
+        ),
+        &[
+            ctx.accounts.creator.to_account_info(),
+            ctx.accounts.vault_sol.to_account_info(),
+            ctx.accounts.system_program.to_account_info(),
+        ],
+    )?;
+
+    // Create collateral vault
+    invoke(
+        &system_instruction::transfer(
+            &ctx.accounts.creator.key(),
+            &ctx.accounts.collateral_vault.key(),
+            vault_lamports,
+        ),
+        &[
+            ctx.accounts.creator.to_account_info(),
+            ctx.accounts.collateral_vault.to_account_info(),
+            ctx.accounts.system_program.to_account_info(),
+        ],
+    )?;
+
     // Add creator as the first member
     group_account.member_addresses.push(ctx.accounts.creator.key());
     
     msg!("✅ SOL Pool created with UUID: {:?}", uuid);
     msg!("👥 Max participants: {}", pool_config.max_participants);
+    msg!("💰 Main vault: {}", ctx.accounts.vault_sol.key());
+    msg!("🔒 Collateral vault: {}", ctx.accounts.collateral_vault.key());
+    msg!("📊 Current bid state: {}", ctx.accounts.current_bid_state.key());
     
     Ok(())
 }
@@ -660,6 +725,10 @@ pub fn join_sol_pool(ctx: Context<JoinSolPool>, uuid: [u8; 6]) -> Result<()> {
     member_account.collateral_staked = 0;
     member_account.reputation_points = 0;
     member_account.last_contribution_timestamp = 0;
+    member_account.total_contributions = 0;
+    member_account.has_deposited_collateral = false;
+    member_account.has_bid = false;
+    member_account.has_contributed = false;
     member_account.bump = bump;
     
     // Add user to the pool's member list

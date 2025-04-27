@@ -6,22 +6,28 @@ use crate::errors::*;
 pub fn submit_bid(ctx: Context<SubmitBid>, bid_amount: u64) -> Result<()> {
     let bid_state = &mut ctx.accounts.bid_state;
     let group_account = &ctx.accounts.group_account;
+    let member_account = &mut ctx.accounts.member;
     // Basic validations    
     require!(bid_amount > 0, HuiFiError::InvalidBidAmount);
-    require!(
-        !bid_state.bids.iter().any(|b| b.bidder == ctx.accounts.bidder.key()),
-        HuiFiError::AlreadyBid
-    );
+
     // Check if member is part of the pool
     require!(
         group_account.member_addresses.contains(&ctx.accounts.bidder.key()),
         HuiFiError::NotPoolMember
     );
+
+    // Check if member has already bid
+    require!(
+        !member_account.has_bid, 
+        HuiFiError::AlreadyBid
+    );
+
     bid_state.bids.push(BidEntry {
         bidder: ctx.accounts.bidder.key(),
         amount: bid_amount,
     });
-
+    // Update member account
+    member_account.has_bid = true;
     msg!(
         "🪙 Bid submitted: {} by {}",
         bid_amount,
@@ -62,14 +68,14 @@ pub fn finalize_bidding(ctx: Context<FinalizeBidding>) -> Result<()> {
     );
     member.eligible_for_payout = true;
 
-    // Transition to Contributing phase
-    group_account.status = PoolStatus::Active {
-        phase: CyclePhase::Contributing
-    };
+    // // Transition to Contributing phase
+    // group_account.status = PoolStatus::Active {
+    //     phase: CyclePhase::Contributing
+    // };
 
-    // Set the timestamp for the next phase
-    let clock = Clock::get()?;
-    group_account.last_cycle_timestamp = clock.unix_timestamp;
+    // // Set the timestamp for the next phase
+    // let clock = Clock::get()?;
+    // group_account.last_cycle_timestamp = clock.unix_timestamp;
 
     msg!(
         "🏆 Bidding finalized for pool {} cycle {}",
@@ -90,7 +96,7 @@ pub struct SubmitBid<'info> {
 
     #[account(
         mut,
-        seeds = [b"bid", group_account.key().as_ref(), &[group_account.current_cycle]],
+        seeds = [BID_STATE_SEED, group_account.key().as_ref()],
         bump = bid_state.bump
     )]
     pub bid_state: Account<'info, BidState>,
@@ -106,6 +112,12 @@ pub struct SubmitBid<'info> {
         // constraint = group_account.status == PoolStatus::Active @ HuiFiError::InvalidPoolStatus,
     )]
     pub group_account: Account<'info, GroupAccount>,
+
+    #[account(
+        seeds = [MEMBER_SEED, group_account.key().as_ref(), bidder.key().as_ref()],
+        bump = member.bump,
+    )]
+    pub member: Account<'info, MemberAccount>,
 }
 
 #[derive(Accounts)]
@@ -115,7 +127,7 @@ pub struct FinalizeBidding<'info> {
 
     #[account(
         mut,
-        seeds = [b"bid", group_account.key().as_ref(), &[group_account.current_cycle]],
+        seeds = [BID_STATE_SEED, group_account.key().as_ref(), &[group_account.current_cycle]],
         bump = bid_state.bump
     )]
     pub bid_state: Account<'info, BidState>,

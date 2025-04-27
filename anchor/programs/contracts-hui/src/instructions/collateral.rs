@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{program::invoke, system_instruction};
+use anchor_lang::solana_program::{program::invoke, system_instruction, native_token::LAMPORTS_PER_SOL};
 use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 use crate::constants::*;
 use crate::state::*;
@@ -37,11 +37,11 @@ pub struct DepositSolCollateral<'info> {
 
     #[account(
         mut,
-        seeds = [COLLATERAL_VAULT_SOL_SEED, group_account.key().as_ref(), user.key().as_ref()],
+        seeds = [COLLATERAL_VAULT_SOL_SEED, group_account.key().as_ref()],
         bump,
     )]
     /// CHECK: Native SOL vault PDA
-    pub collateral_vault_sol: AccountInfo<'info>,
+    pub collateral_vault_sol: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -49,40 +49,49 @@ pub struct DepositSolCollateral<'info> {
 pub fn deposit_sol_collateral(
     ctx: Context<DepositSolCollateral>,
     _uuid: [u8; 6],
-    amount: u64
+    amount: u64  // already in lamports from frontend
 ) -> Result<()> {
     let group = &ctx.accounts.group_account;
     let member = &mut ctx.accounts.member_account;
 
-    let min_required = calculate_required_collateral(
-        group.config.contribution_amount,
-        group.config.max_participants,
-        member.contributions_made,
-        group.config.collateral_requirement_bps as u64,
-    );
+    // Calculate required collateral (130% of total contributions)
+    let min_required = group.total_contributions
+        .saturating_mul(130)
+        .saturating_div(100);
 
     require!(amount >= min_required, HuiFiError::InsufficientCollateral);
-    // After collateral check and before transfer
-    msg!("🛡️ Collateral status - Required: {}, Staked: {}", 
-        min_required,
-        member.collateral_staked
+    require!(member.has_deposited_collateral == false, HuiFiError::AlreadyDepositedCollateral);
+
+    // Log amounts in SOL for better readability
+    msg!("🛡️ Collateral status - Required: {} SOL (130% of total contributions), Provided: {} SOL", 
+        min_required as f64 / LAMPORTS_PER_SOL as f64,
+        amount as f64 / LAMPORTS_PER_SOL as f64
     );
+
+    // Transfer lamports
     let ix = system_instruction::transfer(
         &ctx.accounts.user.key(),
         &ctx.accounts.collateral_vault_sol.key(),
-        amount,
+        amount,  // already in lamports
     );
+
     invoke(
         &ix,
         &[
             ctx.accounts.user.to_account_info(),
-            ctx.accounts.collateral_vault_sol.clone(),
+            ctx.accounts.collateral_vault_sol.to_account_info(),
             ctx.accounts.system_program.to_account_info(),
         ],
     )?;
 
+    // Store amount in lamports
     member.collateral_staked += amount;
-    msg!("✅ Deposited {} SOL as collateral", amount);
+    member.has_deposited_collateral = true;
+
+    // Log in SOL for better readability
+    msg!("✅ Deposited {} SOL as collateral", 
+        amount as f64 / LAMPORTS_PER_SOL as f64
+    );
 
     Ok(())
 }
@@ -305,16 +314,23 @@ pub fn slash_collateral(ctx: Context<SlashCollateral>, uuid: [u8; 6], payout_amo
 
 // ========== Helpers ==========
 
-fn calculate_required_collateral(
-    contribution_amount: u64,
-    max_participants: u8,
-    contribution_count: u8,
-    ltv_basis_points: u64,
-) -> u64 {
-    let expected_payout = contribution_amount * max_participants as u64;
-    let user_contribution = contribution_amount * contribution_count as u64;
-    (expected_payout - user_contribution) * 10_000 / ltv_basis_points
-}
+// Helper function should also work with lamports
+// fn calculate_required_collateral(
+//     contribution_amount: u64,  // should be in lamports
+//     max_participants: u8,
+//     contributions_made: u64,
+//     collateral_requirement_bps: u64,
+// ) -> u64 {
+//     // Calculate total contribution value in lamports
+//     let total_contribution = contribution_amount
+//         .saturating_mul(max_participants as u64)
+//         .saturating_mul(contributions_made);
+
+//     // Calculate required collateral in lamports
+//     total_contribution
+//         .saturating_mul(collateral_requirement_bps)
+//         .saturating_div(MIN_COLLATERAL_REQUIREMENT_BPS)
+// }
 
 
 

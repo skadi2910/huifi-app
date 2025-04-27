@@ -88,6 +88,7 @@ pub struct GroupAccount {
     pub price_feed_id: [u8; 32],        // Price feed ID
     pub current_winner: Option<Pubkey>,  // Current winner
     pub current_bid_amount: Option<u64>, // Current bid amount
+    pub final_contribution_amount: Option<u64>, // Final contribution amount
     pub bump: u8,                       // PDA bump
 }
 impl GroupAccount {
