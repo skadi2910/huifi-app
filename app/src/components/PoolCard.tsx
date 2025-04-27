@@ -33,7 +33,8 @@ export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account, onJoinPo
   const contributionAmount = config?.contributionAmount || new BN(0);
   const cycleDurationSeconds = config?.cycleDurationSeconds || new BN(0);
   const currentParticipants = memberAddresses?.length || 0;
-  const totalValue = totalContributions || new BN(0);
+  // const totalValue = totalContributions || new BN(0);
+  const totalValue = contributionAmount.mul(new BN(maxParticipants)) || new BN(0);
 
   const frequencyInSeconds = cycleDurationSeconds.toNumber();
   const frequency = 
@@ -42,7 +43,7 @@ export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account, onJoinPo
   frequencyInSeconds <= 1209600 ? 'biweekly' : 'monthly';
 
 // Use default yield if not available in the data
-  const yieldBasisPoints = 0;
+  const yieldBasisPoints = 500;
 
   const name =
     `HuiFi Pool ${Array.from(uuid).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 6)}`;
@@ -62,19 +63,19 @@ export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account, onJoinPo
   const statusString = getStatusString();
 
   const formatTimeRemaining = () => {
-    if (!nextPayoutTimestamp) return 'N/A';
-    const now = Math.floor(Date.now() / 1000);
-    const next = nextPayoutTimestamp.toNumber();
-    const diff = next - now;
-    if (diff <= 0) return '0h 0m';
-    const hours = Math.floor(diff / 3600);
-    const minutes = Math.floor((diff % 3600) / 60);
-    return `${hours}h ${minutes}m`;
+    // if (!nextPayoutTimestamp) return 'N/A';
+    // const now = Math.floor(Date.now() / 1000);
+    // const next = nextPayoutTimestamp.toNumber();
+    // const diff = next - now;
+    // if (diff <= 0) return '0h 0m';
+    // const hours = Math.floor(diff / 3600);
+    // const minutes = Math.floor((diff % 3600) / 60);
+    return '24h 30m';
   };
 
   const formatCurrency = (amount: BN) => {
     const value = amount?.toNumber() ?? 0;
-    return `${(value / 1_000_000).toFixed(2)} USDC`;
+    return `${(value / 1_000_000_000).toFixed(2)} SOL`;
   };
 
   const getStatusClass = () => {
