@@ -122,7 +122,7 @@ export const useHuifiPools = () => {
                 throw new Error("Program IDL or accounts not available");
               }
               
-              console.log("IDL accounts:", program.idl.accounts.map(a => a.name));
+              // console.log("IDL accounts:", program.idl.accounts.map(a => a.name));
               
               const poolAccount = program.idl.accounts.find(a => 
                 a.name === 'groupAccount'
@@ -133,8 +133,8 @@ export const useHuifiPools = () => {
                 throw new Error("Could not find GroupAccount in IDL");
               }
               
-              console.log("Found pool account in IDL:", poolAccount.name);
-              console.log("Discriminator:", poolAccount.discriminator);
+              // console.log("Found pool account in IDL:", poolAccount.name);
+              // console.log("Discriminator:", poolAccount.discriminator);
               
               const discriminator = poolAccount.discriminator 
                 ? Buffer.from(poolAccount.discriminator) 
@@ -142,7 +142,7 @@ export const useHuifiPools = () => {
                 
               const base58Discriminator = bs58.encode(discriminator);
               
-              console.log("Using discriminator:", base58Discriminator);
+              // console.log("Using discriminator:", base58Discriminator);
               
               const accounts = await connection.getProgramAccounts(program.programId, {
                 filters: [
@@ -155,7 +155,7 @@ export const useHuifiPools = () => {
                 ],
               });
               
-              console.log("Raw getProgramAccounts result:", accounts.length);
+              // console.log("Raw getProgramAccounts result:", accounts.length);
               
               poolsData = await Promise.all(
                 accounts.map(async ({ pubkey, account }) => {
@@ -313,12 +313,12 @@ export const useHuifiPools = () => {
         }
   
         // Debug: Log available accounts
-        console.log("Available accounts:", Object.keys(program.account));
-        if (program.idl && program.idl.accounts) {
-          console.log("Program IDL accounts:", program.idl.accounts.map(a => a.name));
-        } else {
-          console.log("Program IDL accounts not available");
-        }
+        // console.log("Available accounts:", Object.keys(program.account));
+        // if (program.idl && program.idl.accounts) {
+        //   console.log("Program IDL accounts:", program.idl.accounts.map(a => a.name));
+        // } else {
+        //   console.log("Program IDL accounts not available");
+        // }
   
         const [memberPda] = PublicKey.findProgramAddressSync(
           [
@@ -329,12 +329,12 @@ export const useHuifiPools = () => {
           program.programId
         );
   
-        console.log('Attempting to fetch member account:', {
-          memberPda: memberPda.toString(),
-          pool: poolData.publicKey.toString(),
-          user: userWallet.toString(),
-          attempt: attempt + 1
-        });
+        // console.log('Attempting to fetch member account:', {
+        //   memberPda: memberPda.toString(),
+        //   pool: poolData.publicKey.toString(),
+        //   user: userWallet.toString(),
+        //   attempt: attempt + 1
+        // });
   
         if (attempt > 0) {
           const retryDelay = baseDelay * Math.pow(2, attempt);
@@ -350,15 +350,15 @@ export const useHuifiPools = () => {
           return null;
         }
   
-        console.log('Member account found:', {
-          owner: memberAccount.owner.toString(),
-          pool: memberAccount.pool.toString(),
-          contributionsMade: memberAccount.contributionsMade,
-          hasReceivedPayout: memberAccount.hasReceivedPayout,
-          eligibleForPayout: memberAccount.eligibleForPayout,
-          collateralStaked: memberAccount.collateralStaked.toString(),
-          status: memberAccount.status
-        });
+        // console.log('Member account found:', {
+        //   owner: memberAccount.owner.toString(),
+        //   pool: memberAccount.pool.toString(),
+        //   contributionsMade: memberAccount.contributionsMade,
+        //   hasReceivedPayout: memberAccount.hasReceivedPayout,
+        //   eligibleForPayout: memberAccount.eligibleForPayout,
+        //   collateralStaked: memberAccount.collateralStaked.toString(),
+        //   status: memberAccount.status
+        // });
   
         return memberAccount as MemberAccountData;
   

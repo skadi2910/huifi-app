@@ -1,5 +1,5 @@
 {
-  "address": "3EpcS5dv1G71CDER3d77L7jAh7dn9zKpJNo7wSSwn7kA",
+  "address": "96b1pKm21J4ouL2kUD6YeLAhxNZyj1HC82t5VCeEmTsP",
   "metadata": {
     "name": "contracts_hui",
     "version": "0.1.0",
@@ -343,6 +343,84 @@
                   115,
                   111,
                   108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "collateral_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  99,
+                  111,
+                  108,
+                  108,
+                  97,
+                  116,
+                  101,
+                  114,
+                  97,
+                  108,
+                  45,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116,
+                  45,
+                  115,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              }
+            ]
+          }
+        },
+        {
+          "name": "current_bid_state",
+          "docs": [
+            "Current bid state account"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  98,
+                  105,
+                  100,
+                  45,
+                  115,
+                  116,
+                  97,
+                  116,
+                  101
                 ]
               },
               {
@@ -712,10 +790,6 @@
               {
                 "kind": "account",
                 "path": "group_account"
-              },
-              {
-                "kind": "account",
-                "path": "user"
               }
             ]
           }
@@ -852,7 +926,7 @@
       ],
       "accounts": [
         {
-          "name": "creator",
+          "name": "authority",
           "writable": true,
           "signer": true
         },
@@ -886,7 +960,6 @@
         },
         {
           "name": "bid_state",
-          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1336,20 +1409,17 @@
               },
               {
                 "kind": "account",
-                "path": "recipient"
+                "path": "user"
               }
             ]
           }
         },
         {
-          "name": "recipient"
-        },
-        {
-          "name": "recipient_token_account",
+          "name": "recipient",
           "writable": true
         },
         {
-          "name": "vault",
+          "name": "vault_sol",
           "writable": true,
           "pda": {
             "seeds": [
@@ -1366,7 +1436,11 @@
                   97,
                   117,
                   108,
-                  116
+                  116,
+                  45,
+                  115,
+                  111,
+                  108
                 ]
               },
               {
@@ -1405,10 +1479,6 @@
         {
           "name": "protocol_treasury",
           "writable": true
-        },
-        {
-          "name": "token_program",
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
           "name": "system_program",
@@ -1603,7 +1673,35 @@
         },
         {
           "name": "bid_state",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  98,
+                  105,
+                  100,
+                  45,
+                  115,
+                  116,
+                  97,
+                  116,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              }
+            ]
+          }
         },
         {
           "name": "group_account",
@@ -1628,6 +1726,38 @@
                 "kind": "account",
                 "path": "group_account.uuid",
                 "account": "GroupAccount"
+              }
+            ]
+          }
+        },
+        {
+          "name": "member",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  104,
+                  117,
+                  105,
+                  102,
+                  105,
+                  45,
+                  109,
+                  101,
+                  109,
+                  98,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "group_account"
+              },
+              {
+                "kind": "account",
+                "path": "bidder"
               }
             ]
           }
@@ -1841,118 +1971,153 @@
     },
     {
       "code": 6023,
+      "name": "MemberHadDefaulted",
+      "msg": "Member had already defaulted"
+    },
+    {
+      "code": 6024,
       "name": "MemberNotPaidYet",
       "msg": "Member not paid yet"
     },
     {
-      "code": 6024,
+      "code": 6025,
       "name": "UnsupportedToken",
       "msg": "Unsupported token"
     },
     {
-      "code": 6025,
+      "code": 6026,
       "name": "InvalidVault",
       "msg": "Invalid vault"
     },
     {
-      "code": 6026,
+      "code": 6027,
       "name": "InvalidPoolType",
       "msg": "Invalid pool type"
     },
     {
-      "code": 6027,
+      "code": 6028,
       "name": "InvalidTokenMint",
       "msg": "Invalid token mint"
     },
     {
-      "code": 6028,
+      "code": 6029,
       "name": "InvalidPoolUUID",
       "msg": "Invalid pool UUID"
     },
     {
-      "code": 6029,
+      "code": 6030,
       "name": "NoBids",
       "msg": "No bids"
     },
     {
-      "code": 6030,
+      "code": 6031,
       "name": "AlreadyBid",
       "msg": "Already bid"
     },
     {
-      "code": 6031,
+      "code": 6032,
       "name": "InvalidBidAmount",
       "msg": "Invalid bid amount"
     },
     {
-      "code": 6032,
+      "code": 6033,
       "name": "MissingCollateralVault",
       "msg": "Missing collateral vault"
     },
     {
-      "code": 6033,
+      "code": 6034,
       "name": "MissingTreasury",
       "msg": "Missing treasury"
     },
     {
-      "code": 6034,
+      "code": 6035,
       "name": "MissingPoolVault",
       "msg": "Missing pool vault"
     },
     {
-      "code": 6035,
+      "code": 6036,
       "name": "MissingTokenProgram",
       "msg": "Missing token program"
     },
     {
-      "code": 6036,
+      "code": 6037,
       "name": "InvalidWinnerAccount",
       "msg": "Invalid winner account provided"
     },
     {
-      "code": 6037,
+      "code": 6038,
       "name": "InvalidPhaseTransition",
       "msg": "Invalid phase transition"
     },
     {
-      "code": 6038,
+      "code": 6039,
       "name": "CycleNotReadyForAdvancement",
       "msg": "Cycle not ready for advancement"
     },
     {
-      "code": 6039,
+      "code": 6040,
       "name": "InvalidCyclePhase",
       "msg": "Invalid cycle phase"
     },
     {
-      "code": 6040,
+      "code": 6041,
       "name": "InvalidPhase",
       "msg": "Invalid phase"
     },
     {
-      "code": 6041,
+      "code": 6042,
       "name": "NotPoolMember",
       "msg": "Not a pool member"
     },
     {
-      "code": 6042,
+      "code": 6043,
       "name": "BidTooHigh",
       "msg": "Bid amount exceeds maximum allowed"
     },
     {
-      "code": 6043,
+      "code": 6044,
       "name": "NotPoolWinner",
       "msg": "Not pool winner"
     },
     {
-      "code": 6044,
+      "code": 6045,
       "name": "CollateralRequired",
       "msg": "Collateral required"
     },
     {
-      "code": 6045,
+      "code": 6046,
       "name": "ContributionsPending",
       "msg": "All members must contribute before advancing"
+    },
+    {
+      "code": 6047,
+      "name": "CycleOutOfBounds",
+      "msg": "Cycle out of bounds"
+    },
+    {
+      "code": 6048,
+      "name": "UnclaimedPayouts",
+      "msg": "Unclaimed payouts"
+    },
+    {
+      "code": 6049,
+      "name": "Overflow",
+      "msg": "Overflow"
+    },
+    {
+      "code": 6050,
+      "name": "HasAlreadyContributed",
+      "msg": "Has already contributed"
+    },
+    {
+      "code": 6051,
+      "name": "AlreadyDepositedCollateral",
+      "msg": "Already deposited collateral"
+    },
+    {
+      "code": 6052,
+      "name": "CollateralNotDeposited",
+      "msg": "Has not deposited collateral"
     }
   ],
   "types": [
@@ -2131,6 +2296,12 @@
             }
           },
           {
+            "name": "final_contribution_amount",
+            "type": {
+              "option": "u64"
+            }
+          },
+          {
             "name": "bump",
             "type": "u8"
           }
@@ -2153,6 +2324,14 @@
           {
             "name": "contributions_made",
             "type": "u8"
+          },
+          {
+            "name": "has_bid",
+            "type": "bool"
+          },
+          {
+            "name": "has_contributed",
+            "type": "bool"
           },
           {
             "name": "status",
@@ -2181,6 +2360,14 @@
           {
             "name": "last_contribution_timestamp",
             "type": "i64"
+          },
+          {
+            "name": "total_contributions",
+            "type": "u64"
+          },
+          {
+            "name": "has_deposited_collateral",
+            "type": "bool"
           },
           {
             "name": "bump",

@@ -29,7 +29,7 @@ pub struct AdvanceCycle<'info> {
     // Optional: Include winner's member account for eligibility update
     #[account(
         mut,
-        seeds = [MEMBER_SEED, group_account.key().as_ref(), winner_member_account.owner.as_ref()],
+        seeds = [MEMBER_SEED, group_account.key().as_ref(), authority.owner.as_ref()],
         bump = winner_member_account.bump,
     )]
     pub winner_member_account: Option<Account<'info, MemberAccount>>,
@@ -234,7 +234,7 @@ pub fn force_advance_cycle(ctx: Context<ForceAdvanceCycle>) -> Result<()> {
         PoolStatus::Initializing => {
             msg!("📊 Force advancing from initializing state");
             // Move to cycle 1
-            group_account.current_cycle += 1; // Set directly to 1 instead of incrementing      
+            group_account.current_cycle += 1; // Set directly to 1 instead of incrementing
             group_account.status = PoolStatus::Active {
                 phase: CyclePhase::Bidding
             };
