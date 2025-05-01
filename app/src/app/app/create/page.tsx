@@ -320,10 +320,8 @@ export default function CreatePoolPage() {
                     <div>
                       <label htmlFor="currency" className="block text-sm font-medium text-[#f8e555] mb-2">Currency</label>
                       <select id="currency" name="currency" value={formData.currency} onChange={handleInputChange} className="w-full px-4 py-2 border border-[#e6ce04]/30 rounded-lg bg-[#252520] text-[#f8e555] focus:ring-2 focus:ring-[#e6ce04] focus:border-transparent">
-                        <option>USDC</option>
-                        <option>ETH</option>
-                        <option>DAI</option>
-                        <option>USDT</option>
+                        <option value="SOL">SOL</option>
+                        <option value="USDC">USDC</option>
                       </select>
                     </div>
                   </div>
