@@ -137,13 +137,13 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
   const poolPublicKey = useMemo(() => new PublicKey(publicKey), [publicKey]);
   const [statusString, setStatusString] = useState<string>('Unknown');
   const { contributeSolMutation } = useContributeSol();
-  const { advanceCycleMutation } = useAdvanceCycle();
+  const { advanceCycleMutation } = useAdvanceCycle({ pool: poolData as PoolWithKey});
 
   useEffect(() => {
     const loadPoolData = async () => {
       try {
         const data = await fetchPoolDetails(poolPublicKey);
-        console.log("Pool data:", data);
+        // console.log("Pool data:", data);
         setPoolData(data);
         setStatusString(getStatusString(data?.account.status));
       } catch (error) {
@@ -164,23 +164,23 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
       }
   
       try {
-        console.log('Checking membership for:', {
-          pool: poolData.publicKey.toString(),
-          user: userWallet.toString()
-        });
+        // console.log('Checking membership for:', {
+        //   pool: poolData.publicKey.toString(),
+        //   user: userWallet.toString()
+        // });
   
         const memberDetails = await fetchMemberAccountDetail(poolData, userWallet);
         
         if (memberDetails) {
-          console.log('Member details:', {
-            owner: memberDetails.owner.toString(),
-            pool: memberDetails.pool.toString(),
-            contributionsMade: memberDetails.contributionsMade,
-            hasReceivedPayout: memberDetails.hasReceivedPayout,
-            eligibleForPayout: memberDetails.eligibleForPayout,
-            collateralStaked: memberDetails.collateralStaked.toString(),
-            status: memberDetails.status
-          });
+          // console.log('Member details:', {
+          //   owner: memberDetails.owner.toString(),
+          //   pool: memberDetails.pool.toString(),
+          //   contributionsMade: memberDetails.contributionsMade,
+          //   hasReceivedPayout: memberDetails.hasReceivedPayout,
+          //   eligibleForPayout: memberDetails.eligibleForPayout,
+          //   collateralStaked: memberDetails.collateralStaked.toString(),
+          //   status: memberDetails.status
+          // });
           setMemberDetails(memberDetails);
         } else {
           console.log('User is not a member of this pool');
