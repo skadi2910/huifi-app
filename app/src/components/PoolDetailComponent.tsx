@@ -25,7 +25,7 @@ import { getStatusString, formatDurationHours, lamportsToSol, bpsToPercentage } 
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useContributeSol } from "@/hooks/useContributeSol";
 import { toast } from "react-hot-toast";
-import { useAdvanceCycle } from "@/hooks/useAdvanceCycle";
+import { useAdvanceCycle } from "@/hooks/useForceAdvanceCycle";
 
 // Assuming MOCK_POOL_DATA is either passed in or replaced by actual data structure
 // If MOCK_POOL_DATA is truly static, you might keep its definition here or import it.
