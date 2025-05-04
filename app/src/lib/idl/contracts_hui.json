@@ -86,8 +86,7 @@
               },
               {
                 "kind": "account",
-                "path": "winner_member_account.owner",
-                "account": "MemberAccount"
+                "path": "authority.owner"
               }
             ]
           }
@@ -1018,7 +1017,7 @@
               },
               {
                 "kind": "account",
-                "path": "bid_state.winner",
+                "path": "bid_state.winner.unwrap_or(group_account.creator)",
                 "account": "BidState"
               }
             ]

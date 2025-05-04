@@ -14,11 +14,11 @@ export interface HuifiAccounts {
     all(): Promise<{ publicKey: PublicKey; account: UserAccount }[]>;
     // Add other methods if needed
   };
-  BidState: {
+  bidState: {
     fetch(address: PublicKey): Promise<BidState>;
     all(): Promise<{ publicKey: PublicKey; account: BidState }[]>;
   };
-  MemberAccount: {
+  memberAccount: {
     fetch(address: PublicKey): Promise<MemberAccount>;
     all(): Promise<{ publicKey: PublicKey; account: MemberAccount }[]>;
   };
@@ -38,7 +38,7 @@ export interface HuifiAccounts {
   Vault: {
     fetch(address: PublicKey): Promise<Vault>;
   };
-  GroupAccount: {
+  groupAccount: {
     fetch(address: PublicKey): Promise<GroupAccount>;
     all(): Promise<{ publicKey: PublicKey; account: GroupAccount }[]>;
   };
