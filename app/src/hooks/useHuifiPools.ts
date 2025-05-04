@@ -297,7 +297,7 @@ export const useHuifiPools = () => {
  
   const MEMBER_SEED = "huifi-member";
 
-  const fetchMemberAccountDetail = async (poolData: PoolWithKey, userWallet: PublicKey): Promise<MemberAccountData | null> => {
+  const fetchMemberAccountDetail = useCallback(async (poolData: PoolWithKey, userWallet: PublicKey): Promise<MemberAccountData | null> => {
     const maxRetries = 3;
     const baseDelay = 1000;
   
@@ -381,7 +381,7 @@ export const useHuifiPools = () => {
     }
   
     return null;
-  };
+  }, [program]);
   
   const refreshPools = useCallback(async () => {
     console.log("Refreshing pools...");
