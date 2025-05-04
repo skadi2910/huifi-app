@@ -9,6 +9,7 @@ import {
   BidState,
   MemberAccount,
 } from "@/lib/types/program-types";
+import { AnchorError } from "@coral-xyz/anchor";
 export interface AdvanceCycleParams {
   pool: PoolWithKey;
 }
@@ -38,6 +39,14 @@ export const useAdvanceCycle = ({ pool }: { pool: PoolWithKey }) => {
         availableAccounts: Object.keys(program.account),
         // This will help us see what account types are actually available
       });
+
+      // Debug log to see what we actually have
+      console.log("Program accounts:", {
+        availableAccounts: Object.keys(program.account),
+        groupAccountType: typeof program.account.groupAccount,
+        groupAccountMethods: Object.keys(program.account.groupAccount || {}),
+      });
+
       try {
         const pool = params.pool;
         console.log("Pool details:", {
@@ -58,27 +67,81 @@ export const useAdvanceCycle = ({ pool }: { pool: PoolWithKey }) => {
           [Buffer.from("huifi-bid-state"), groupAccountPda.toBuffer()],
           program.programId
         );
+        // First fetch group and bid state to determine the winner
+        const [groupAccountInfo, bidStateInfo] = await Promise.all([
+          program.account.groupAccount.fetch(groupAccountPda),
+          program.account.bidState.fetch(bidStatePda),
+        ]);
+        // Debug log the current state
+        console.log("Current state:", {
+          groupAccount: groupAccountPda.toBase58(),
+          bidState: bidStatePda.toBase58(),
+          currentWinner: bidStateInfo.winner?.toBase58(),
+          creator: groupAccountInfo.creator.toBase58(),
+        });
+        // Determine which key to use for the member account
+        const memberOwnerKey = bidStateInfo.winner || groupAccountInfo.creator;
+        console.log("Keys being used:", {
+          winner: bidStateInfo.winner?.toBase58() || "No winner",
+          defaultKey: groupAccountInfo.creator.toBase58(),
+          usingKey: memberOwnerKey.toBase58(),
+        });
         const [winnerMemberAccountPda] = PublicKey.findProgramAddressSync(
           [
             Buffer.from("huifi-member"),
             groupAccountPda.toBuffer(),
-            publicKey.toBuffer(),
+            memberOwnerKey.toBuffer(),
           ],
           program.programId
         );
-        console.log("Fetching accounts for:", {
-          groupAccountPda: groupAccountPda.toBase58(),
-          bidStatePda: bidStatePda.toBase58(),
-          winnerMemberAccountPda: winnerMemberAccountPda.toBase58(),
+        console.log("PDA Verification:", {
+          seeds: {
+            prefix: "huifi-member",
+            group: groupAccountPda.toBase58(),
+            owner: memberOwnerKey.toBase58(),
+          },
+          derivedPda: winnerMemberAccountPda.toBase58(),
         });
+        // Check if the member account exists
+        const memberAccountInfo = await connection.getAccountInfo(
+          winnerMemberAccountPda
+        );
+        console.log("Member account status:", {
+          exists: !!memberAccountInfo,
+          address: winnerMemberAccountPda.toBase58(),
+          owner: memberOwnerKey.toBase58(),
+        });
+        // console.log("Fetching accounts for:", {
+        //   groupAccountPda: groupAccountPda.toBase58(),
+        //   bidStatePda: bidStatePda.toBase58(),
+        //   winnerMemberAccountPda: winnerMemberAccountPda.toBase58(),
+        // });
+        // Verify program is still available before fetching
         // Verify program is still available before fetching
         if (
-          !program.account.GroupAccount ||
-          !program.account.BidState ||
-          !program.account.MemberAccount
+          // Use type assertion to tell TypeScript these properties exist
+          !(program.account as any).groupAccount ||
+          !(program.account as any).bidState ||
+          !(program.account as any).memberAccount
         ) {
           throw new Error("Program accounts not properly initialized");
         }
+        //Call the advance_cycle instruction
+        const signature = await program.methods
+          .forceAdvanceCycle()
+          .accounts({
+            authority: publicKey,
+            groupAccount: groupAccountPda,
+            bidState: bidStatePda,
+            winnerMemberAccount: winnerMemberAccountPda,
+          })
+          .rpc();
+
+        console.log("Cycle advanced successfully:", signature);
+        await connection.confirmTransaction(signature);
+        addTransaction(signature, "Advance Pool Cycle");
+
+        return signature;
         // Type-safe account access
         // const accounts = {
         //   groupAccount: program.account
@@ -99,43 +162,21 @@ export const useAdvanceCycle = ({ pool }: { pool: PoolWithKey }) => {
         //   // program.account.MemberAccount.fetch(winnerMemberAccountPda),
         // ]);
         // Try fetching accounts one by one with error handling
-        let groupAccountInfo: GroupAccount | null = null;
-        try {
-          console.log("Debug - Attempting to fetch GroupAccount...");
-          groupAccountInfo = await program.account.GroupAccount.fetch(
-            groupAccountPda
-          );
-          console.log("Debug - GroupAccount fetched successfully");
-        } catch (err) {
-          console.error("Error fetching GroupAccount:", err);
-          console.log(
-            "Available account methods:",
-            Object.keys(program.account)
-          );
-        }
-
-        if (groupAccountInfo) {
-          console.log("GroupAccount details:", {
-            uuid: groupAccountInfo.uuid,
-            creator: groupAccountInfo.creator.toBase58(),
-            currentCycle: groupAccountInfo.currentCycle,
-            totalCycles: groupAccountInfo.totalCycles,
-            status: groupAccountInfo.status,
-            currentWinner:
-              groupAccountInfo.currentWinner?.toBase58() || "No winner yet",
-            currentBidAmount:
-              groupAccountInfo.currentBidAmount?.toString() || "0",
-            totalContributions: groupAccountInfo.totalContributions.toString(),
-            memberCount: groupAccountInfo.memberAddresses.length,
-            members: groupAccountInfo.memberAddresses.map((pub) =>
-              pub.toBase58()
-            ),
-          });
-        }
-        // // Log GroupAccount details
-        // if (!groupAccountInfo) {
-        //   console.log("GroupAccount doesn't exist yet!");
-        // } else {
+        // let groupAccountInfo: GroupAccount | null = null;
+        // try {
+        //   console.log("Debug - Attempting to fetch GroupAccount...");
+        //   groupAccountInfo = await program.account.groupAccount.fetch(
+        //     groupAccountPda
+        //   );
+        //   console.log("Debug - GroupAccount fetched successfully");
+        // } catch (err) {
+        //   console.error("Error fetching GroupAccount:", err);
+        //   console.log(
+        //     "Available account methods:",
+        //     Object.keys(program.account)
+        //   );
+        // }
+        // if (groupAccountInfo) {
         //   console.log("GroupAccount details:", {
         //     uuid: groupAccountInfo.uuid,
         //     creator: groupAccountInfo.creator.toBase58(),
@@ -153,11 +194,19 @@ export const useAdvanceCycle = ({ pool }: { pool: PoolWithKey }) => {
         //     ),
         //   });
         // }
-
-        // Log BidState details
-        // if (!bidStateAccountInfo) {
-        //   console.log("BidState doesn't exist yet!");
-        // } else {
+        // let bidStateAccountInfo: BidState | null = null;
+        // try {
+        //   console.log("Debug - Attempting to fetch BidState...");
+        //   bidStateAccountInfo = await program.account.bidState.fetch(bidStatePda);
+        //   console.log("Debug - BidState fetched successfully");
+        // } catch (err) {
+        //   console.error("Error fetching BidState:", err);
+        //   console.log(
+        //     "Available account methods:",
+        //     Object.keys(program.account)
+        //   );
+        // }
+        // if(bidStateAccountInfo) {
         //   console.log("BidState details:", {
         //     pool: bidStateAccountInfo.pool.toBase58(),
         //     cycle: bidStateAccountInfo.cycle,
@@ -169,12 +218,22 @@ export const useAdvanceCycle = ({ pool }: { pool: PoolWithKey }) => {
         //     winner: bidStateAccountInfo.winner?.toBase58() || "No winner yet",
         //   });
         // }
-
-        // Log WinnerMember details
-        // if (!winnerMemberAccountInfo) {
-        //   console.log("WinnerMember doesn't exist yet!");
-        // } else {
-        //   console.log("WinnerMember details:", {
+        // let winnerMemberAccountInfo: MemberAccount | null = null;
+        // try {
+        //   console.log("Debug - Attempting to fetch WinnerMemberAccount...");
+        //   winnerMemberAccountInfo = await program.account.memberAccount.fetch(
+        //     winnerMemberAccountPda
+        //   );
+        //   console.log("Debug - WinnerMemberAccount fetched successfully");
+        // } catch (err) {
+        //   console.error("Error fetching WinnerMemberAccount:", err);
+        //   console.log(
+        //     "Available account methods:",
+        //     Object.keys(program.account)
+        //   );
+        // }
+        // if (winnerMemberAccountInfo) {
+        //   console.log("WinnerMemberAccount details:", {
         //     owner: winnerMemberAccountInfo.owner.toBase58(),
         //     pool: winnerMemberAccountInfo.pool.toBase58(),
         //     contributionsMade: winnerMemberAccountInfo.contributionsMade,
@@ -194,45 +253,16 @@ export const useAdvanceCycle = ({ pool }: { pool: PoolWithKey }) => {
         //     ).toLocaleString(),
         //   });
         // }
-
-        // Log overall state summary
-        // console.log("Current Pool State Summary:", {
-        //   currentCycle: groupAccountInfo?.currentCycle || 0,
-        //   totalCycles: groupAccountInfo?.totalCycles || 0,
-        //   poolStatus: groupAccountInfo?.status || "Unknown",
-        //   activeBids: bidStateAccountInfo?.bids.length || 0,
-        //   currentWinner:
-        //     bidStateAccountInfo?.winner?.toBase58() || "No winner yet",
-        //   winnerEligibleForPayout:
-        //     winnerMemberAccountInfo?.eligibleForPayout || false,
-        // });
-
-        // console.log('Advancing cycle for pool:', {
-        //   authority: publicKey.toString(),
-        //   groupAccount: groupAccountPDA.toString(),
-        //   bidState: bidStatePda.toString(),
-        //   winnerMemberAccount: winnerMemberAccountPda.toString(),
-        // });
-
-        // Call the advance_cycle instruction
-        // const signature = await program.methods
-        //   .forceAdvanceCycle()
-        //   .accounts({
-        //     authority: publicKey,
-        //     groupAccount: groupAccountPda,
-        //     bidState: bidStatePda,
-        //     winnerMemberAccount: winnerMemberAccountPda,
-        //   })
-        //   .rpc();
-
-        // console.log('Cycle advanced successfully:', signature);
-        // await connection.confirmTransaction(signature);
-        // addTransaction(signature, 'Advance Pool Cycle');
-
-        // return signature;
-        return "";
+        // return "";
       } catch (error) {
-        console.error("Error advancing cycle:", error);
+        console.error("Error in advanceCycle:", error);
+        if (error instanceof AnchorError) {
+          console.error("Detailed error:", {
+            code: error.error.errorCode,
+            message: error.error.errorMessage,
+            programLogs: error.logs,
+          });
+        }
         throw error;
       }
     },

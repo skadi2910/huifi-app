@@ -58,6 +58,7 @@ export const useJoinPool = () => {
         addTransaction(signature, 'Join Pool');
         
         return signature;
+        // return "uoooo";
       } catch (error) {
         console.error('Error joining pool:', error);
         throw error;
