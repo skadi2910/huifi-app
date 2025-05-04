@@ -184,6 +184,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
           setMemberDetails(memberDetails);
         } else {
           console.log('User is not a member of this pool');
+          toast.error('User is not a member of this pool');
           setMemberDetails(null);
         }
       } catch (error) {
@@ -246,9 +247,10 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
         setPoolData(data);
         setStatusString(getStatusString(data?.account.status));
       } 
-      else {
+      else if (activeAction === "bid" && poolData) {
         // For other actions, implement their specific logic here
-        await new Promise((resolve) => setTimeout(resolve, 2000)); // Placeholder
+        // await new Promise((resolve) => setTimeout(resolve, 2000)); // Placeholder
+        console.log("uoooo");
       }
     } catch (error) {
       console.error("Error performing action:", error);
@@ -262,22 +264,27 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
   
   // Action modal component
   const ActionModal = () => {
-    if (!activeAction || !poolData) return null; // Ensure data is available
-
+    const [localActionAmount, setLocalActionAmount] = useState<string>("");
+    if (!activeAction || !poolData) return null;
+    const handleLocalAction = async () => {
+      // Update parent state only when submitting
+      setActionAmount(localActionAmount);
+      await handleAction();
+    };
     // Use `data` (from props) instead of MOCK_POOL_DATA here
     const actionConfig: Record<string, ActionConfig> = {
       bid: {
         title: "Place Bid for Next Round",
         description:
-          "Increase your chances of winning by placing a competitive bid. Current highest bid: 50 USDC", // TODO: Get actual highest bid if available
+          "Increase your chances of winning by placing a competitive bid.", // TODO: Get actual highest bid if available
         buttonText: "Place Bid",
-        min: "10 USDC", // Example values
-        max: "500 USDC",
+        min: poolData?.account.config.isNativeSol ? "0.0005 SOL" : "1 USDC", // Example values
+        max: poolData?.account.config.isNativeSol ? "0.005 SOL" : "500 USDC",
       },
       contribute: {
         title: "Contribute to Pool",
         // description: `Contribution amount: ${data.financials.contributionAmount}`, // Use actual data
-        description: `Contribution amount: ${poolData.account.contributionAmount}`, // Use actual data
+        description: `Contribution amount: ${poolData?.account.contributionAmount}`, // Use actual data
         buttonText: "Contribute",
         // Assuming contribution amount is fixed based on data, min/max might not apply
         // min: data.financials.contributionAmount,
@@ -318,10 +325,20 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
           {(activeAction === "bid" || activeAction === "contribute") && ( // Adjust condition if 'contribute' takes amount input
             <div className="space-y-4 mb-4">
               <input
-                type="number"
-                value={actionAmount}
-                onChange={(e) => setActionAmount(e.target.value)}
-                placeholder="Enter amount in USDC"
+                type="text"
+                value={localActionAmount}
+                // onChange={(e) => setLocalActionAmount(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  // Allow empty string, numbers, and only one decimal point
+                  if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                    // Prevent multiple decimal points
+                    if (value.split('.').length <= 2) {
+                      setLocalActionAmount(value);
+                    }
+                  }
+                }}
+                placeholder={poolData.account.config.isNativeSol ? "Enter amount in SOL" : "Enter amount in USDC" }
                 className="w-full px-4 py-2 bg-[#010200] border-2 border-[#e6ce04]/30 rounded-lg text-[#e6ce04] focus:border-[#e6ce04] focus:ring-0"
               />
               {config.min && config.max && (
@@ -335,11 +352,11 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
 
           <div className="flex gap-3 mt-4">
             <button
-              onClick={handleAction}
+              onClick={handleLocalAction}
               disabled={
                 isProcessing ||
                 ((activeAction === "bid" || activeAction === "contribute") &&
-                  !actionAmount)
+                  !localActionAmount)
               } // Basic validation
               className="flex-1 bg-[#e6ce04] text-[#010200] font-bold py-2 rounded-lg hover:bg-[#f8e555] disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -595,7 +612,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                 {activeTab === "members" && (
                   <div className="space-y-4">
                     {/* Replace with actual member data iteration if available */}
-                    {/* {Array.from({ length: data.participants.current }).map(
+                    {Array.from({ length: poolData.account.memberAddresses.length }).map(
                       (_, index) => (
                         <div
                           key={index}
@@ -610,7 +627,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                                 Member #{index + 1}
                               </p>
                               <p className="text-xs text-[#f8e555]/70">
-                                Joined {"data.dates.started"}
+                                {poolData.account.memberAddresses[index].toString()}
                               </p>
                             </div>
                           </div>
@@ -624,12 +641,12 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                           </div>
                         </div>
                       )
-                    )} */}
-                    {/* {data.participants.current === 0 && (
+                    )}
+                    {poolData.account.memberAddresses.length === 0 && (
                       <p className="text-[#f8e555]/70 text-center py-4">
                         No members have joined yet.
                       </p>
-                    )} */}
+                    )}
                   </div>
                 )}
 

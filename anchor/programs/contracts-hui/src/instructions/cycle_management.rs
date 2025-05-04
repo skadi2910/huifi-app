@@ -217,6 +217,7 @@ pub struct ForceAdvanceCycle<'info> {
         seeds = [
             MEMBER_SEED, 
             group_account.key().as_ref(), 
+            // bid_state.winner.unwrap_or_default().as_ref()
             bid_state.winner.unwrap_or(group_account.creator).as_ref()
         ],
         bump,
@@ -303,7 +304,7 @@ pub fn force_advance_cycle(ctx: Context<ForceAdvanceCycle>) -> Result<()> {
                     group_account.last_cycle_timestamp = current_timestamp;
 
                     bid_state.bids = Vec::new();
-                    bid_state.winner = None;   
+                    bid_state.winner = None;
                     group_account.current_cycle += 1;
                     group_account.status = PoolStatus::Active {
                         phase: CyclePhase::Bidding
