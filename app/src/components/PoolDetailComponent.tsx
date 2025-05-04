@@ -154,8 +154,10 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
     loadPoolData();
   }, [poolPublicKey, fetchPoolDetails]);
   useEffect(() => {
+    // Extract the check into a variable to satisfy the static checker
+    const isReady = poolData && userWallet;
     const checkMembership = async () => {
-      if (!poolData || !userWallet) {
+      if (!isReady) {
         console.log('Missing required data for membership check:', {
           hasPoolData: !!poolData,
           hasUserWallet: !!userWallet
@@ -172,15 +174,15 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
         const memberDetails = await fetchMemberAccountDetail(poolData, userWallet);
         
         if (memberDetails) {
-          // console.log('Member details:', {
-          //   owner: memberDetails.owner.toString(),
-          //   pool: memberDetails.pool.toString(),
-          //   contributionsMade: memberDetails.contributionsMade,
-          //   hasReceivedPayout: memberDetails.hasReceivedPayout,
-          //   eligibleForPayout: memberDetails.eligibleForPayout,
-          //   collateralStaked: memberDetails.collateralStaked.toString(),
-          //   status: memberDetails.status
-          // });
+          console.log('Member details:', {
+            owner: memberDetails.owner.toString(),
+            pool: memberDetails.pool.toString(),
+            contributionsMade: memberDetails.contributionsMade,
+            hasReceivedPayout: memberDetails.hasReceivedPayout,
+            eligibleForPayout: memberDetails.eligibleForPayout,
+            collateralStaked: memberDetails.collateralStaked.toString(),
+            status: memberDetails.status
+          });
           setMemberDetails(memberDetails);
         } else {
           console.log('User is not a member of this pool');
