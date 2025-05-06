@@ -96,6 +96,8 @@ export interface PoolConfig {
   yieldStrategy: { none: {} } | { jitoSol: {} } | { kamino: {} };
   isNativeSol: boolean;
   status: PoolStatus;
+  isPrivate: boolean;
+  // feedId: number[];
 }
 
 // First, we need the BidEntry interface 
@@ -172,7 +174,7 @@ export interface PoolConfig {
   yieldStrategy: { none: {} } | { jitoSol: {} } | { kamino: {} };
   isPrivate: boolean;
   isNativeSol: boolean;
-  feedId: number[];                  // [u8; 32]
+  // feedId: number[];                  // [u8; 32]
 }
 
 // Create the main GroupAccount interface
