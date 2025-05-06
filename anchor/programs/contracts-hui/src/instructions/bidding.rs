@@ -27,15 +27,16 @@ pub struct SubmitBid<'info> {
     pub group_account: Account<'info, GroupAccount>,
 
     #[account(
+        mut,
         seeds = [MEMBER_SEED, group_account.key().as_ref(), bidder.key().as_ref()],
-        bump = member.bump,
+        bump = member_account.bump,
     )]
-    pub member: Account<'info, MemberAccount>,
+    pub member_account: Account<'info, MemberAccount>,
 }
 pub fn submit_bid(ctx: Context<SubmitBid>, bid_amount: u64) -> Result<()> {
     let bid_state = &mut ctx.accounts.bid_state;
     let group_account = &ctx.accounts.group_account;
-    let member_account = &mut ctx.accounts.member;
+    let member_account = &mut ctx.accounts.member_account;
     // Basic validations    
     require!(bid_amount > 0, HuiFiError::InvalidBidAmount);
 

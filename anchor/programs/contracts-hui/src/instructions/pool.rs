@@ -447,11 +447,25 @@ pub struct CreateSolPool<'info> {
     )]
     pub collateral_vault: AccountInfo<'info>,
 
+
     /// Current bid state account
     #[account(
         init,
         payer = creator,
-        space = 8 + std::mem::size_of::<BidState>(),
+        // Calculate space for:
+        // - 8 bytes for discriminator
+        // - size of pool pubkey
+        // - size of cycle (u64)
+        // - size of winner (Option<Pubkey>)
+        // - size of bump (u8)
+        // - size of bids vector (vec length + max_bids * size_of_bid_entry)
+        space = 8 
+            + 32  // pool: Pubkey
+            + 8   // cycle: u64
+            + (32 + 1)  // winner: Option<Pubkey>
+            + 1   // bump: u8
+            + 4   // vec length prefix
+            + (32 + 8) * pool_config.max_participants as usize, // bidder: Pubkey + amount: u64 for each bid
         seeds = [BID_STATE_SEED, group_account.key().as_ref()],
         bump,
     )]

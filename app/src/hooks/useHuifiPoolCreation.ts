@@ -103,6 +103,8 @@ export const useHuifiPoolCreation = () => {
         collateralRequirementBps: 10000, // 100%
         yieldStrategy: { none: {} },
         isNativeSol: true,
+        isPrivate: params.privacy === 'private',
+        // feedId: ,
         status: 0 // This is PoolStatus.Initializing
       };
 

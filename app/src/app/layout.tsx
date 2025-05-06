@@ -4,7 +4,7 @@ import { SolanaProvider } from '@/components/solana/solana-provider'
 import { UiLayout } from '@/components/ui/ui-layout'
 import { ReactQueryProvider } from './react-query-provider'
 import { TransactionProvider } from '@/contexts/TransactionContext'
-
+import ToasterProvider from './ToasterProvider'
 export const metadata = {
   title: 'HuiFi - Solana Rotating Savings',
   description: 'Play, Save & Earn with Solana Rotating Savings Games',
@@ -25,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ClusterProvider>
             <SolanaProvider>
               <TransactionProvider>
+                <ToasterProvider />
                 <UiLayout links={links}>{children}</UiLayout>
               </TransactionProvider>
             </SolanaProvider>

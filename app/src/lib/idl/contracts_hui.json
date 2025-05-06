@@ -1730,7 +1730,8 @@
           }
         },
         {
-          "name": "member",
+          "name": "member_account",
+          "writable": true,
           "pda": {
             "seeds": [
               {

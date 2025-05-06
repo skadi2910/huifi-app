@@ -26,6 +26,7 @@ import { useWallet } from "@solana/wallet-adapter-react";
 import { useContributeSol } from "@/hooks/useContributeSol";
 import { toast } from "react-hot-toast";
 import { useAdvanceCycle } from "@/hooks/useAdvanceCycle";
+import { usePoolBidding } from "@/hooks/usePoolBidding";
 
 // Assuming MOCK_POOL_DATA is either passed in or replaced by actual data structure
 // If MOCK_POOL_DATA is truly static, you might keep its definition here or import it.
@@ -138,7 +139,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
   const [statusString, setStatusString] = useState<string>('Unknown');
   const { contributeSolMutation } = useContributeSol();
   const { advanceCycleMutation } = useAdvanceCycle({ pool: poolData as PoolWithKey});
-
+  const { placeBidMutation } = usePoolBidding(poolPublicKey);
   useEffect(() => {
     const loadPoolData = async () => {
       try {
@@ -206,57 +207,59 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
   }, [poolData, userWallet]);
 
   // Update the handle action function to include progress functionality
-  const handleAction = async () => {
-    console.log(
-      `Performing action: ${activeAction} with amount: ${actionAmount}`
-    );
+  const handleAction = async (amount: string) => {
+    console.log(`Performing action: ${activeAction} with amount: ${actionAmount}`);
     setIsProcessing(true);
     
     try {
-      if (activeAction === "contribute" && poolData) {
-        if (!actionAmount || parseFloat(actionAmount) <= 0) {
-          throw new Error("Please enter a valid amount");
-        }
-        
-        const uuid = poolData.account.uuid || [];
-        
-        await contributeSolMutation.mutateAsync({
-          poolId: poolPublicKey,
-          uuid: uuid,
-          amount: parseFloat(actionAmount)
-        });
-        
-        toast.success("Successfully contributed to the pool!");
-        
-        const data = await fetchPoolDetails(poolPublicKey);
-        setPoolData(data);
-      } 
-      else if (activeAction === "progress" && poolData) {
-        // Check if user is the creator
-        if (!isPoolCreator) {
-          throw new Error("Only the pool creator can progress the pool");
-        }
-        
-        // Call the advance cycle function
-        await advanceCycleMutation.mutateAsync({
-          pool: poolData
-        });
-        
-        toast.success("Successfully progressed the pool to the next phase!");
-        
-        // Refresh the pool data to show updated status
-        const data = await fetchPoolDetails(poolPublicKey);
-        setPoolData(data);
-        setStatusString(getStatusString(data?.account.status));
-      } 
-      else if (activeAction === "bid" && poolData) {
-        // For other actions, implement their specific logic here
-        // await new Promise((resolve) => setTimeout(resolve, 2000)); // Placeholder
-        console.log("uoooo");
+      switch (activeAction) {
+        case "contribute":
+          if (!poolData) throw new Error("Pool data not found");
+          if (!actionAmount || parseFloat(actionAmount) <= 0) {
+            throw new Error("Please enter a valid amount");
+          }
+          
+          await contributeSolMutation.mutateAsync({
+            poolId: poolPublicKey,
+            uuid: poolData.account.uuid || [],
+            amount: parseFloat(actionAmount)
+          });
+          toast.success("Successfully contributed to the pool!");
+          break;
+  
+        case "bid":
+          if (!poolData) throw new Error("Pool data not found");
+          await placeBidMutation.mutateAsync({
+            amount: parseFloat(amount),
+            uuid: poolData.account.uuid
+          });
+          toast.success("Successfully placed a bid!");
+          break;
+  
+        case "progress":
+          if (!isPoolCreator) {
+            throw new Error("Only the pool creator can progress the pool");
+          }
+          await advanceCycleMutation.mutateAsync({ pool: poolData as PoolWithKey });
+          toast.success("Successfully progressed the pool to the next phase!");
+          break;
       }
+  
+      // Refresh pool data after successful action
+      const data = await fetchPoolDetails(poolPublicKey);
+      setPoolData(data);
+      if (activeAction === "progress") {
+        setStatusString(getStatusString(data?.account.status));
+      }
+  
     } catch (error) {
-      console.error("Error performing action:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to complete action");
+      console.log("Error caught:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+      console.log("Error message:", errorMessage);
+      // The error message will now come properly formatted from the hook
+      // toast.error(error instanceof Error ? error.message : "An unexpected error occurred");
+          // Force toast with promise
+      toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
       setActiveAction(null);
@@ -271,7 +274,8 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
     const handleLocalAction = async () => {
       // Update parent state only when submitting
       setActionAmount(localActionAmount);
-      await handleAction();
+      console.log("localActionAmount: ", localActionAmount);
+      await handleAction(localActionAmount);
     };
     // Use `data` (from props) instead of MOCK_POOL_DATA here
     const actionConfig: Record<string, ActionConfig> = {
