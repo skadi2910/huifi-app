@@ -206,31 +206,38 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
   }, [poolData, userWallet]);
 
   // Update the handle action function to include progress functionality
-  const handleAction = async () => {
+  const handleAction = async (amount: string) => {
     console.log(
-      `Performing action: ${activeAction} with amount: ${actionAmount}`
+      `Performing action: ${activeAction} with amount: ${amount}`
     );
     setIsProcessing(true);
     
     try {
       if (activeAction === "contribute" && poolData) {
-        if (!actionAmount || parseFloat(actionAmount) <= 0) {
+        if (!amount || parseFloat(amount) <= 0) {
           throw new Error("Please enter a valid amount");
         }
         
-        const uuid = poolData.account.uuid || [];
+        const uuid = Array.from(poolData.account.uuid); // Ensure it's an array of numbers
         
         await contributeSolMutation.mutateAsync({
           poolId: poolPublicKey,
           uuid: uuid,
-          amount: parseFloat(actionAmount)
+          amount: parseFloat(amount)
         });
         
         toast.success("Successfully contributed to the pool!");
         
+        // Refresh pool data
         const data = await fetchPoolDetails(poolPublicKey);
         setPoolData(data);
-      } 
+        
+        // If needed, refresh member details too
+        if (userWallet && data) {
+          const memberData = await fetchMemberAccountDetail(data, userWallet);
+          setMemberDetails(memberData);
+        }
+      }
       else if (activeAction === "progress" && poolData) {
         // Check if user is the creator
         if (!isPoolCreator) {
@@ -271,7 +278,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
     const handleLocalAction = async () => {
       // Update parent state only when submitting
       setActionAmount(localActionAmount);
-      await handleAction();
+      await handleAction(localActionAmount);
     };
     // Use `data` (from props) instead of MOCK_POOL_DATA here
     const actionConfig: Record<string, ActionConfig> = {
