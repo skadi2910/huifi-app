@@ -43,37 +43,37 @@ export const usePoolBidding = (poolAddress: PublicKey) => {
       const bidStateAccount = await program.account.bidState.fetch(bidStateAccountPda);
       const bidStateAccountInfo = await connection.getAccountInfo(bidStateAccountPda);
     
-      // if (bidStateAccountInfo) {
-      //   console.log('BidState Account Details:', {
-      //       address: bidPda.toString(),
-      //       space: bidStateAccountInfo.data.length,
-      //       expectedSpace: 206, // 8 + 32 + 8 + 33 + 1 + 4 + (40 * 3)
-      //       owner: bidStateAccountInfo.owner.toString(),
-      //       programId: program.programId.toString(),
-      //       spaceBreakdown: {
-      //           discriminator: 8,
-      //           pool: 32,
-      //           cycle: 8,
-      //           winner: 33,
-      //           bump: 1,
-      //           vecPrefix: 4,
-      //           bidsSpace: 40 * 3
-      //       }
-      //   });
-      // }
-      // console.log('BidState Data:', {
-      //   pool: bidStateAccount.pool.toString(),
-      //   cycle: bidStateAccount.cycle,
-      //   bidsCount: bidStateAccount.bids.length,
-      //   bids: bidStateAccount.bids.map(bid=>({
-      //     bidder: bid.bidder.toString(),
-      //     amount: bid.amount.toString(),  
-      //   })),
-      //   winner: bidStateAccount.winner?.toString() || 'No winner yet',
-      //   bump: bidStateAccount.bump,
-      //   currentSize: bidStateAccountInfo?.data.length,
-      //   // maxPossibleBids: Math.floor((bidStateAccountInfo?.data.length - (8 + 32 + 1 + 4 + 33 + 1)) / 40)
-      // });
+      if (bidStateAccountInfo) {
+        console.log('BidState Account Details:', {
+            address: bidStateAccountPda.toString(),
+            space: bidStateAccountInfo.data.length,
+            expectedSpace: 206, // 8 + 32 + 8 + 33 + 1 + 4 + (40 * 3)
+            owner: bidStateAccountInfo.owner.toString(),
+            programId: program.programId.toString(),
+            spaceBreakdown: {
+                discriminator: 8,
+                pool: 32,
+                cycle: 8,
+                winner: 33,
+                bump: 1,
+                vecPrefix: 4,
+                bidsSpace: 40 * 3
+            }
+        });
+      }
+      console.log('BidState Data:', {
+        pool: bidStateAccount.pool.toString(),
+        cycle: bidStateAccount.cycle,
+        bidsCount: bidStateAccount.bids.length,
+        bids: bidStateAccount.bids.map(bid=>({
+          bidder: bid.bidder.toString(),
+          amount: bid.amount.toString(),  
+        })),
+        winner: bidStateAccount.winner?.toString() || 'No winner yet',
+        bump: bidStateAccount.bump,
+        currentSize: bidStateAccountInfo?.data.length,
+        // maxPossibleBids: Math.floor((bidStateAccountInfo?.data.length - (8 + 32 + 1 + 4 + 33 + 1)) / 40)
+      });
 
         const memberAccountInfo = await program.account.memberAccount.fetch(memberAccountPda);
         console.log("memberAccountInfo: ", memberAccountInfo);
@@ -88,7 +88,7 @@ export const usePoolBidding = (poolAddress: PublicKey) => {
         }).rpc();
         console.log("signature: ", signature);
         addTransaction(signature, `Place Bid`);
-        // return signature;
+        return signature;
         return "";
       } catch (error: any) {
         // console.error('Error placing bid:', error);

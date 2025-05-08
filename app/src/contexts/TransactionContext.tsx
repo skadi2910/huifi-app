@@ -3,6 +3,7 @@
 import { ReactNode, createContext, useContext, useState } from 'react';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { useTransactionToast } from '@/components/ui/ui-layout';
+import { useWallet } from '@/hooks/useWallet';
 
 type TransactionType = {
   signature: string;
@@ -14,12 +15,19 @@ type TransactionContextType = {
   pendingTransactions: TransactionType[];
   addTransaction: (signature: string, description?: string) => void;
   confirmTransaction: (signature: string) => Promise<boolean>;
+  signTransaction: (transaction: any) => Promise<string>;
+  signMessage: (instruction: any) => Promise<string>;
 };
 
 const TransactionContext = createContext<TransactionContextType | undefined>(undefined);
 
 export function TransactionProvider({ children }: { children: ReactNode }) {
   const { connection } = useConnection();
+  const { 
+    solanaSignTransaction,
+    solanaSignAllTransactions,
+    lazorSignMessage 
+  } = useWallet();
   const transactionToast = useTransactionToast();
   const [pendingTransactions, setPendingTransactions] = useState<TransactionType[]>([]);
 
@@ -77,11 +85,27 @@ export function TransactionProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const signTransaction = async (transaction: any) => {
+    if (solanaSignTransaction) {
+      return await solanaSignTransaction(transaction);
+    }
+    throw new Error('No wallet available for signing');
+  };
+
+  const signMessage = async (instruction: any) => {
+    if (lazorSignMessage) {
+      return await lazorSignMessage(instruction);
+    }
+    throw new Error('No Lazor wallet available for signing');
+  };
+
   return (
     <TransactionContext.Provider value={{ 
       pendingTransactions, 
       addTransaction, 
-      confirmTransaction 
+      confirmTransaction,
+      signTransaction,
+      signMessage
     }}>
       {children}
     </TransactionContext.Provider>

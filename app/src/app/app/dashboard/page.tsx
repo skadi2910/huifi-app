@@ -4,21 +4,28 @@
 import React from 'react';
 import { Wallet, TrendingUp, Trophy, Calendar, Coins, ChevronRight, Zap, Star } from 'lucide-react';
 import Link from 'next/link';
-import { useWallet } from '@solana/wallet-adapter-react'; // Import useWallet
-import { WalletButton } from '@/components/solana/solana-provider'; // Import WalletButton
+import { useWallet } from '@/hooks/useWallet';
+import { WalletButton } from '@/components/solana/solana-provider';
 // Import necessary hooks for fetching user data (replace with your actual hooks)
 // import { useUserDashboardData } from '@/components/huifi/huifi-data-access';
 // import { useGetBalance } from '@/components/account/account-data-access'; // For SOL balance if needed
 
 export default function DashboardPage() {
-  const { publicKey } = useWallet();
+  const { 
+    solanaPublicKey,
+    solanaIsConnected,
+    lazorPublicKey,
+    lazorIsConnected,
+    lazorSmartWalletAuthorityPubkey 
+  } = useWallet();
+
   // Placeholder for fetching data - replace with actual hook usage
   // const { data: dashboardData, isLoading, error } = useUserDashboardData(publicKey);
   // const { data: solBalance } = useGetBalance(publicKey); // Example for SOL balance
 
   // Mock data structure (replace with actual data from hooks)
   const isLoading = false; // Set to true while loading
-  const dashboardData = publicKey ? {
+  const dashboardData = solanaPublicKey ? {
       totalEarnings: 1250, // USDC
       currentYield: 10.8,
       activeGamesCount: 3,
@@ -53,11 +60,12 @@ export default function DashboardPage() {
       ]
   } : null;
 
-  if (!publicKey) {
+  // Show connect button if neither wallet is connected
+  if (!solanaIsConnected && !lazorIsConnected) {
     return (
       <div className="min-h-screen pt-24 pb-16 bg-[#010200] flex flex-col items-center justify-center">
-         <h2 className="text-2xl text-[#e6ce04] mb-4">Connect Your Wallet</h2>
-         <p className="text-[#f8e555]/70 mb-6">Please connect your wallet to view your dashboard.</p>
+        <h2 className="text-2xl text-[#e6ce04] mb-4">Connect Your Wallet</h2>
+        <p className="text-[#f8e555]/70 mb-6">Please connect your wallet to access the dashboard.</p>
         <WalletButton />
       </div>
     );
@@ -281,6 +289,11 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      {lazorIsConnected && (
+        <div className="mt-4">
+          <p>Lazor Smart Wallet: {lazorSmartWalletAuthorityPubkey}</p>
+        </div>
+      )}
     </div>
   );
 };

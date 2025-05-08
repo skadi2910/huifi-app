@@ -208,21 +208,21 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
 
   // Update the handle action function to include progress functionality
   const handleAction = async (amount: string) => {
-    console.log(`Performing action: ${activeAction} with amount: ${actionAmount}`);
+    console.log(`Performing action: ${activeAction} with amount: ${amount}`);
     setIsProcessing(true);
     
     try {
       switch (activeAction) {
         case "contribute":
           if (!poolData) throw new Error("Pool data not found");
-          if (!actionAmount || parseFloat(actionAmount) <= 0) {
+          if (!amount || parseFloat(amount) <= 0) {
             throw new Error("Please enter a valid amount");
           }
           
           await contributeSolMutation.mutateAsync({
             poolId: poolPublicKey,
             uuid: poolData.account.uuid || [],
-            amount: parseFloat(actionAmount)
+            amount: parseFloat(amount)
           });
           toast.success("Successfully contributed to the pool!");
           break;
@@ -289,8 +289,9 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
       },
       contribute: {
         title: "Contribute to Pool",
-        // description: `Contribution amount: ${data.financials.contributionAmount}`, // Use actual data
-        description: `Contribution amount: ${poolData?.account.contributionAmount}`, // Use actual data
+        description: `Contribution amount: ${
+          lamportsToSol(new BN(poolData?.account.finalContributionAmount ?? 0)).toString()
+        }`,
         buttonText: "Contribute",
         // Assuming contribution amount is fixed based on data, min/max might not apply
         // min: data.financials.contributionAmount,
@@ -442,7 +443,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                   Total Value
                 </p>
                 <p className="text-xl md:text-2xl font-bold text-[#e6ce04]">
-                  {poolData.account.totalContributions.toString()} SOL
+                  {lamportsToSol(poolData.account.totalContributions).toString()}
                 </p>
               </div>
               <div className="bg-[#1a1a18] p-4 rounded-xl border border-[#e6ce04]/20">

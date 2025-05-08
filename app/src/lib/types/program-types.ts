@@ -42,6 +42,7 @@ export interface HuifiPool {
   name: string;
   description: string;
   frequency: string;
+  finalContributionAmount: BN;
 }
 
 export interface UserAccount {
