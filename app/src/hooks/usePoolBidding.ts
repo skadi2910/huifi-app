@@ -5,7 +5,6 @@ import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from '@solana/spl-tok
 import { BN } from '@coral-xyz/anchor';
 import { useHuifiProgram } from './useHuifiProgram';
 import { useTransactions } from '@/contexts/TransactionContext';
-import toast from 'react-hot-toast';
 import { getProgramErrorMessage } from '@/lib/utils';
 export const usePoolBidding = (poolAddress: PublicKey) => {
   const { publicKey } = useWallet();

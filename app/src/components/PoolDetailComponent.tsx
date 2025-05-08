@@ -175,15 +175,17 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
         const memberDetails = await fetchMemberAccountDetail(poolData, userWallet);
         
         if (memberDetails) {
-          console.log('Member details:', {
-            owner: memberDetails.owner.toString(),
-            pool: memberDetails.pool.toString(),
-            contributionsMade: memberDetails.contributionsMade,
-            hasReceivedPayout: memberDetails.hasReceivedPayout,
-            eligibleForPayout: memberDetails.eligibleForPayout,
-            collateralStaked: memberDetails.collateralStaked.toString(),
-            status: memberDetails.status
-          });
+          console.log('Member details:', memberDetails);
+          // console.log('Member details:', {
+          //   owner: memberDetails.owner.toString(),
+          //   pool: memberDetails.pool.toString(),
+          //   contributionsMade: memberDetails.contributionsMade,
+          //   hasContributed: memberDetails.hasContributed,
+          //   hasReceivedPayout: memberDetails.hasReceivedPayout,
+          //   eligibleForPayout: memberDetails.eligibleForPayout,
+          //   collateralStaked: memberDetails.collateralStaked.toString(),
+          //   status: memberDetails.status
+          // });
           setMemberDetails(memberDetails);
         } else {
           console.log('User is not a member of this pool');
@@ -289,9 +291,10 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
       },
       contribute: {
         title: "Contribute to Pool",
+        // description: `Contribution amount: ${data.financials.contributionAmount}`, // Use actual data
         description: `Contribution amount: ${
           lamportsToSol(new BN(poolData?.account.finalContributionAmount ?? 0)).toString()
-        }`,
+      }`,
         buttonText: "Contribute",
         // Assuming contribution amount is fixed based on data, min/max might not apply
         // min: data.financials.contributionAmount,
