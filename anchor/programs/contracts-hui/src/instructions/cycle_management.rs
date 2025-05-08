@@ -251,6 +251,7 @@ pub fn force_advance_cycle(ctx: Context<ForceAdvanceCycle>) -> Result<()> {
                     bid_state.winner = Some(group_account.creator);
                     group_account.current_winner = bid_state.winner;
                     group_account.current_bid_amount = Some(0);
+                    group_account.final_contribution_amount = Some(group_account.config.contribution_amount);
                     msg!("ℹ️ No bids in this cycle, Creator wins");
                 } else if bid_state.bids.len() == 1 {
                     // If only one bid, they automatically win
@@ -258,7 +259,8 @@ pub fn force_advance_cycle(ctx: Context<ForceAdvanceCycle>) -> Result<()> {
                     bid_state.winner = Some(winning_bid.bidder);
                     group_account.current_winner = Some(winning_bid.bidder);
                     group_account.current_bid_amount = Some(winning_bid.amount);
-                    
+                    group_account.final_contribution_amount = group_account.current_bid_amount
+                    .map(|bid_amount| group_account.config.contribution_amount - bid_amount);
                     if let Some(winner_account) = &mut ctx.accounts.winner_member_account {
                         winner_account.eligible_for_payout = true;
                     }
@@ -271,7 +273,8 @@ pub fn force_advance_cycle(ctx: Context<ForceAdvanceCycle>) -> Result<()> {
                     bid_state.winner = Some(winning_bid.bidder);
                     group_account.current_winner = Some(winning_bid.bidder);
                     group_account.current_bid_amount = Some(winning_bid.amount);
-                
+                    group_account.final_contribution_amount = group_account.current_bid_amount
+                    .map(|bid_amount| group_account.config.contribution_amount - bid_amount);
                     if let Some(winner_account) = &mut ctx.accounts.winner_member_account {
                         winner_account.eligible_for_payout = true;
                     }
