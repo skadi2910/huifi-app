@@ -19,41 +19,12 @@ import {
   SolflareWalletAdapter, 
   LedgerWalletAdapter 
 } from '@solana/wallet-adapter-wallets'
-import { LazorWalletAdapter } from './lazor-wallet-adapter'
 
 require('@solana/wallet-adapter-react-ui/styles.css')
 
-// Create a custom wallet button component
-const CustomWalletButton = dynamic(
-  async () => {
-    const { WalletMultiButton } = await import('@solana/wallet-adapter-react-ui')
-    return function CustomWalletButton() {
-      return (
-        <div className="wallet-adapter-dropdown">
-          <WalletMultiButton />
-          <div className="wallet-adapter-dropdown-list">
-            <button
-              className="wallet-adapter-dropdown-list-item"
-              onClick={async () => {
-                const lazorWallet = new LazorWalletAdapter()
-                try {
-                  await lazorWallet.connect()
-                } catch (error) {
-                  console.error('Failed to connect Lazor wallet:', error)
-                }
-              }}
-            >
-              Connect Lazor Wallet
-            </button>
-          </div>
-        </div>
-      )
-    }
-  },
-  { ssr: false }
-)
-
-export const WalletButton = CustomWalletButton
+export const WalletButton = dynamic(async () => (await import('@solana/wallet-adapter-react-ui')).WalletMultiButton, {
+  ssr: false,
+})
 
 export function SolanaProvider({ children }: { children: ReactNode }) {
   const { cluster } = useCluster()
@@ -62,7 +33,6 @@ export function SolanaProvider({ children }: { children: ReactNode }) {
     new PhantomWalletAdapter(),
     new SolflareWalletAdapter(),
     new LedgerWalletAdapter(),
-    new LazorWalletAdapter(),
   ], [])
   
   const onError = useCallback((error: WalletError) => {
@@ -72,9 +42,7 @@ export function SolanaProvider({ children }: { children: ReactNode }) {
   return (
     <ConnectionProvider endpoint={endpoint}>
       <WalletProvider wallets={wallets} onError={onError} autoConnect={true}>
-        <WalletModalProvider>
-          {children}
-        </WalletModalProvider>
+        <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
     </ConnectionProvider>
   )
