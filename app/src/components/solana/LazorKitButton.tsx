@@ -21,7 +21,7 @@ export function LazorKitButton() {
   
   // Get the display address - prioritize smart wallet address then fallback to publicKey
   const displayAddress = smartWalletAuthorityPubkey || publicKey;
-  
+  console.log("Address:", displayAddress);
   const handleConnect = useCallback(async () => {
     if (isConnected) {
       disconnect();

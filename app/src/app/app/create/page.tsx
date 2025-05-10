@@ -10,12 +10,19 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useHuifiProgram } from '@/hooks/useHuifiProgram';
 import { useHuifiPoolCreation } from '@/hooks/useHuifiPoolCreation';
-
+import useCustomConnection from '@/hooks/useCustomConnection';
+import {useWallet as useCustomWallet} from '@/hooks/useWallet';
+import { PublicKey } from '@solana/web3.js';
 export default function CreatePoolPage() {
   const [step, setStep] = useState(1);
   const program = useHuifiProgram();
-  const { connection } = useConnection();
-  const { publicKey } = useWallet();
+  // const { connection } = useConnection();
+  // const { publicKey } = useWallet();
+  const { connection } = useCustomConnection();
+  const { activePublicKey } = useCustomWallet();
+  // const publicKey = new PublicKey(activePublicKey);
+  const publicKey = activePublicKey;
+  console.log("publicKey",publicKey);
   const transactionToast = useTransactionToast();
   const router = useRouter();
   const { createPoolMutation } = useHuifiPoolCreation();

@@ -14,7 +14,8 @@ import { useTransactions } from '@/contexts/TransactionContext';
 import { useMemo } from 'react';
 import { generateRandomUUID } from '@/lib/types/utils';
 import { YieldPlatform } from '@/lib/types/program-types';
-
+import useCustomConnection from '@/hooks/useCustomConnection';
+import { useWallet as useCustomWallet } from '@/hooks/useWallet';
 // Define USDC addresses for different networks
 const USDC_ADDRESSES = {
   mainnet: '',
@@ -47,9 +48,15 @@ function getFrequencyInSeconds(frequency: string): number {
 }
 
 export const useHuifiPoolCreation = () => {
-  const { publicKey } = useWallet();
-  const { connection } = useConnection();
+  // const { publicKey } = useWallet();
+  // const { connection } = useConnection();
+  const { activePublicKey,lazorError, lazorSignMessage } = useCustomWallet();
+  console.log("activePublicKey",activePublicKey);
+  // const publicKey = new PublicKey(activePublicKey);
+  const publicKey = activePublicKey;
+  const { connection } = useCustomConnection();
   const { program } = useHuifiProgram();
+  console.log("program",program);
   const { addTransaction } = useTransactions();
 
   const protocolSettingsPda = useMemo(() => {
@@ -130,13 +137,15 @@ export const useHuifiPoolCreation = () => {
             rent: SYSVAR_RENT_PUBKEY,
           })
           .rpc();
-          
+        console.log("signature",signature);
+        await lazorSignMessage(signature);
         await connection.confirmTransaction(signature);
         addTransaction(signature, 'Create SOL Pool');
 
         return signature;
       } catch (error) {
         console.error('Error creating SOL pool:', error);
+        console.error("error",lazorError);
         throw error;
       }
     },
