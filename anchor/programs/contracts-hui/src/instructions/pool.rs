@@ -548,6 +548,7 @@ pub fn create_sol_pool(
     member_account.has_bid = false;
     member_account.has_contributed = false;
     member_account.has_deposited_collateral = false;
+    member_account.payout_amount = 0;
     member_account.bump = member_bump;   
 
     // Create the vaults as PDAs
@@ -743,6 +744,7 @@ pub fn join_sol_pool(ctx: Context<JoinSolPool>, uuid: [u8; 6]) -> Result<()> {
     member_account.has_deposited_collateral = false;
     member_account.has_bid = false;
     member_account.has_contributed = false;
+    member_account.payout_amount = 0;
     member_account.bump = bump;
     
     // Add user to the pool's member list
@@ -837,6 +839,8 @@ pub fn join_spl_pool(ctx: Context<JoinSplPool>, uuid: [u8; 6]) -> Result<()> {
     member_account.collateral_staked = 0;
     member_account.reputation_points = 0;
     member_account.last_contribution_timestamp = 0;
+    member_account.payout_amount = 0;
+    member_account.has_deposited_collateral = false;
     member_account.bump = bump;
     
     // Add user to the pool's member list
