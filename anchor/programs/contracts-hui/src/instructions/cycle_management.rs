@@ -288,7 +288,9 @@ pub fn force_advance_cycle(ctx: Context<ForceAdvanceCycle>) -> Result<()> {
             },
             CyclePhase::Contributing => {
                 msg!("💫 Force advancing from contribution phase");
-                
+                if let Some(winner_account) = &mut ctx.accounts.winner_member_account {
+                    winner_account.payout_amount = group_account.total_contributions;
+                }
                 group_account.status = PoolStatus::Active {
                     phase: CyclePhase::ReadyForPayout
                 };

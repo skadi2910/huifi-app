@@ -26,15 +26,15 @@ pub struct ProcessPayout<'info> {
         mut,
         seeds = [MEMBER_SEED, group_account.key().as_ref(), user.key().as_ref()],
         bump = recipient_account.bump,
-        constraint = Some(recipient.key()) == group_account.current_winner @ HuiFiError::NotPoolWinner,
+        constraint = Some(user.key()) == group_account.current_winner @ HuiFiError::NotPoolWinner,
         constraint = recipient_account.eligible_for_payout @ HuiFiError::NotEligibleForPayout,
         constraint = !recipient_account.has_received_payout @ HuiFiError::AlreadyReceivedPayout,
     )]
     pub recipient_account: Account<'info, MemberAccount>,
 
     /// CHECK: Recipient of the payout
-    #[account(mut)]
-    pub recipient: AccountInfo<'info>,
+    // #[account(mut)]
+    // pub recipient: AccountInfo<'info>,
 
     /// CHECK: This is the pool's SOL vault
     #[account(
@@ -51,17 +51,22 @@ pub struct ProcessPayout<'info> {
     pub protocol_settings: Account<'info, ProtocolSettings>,
 
     /// CHECK: Protocol treasury to receive fees
-    #[account(mut)]
+    #[account(
+        mut,
+        owner = system_program.key(),
+        seeds = [TREASURY_SEED,b"sol"],
+        bump,
+    )]
     pub protocol_treasury: AccountInfo<'info>,
 
     pub system_program: Program<'info, System>,
 }
 
-pub fn process_payout(ctx: Context<ProcessPayout>, uuid: [u8; 6], required_collateral: Option<u64>) -> Result<()> {
+pub fn process_payout(ctx: Context<ProcessPayout>) -> Result<()> {
     let group_account = &mut ctx.accounts.group_account;
     let recipient_account = &mut ctx.accounts.recipient_account;
     let current_timestamp = Clock::get()?.unix_timestamp;
-
+    let bps = 500;
     // Basic validations
     require!(recipient_account.eligible_for_payout, HuiFiError::NotEligibleForPayout);
     require!(!recipient_account.has_received_payout, HuiFiError::AlreadyReceivedPayout);
@@ -78,12 +83,12 @@ pub fn process_payout(ctx: Context<ProcessPayout>, uuid: [u8; 6], required_colla
             HuiFiError::CollateralNotDeposited
         );
 
-        // Then verify the collateral amount
-        let required_collateral = required_collateral.ok_or(HuiFiError::CollateralRequired)?;
-        require!(
-            recipient_account.collateral_staked >= required_collateral,
-            HuiFiError::InsufficientCollateral
-        );
+        // // Then verify the collateral amount
+        // let required_collateral = required_collateral.ok_or(HuiFiError::CollateralRequired)?;
+        // require!(
+        //     recipient_account.collateral_staked >= required_collateral,
+        //     HuiFiError::InsufficientCollateral
+        // );
 
         msg!("✅ Collateral verification passed");
     } else {
@@ -91,32 +96,28 @@ pub fn process_payout(ctx: Context<ProcessPayout>, uuid: [u8; 6], required_colla
     }
 
     // Calculate payout amounts
-    let total_payout = group_account.total_contributions;
+    let total_payout = recipient_account.payout_amount;
 
-    // Check if vault has enough funds
-    require!(
-        ctx.accounts.vault_sol.lamports() >= total_payout,
-        HuiFiError::InsufficientVaultFunds
-    );
 
     // Calculate fee for early payout
-    let fee_amount = if !is_final_cycle {
+    let fee_amount = 
         total_payout
-            .saturating_mul(group_account.config.early_withdrawal_fee_bps as u64)
-            .saturating_div(BASIS_POINTS_DIVISOR)
-    } else {
-        0
-    };
+            .saturating_mul(bps)
+            .saturating_div(BASIS_POINTS_DIVISOR);
 
     // Process transfers
     let payout_amount = total_payout.saturating_sub(fee_amount);
-
+    // Check if vault has enough funds
+    require!(
+        ctx.accounts.vault_sol.lamports() >= payout_amount,
+        HuiFiError::InsufficientVaultFunds
+    );
     // Transfer SOL from vault to recipient
     **ctx.accounts.vault_sol.try_borrow_mut_lamports()? = ctx.accounts.vault_sol.lamports()
         .checked_sub(payout_amount)
         .ok_or(HuiFiError::InsufficientVaultFunds)?;
     
-    **ctx.accounts.recipient.try_borrow_mut_lamports()? = ctx.accounts.recipient.lamports()
+    **ctx.accounts.user.try_borrow_mut_lamports()? = ctx.accounts.user.lamports()
         .checked_add(payout_amount)
         .ok_or(HuiFiError::Overflow)?;
 
@@ -134,12 +135,13 @@ pub fn process_payout(ctx: Context<ProcessPayout>, uuid: [u8; 6], required_colla
     // Update accounts
     recipient_account.has_received_payout = true;
     recipient_account.eligible_for_payout = false;
-    recipient_account.status = MemberStatus::Withdrawed;
+    // recipient_account.status = MemberStatus::Withdrawed;
+    group_account.total_contributions = 0;  // Reset total contributions
 
     // Log the transaction details
     msg!("✅ Processed payout of {} SOL to {}", 
         payout_amount as f64 / LAMPORTS_PER_SOL as f64,
-        ctx.accounts.recipient.key()
+        ctx.accounts.user.key()
     );
 
     if fee_amount > 0 {
@@ -151,7 +153,7 @@ pub fn process_payout(ctx: Context<ProcessPayout>, uuid: [u8; 6], required_colla
     // Emit event
     emit!(PayoutProcessed {
         pool: group_account.key(),
-        recipient: ctx.accounts.recipient.key(),
+        recipient: ctx.accounts.user.key(),
         amount: payout_amount,
         cycle: group_account.current_cycle,
         timestamp: current_timestamp,

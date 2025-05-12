@@ -31,6 +31,7 @@ export type MemberAccountData = {
   collateralStaked: BN;
   reputationPoints: BN;
   lastContributionTimestamp: BN;
+  totalContributions: BN;
   bump: number;
 };
 export type PoolWithKey = {

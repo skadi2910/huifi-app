@@ -287,8 +287,8 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
         case "claim":
           if (!poolData) throw new Error("Pool data not found");
           await claimPayoutMutation.mutateAsync({
-            amount: parseFloat(amount),
-            // uuid: poolData.account.uuid,
+            // amount: parseFloat(amount),
+            uuid: poolData.account.uuid,
           });
           toast.success("Successfully claim payout!");
           break;
@@ -931,13 +931,13 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                 <div className="flex justify-between items-center text-sm md:text-base">
                   <span className="text-[#f8e555]/70">Contributed</span>
                   <span className="text-[#e6ce04] font-bold text-base md:text-lg">
-                    {memberDetails?.contributionsMade} {"SOL"}
+                    {lamportsToSol(memberDetails?.totalContributions || new BN(0))}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-sm md:text-base">
                   <span className="text-[#f8e555]/70">Collateral Staked</span>
                   <span className="text-[#e6ce04] font-bold text-base md:text-lg">
-                    {memberDetails?.collateralStaked.toString()} {"SOL"}
+                    {(lamportsToSol(memberDetails?.collateralStaked || new BN(0)))}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-sm md:text-base">

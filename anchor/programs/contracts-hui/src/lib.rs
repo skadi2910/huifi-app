@@ -107,10 +107,8 @@ pub mod contracts_hui {
     }
     pub fn process_payout(
         ctx: Context<ProcessPayout>,
-        uuid: [u8; 6],  
-        required_collateral: Option<u64>
     ) -> Result<()> {
-        instructions::payout::process_payout(ctx, uuid, required_collateral)
+        instructions::payout::process_payout(ctx)
     }
     pub fn submit_bid(
         ctx: Context<SubmitBid>,
