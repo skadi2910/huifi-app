@@ -5,15 +5,15 @@ import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from '@solana/spl-tok
 import { useHuifiProgram } from './useHuifiProgram';
 import { useTransactions } from '@/contexts/TransactionContext';
 
-export const useClaimJackpot = (poolAddress: PublicKey) => {
+export const useClaimPayout = (poolAddress: PublicKey) => {
   const { publicKey } = useWallet();
   const { program } = useHuifiProgram();
   const { addTransaction } = useTransactions();
   
   // Mutation for claiming a jackpot
-  const claimJackpotMutation = useMutation({
-    mutationKey: ['claim-jackpot', { pool: poolAddress.toString() }],
-    mutationFn: async (round: number): Promise<string> => {
+  const claimPayoutMutation = useMutation({
+    mutationKey: ['claim-payout', { pool: poolAddress.toString() }],
+    mutationFn: async ({amount}: {amount: number}): Promise<string> => {
       if (!publicKey || !program) {
         throw new Error('Wallet not connected or program not loaded');
       }
@@ -28,10 +28,10 @@ export const useClaimJackpot = (poolAddress: PublicKey) => {
         const tokenMint = poolAccount.tokenMint;
         
         // Calculate round result PDA
-        const [roundResultPda] = PublicKey.findProgramAddressSync(
-          [Buffer.from('round_result'), poolAddress.toBuffer(), Buffer.from([round])],
-          program.programId
-        );
+        // const [roundResultPda] = PublicKey.findProgramAddressSync(
+        //   [Buffer.from('round_result'), poolAddress.toBuffer(), Buffer.from([round])],
+        //   program.programId
+        // );
         
         // Get winner's token account
         const winnerTokenAccount = getAssociatedTokenAddressSync(
@@ -52,10 +52,9 @@ export const useClaimJackpot = (poolAddress: PublicKey) => {
         );
         
         const signature = await program.methods
-          .claimJackpot(round)
+          .claimPayout(amount)
           .accounts({
             groupAccount: poolAddress,
-            roundResult: roundResultPda,
             winner: publicKey,
             winnerTokenAccount,
             poolTokenAccount,
@@ -64,7 +63,7 @@ export const useClaimJackpot = (poolAddress: PublicKey) => {
           })
           .rpc();
           
-        addTransaction(signature, `Claim Jackpot - Round ${round}`);
+        addTransaction(signature, `Claim Payout`);
         return signature;
       } catch (error) {
         console.error('Error claiming jackpot:', error);
@@ -73,5 +72,5 @@ export const useClaimJackpot = (poolAddress: PublicKey) => {
     }
   });
   
-  return { claimJackpotMutation };
+  return { claimPayoutMutation };
 };

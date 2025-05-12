@@ -12,7 +12,19 @@ export enum YieldPlatform {
   JitoSol = 1,
   Kamino = 2,
 }
-
+// Add a type for the status structure
+export type PoolStatusWithPhase = {
+  initializing?: {};
+  active?: {
+    phase: {
+      bidding?: {};
+      contributing?: {};
+      readyForPayout?: {};
+    };
+  };
+  completed?: {};
+  defaulted?: {};
+};
 export interface HuifiPool {
   uuid: number[];
   config: PoolConfig;
@@ -30,6 +42,7 @@ export interface HuifiPool {
   earlyWithdrawalFeeBps: number;
   collateralRequirementBps: number;
   status: PoolStatus;
+  currentPhase: CyclePhase;
   totalValue: BN;
   currentCycle: number;
   totalCycles: number;

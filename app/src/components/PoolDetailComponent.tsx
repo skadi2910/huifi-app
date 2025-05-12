@@ -18,16 +18,28 @@ import {
   History,
   ArrowRight,
 } from "lucide-react";
-import { useHuifiPools, PoolWithKey, MemberAccountData } from "@/hooks/useHuifiPools";
+import {
+  useHuifiPools,
+  PoolWithKey,
+  MemberAccountData,
+} from "@/hooks/useHuifiPools";
 import { PublicKey } from "@solana/web3.js";
 import { BN } from "@coral-xyz/anchor";
-import { getStatusString, formatDurationHours, lamportsToSol, bpsToPercentage } from "@/lib/utils";
+import {
+  getStatusString,
+  formatDurationHours,
+  lamportsToSol,
+  bpsToPercentage,
+  getPhaseString,
+} from "@/lib/utils";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useContributeSol } from "@/hooks/useContributeSol";
 import { toast } from "react-hot-toast";
 import { useAdvanceCycle } from "@/hooks/useAdvanceCycle";
 import { usePoolBidding } from "@/hooks/usePoolBidding";
-
+import { useClaimPayout } from "@/hooks/useClaimPayout";
+import { PoolStatusWithPhase } from "@/lib/types/program-types";
+import { useDepositCollateral } from "@/hooks/useDepositCollateral";
 // Assuming MOCK_POOL_DATA is either passed in or replaced by actual data structure
 // If MOCK_POOL_DATA is truly static, you might keep its definition here or import it.
 // If it represents the *structure* of the fetched data, use the actual data passed in props.
@@ -105,7 +117,7 @@ type ActionConfig = {
 // const getStatusString = (status: any): string => {
 //   // Check if status exists
 //   if (!status) return 'Unknown';
-  
+
 //   // Check which key exists in the status object
 //   try {
 //     if ('initializing' in status) return 'Initializing';
@@ -133,25 +145,47 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [poolData, setPoolData] = useState<PoolWithKey | null>(null);
-  const [memberDetails, setMemberDetails] = useState<MemberAccountData | null>(null);
+  const [memberDetails, setMemberDetails] = useState<MemberAccountData | null>(
+    null
+  );
   const { fetchPoolDetails, fetchMemberAccountDetail } = useHuifiPools();
   const poolPublicKey = useMemo(() => new PublicKey(publicKey), [publicKey]);
-  const [statusString, setStatusString] = useState<string>('Unknown');
+  const [statusString, setStatusString] = useState<string>("Unknown");
+  const [currentPhase, setCurrentPhase] = useState<string>("Unknown");
   const { contributeSolMutation } = useContributeSol();
-  const { advanceCycleMutation } = useAdvanceCycle({ pool: poolData as PoolWithKey});
+  const { advanceCycleMutation } = useAdvanceCycle({
+    pool: poolData as PoolWithKey,
+  });
   const { placeBidMutation } = usePoolBidding(poolPublicKey);
+  const { claimPayoutMutation } = useClaimPayout(poolPublicKey);
+  const { depositSolCollateralMutation } = useDepositCollateral(poolPublicKey);
+  // To multiply by 1.3:
+  const multiplier = new BN(13);
+  const divisor = new BN(10);
   useEffect(() => {
     const loadPoolData = async () => {
       try {
         const data = await fetchPoolDetails(poolPublicKey);
-        // console.log("Pool data:", data);
         setPoolData(data);
-        setStatusString(getStatusString(data?.account.status));
+        console.log("Pool data:", data);
+        // Handle status and phase
+        const status = data?.account.status as unknown as PoolStatusWithPhase;
+        const statusString = getStatusString(status);
+        // First check if the status object exists
+        setStatusString(statusString);
+        if (statusString === "Active") {
+          const currentPhase = status.active?.phase;
+          console.log("Current phase:", currentPhase);
+          setCurrentPhase(getPhaseString(currentPhase));
+        }
+        // setCurrentPhase(phase);
       } catch (error) {
         console.error("Error fetching pool details:", error);
+        // setStatusString("Unknown");
+        setCurrentPhase("Unknown");
       }
     };
-
+  
     loadPoolData();
   }, [poolPublicKey, fetchPoolDetails]);
   useEffect(() => {
@@ -159,23 +193,26 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
     const isReady = poolData && userWallet;
     const checkMembership = async () => {
       if (!isReady) {
-        console.log('Missing required data for membership check:', {
+        console.log("Missing required data for membership check:", {
           hasPoolData: !!poolData,
-          hasUserWallet: !!userWallet
+          hasUserWallet: !!userWallet,
         });
         return;
       }
-  
+
       try {
         // console.log('Checking membership for:', {
         //   pool: poolData.publicKey.toString(),
         //   user: userWallet.toString()
         // });
-  
-        const memberDetails = await fetchMemberAccountDetail(poolData, userWallet);
-        
+
+        const memberDetails = await fetchMemberAccountDetail(
+          poolData,
+          userWallet
+        );
+
         if (memberDetails) {
-          console.log('Member details:', memberDetails);
+          console.log("Member details:", memberDetails);
           // console.log('Member details:', {
           //   owner: memberDetails.owner.toString(),
           //   pool: memberDetails.pool.toString(),
@@ -188,18 +225,18 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
           // });
           setMemberDetails(memberDetails);
         } else {
-          console.log('User is not a member of this pool');
-          toast.error('User is not a member of this pool');
+          console.log("User is not a member of this pool");
+          toast.error("User is not a member of this pool");
           setMemberDetails(null);
         }
       } catch (error) {
-        console.error('Error checking membership:', error);
+        console.error("Error checking membership:", error);
         setMemberDetails(null);
       }
     };
-  
+
     checkMembership();
-  }, [poolData, userWallet, fetchMemberAccountDetail]);// Client-side hooks for actions (example)
+  }, [poolData, userWallet, fetchMemberAccountDetail]); // Client-side hooks for actions (example)
   // const { someActionFromHook } = useHuifiPools();
 
   // Check if the current user is the creator of the pool
@@ -212,7 +249,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
   const handleAction = async (amount: string) => {
     console.log(`Performing action: ${activeAction} with amount: ${amount}`);
     setIsProcessing(true);
-    
+
     try {
       switch (activeAction) {
         case "contribute":
@@ -220,47 +257,59 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
           if (!amount || parseFloat(amount) <= 0) {
             throw new Error("Please enter a valid amount");
           }
-          
+
           await contributeSolMutation.mutateAsync({
             poolId: poolPublicKey,
             uuid: poolData.account.uuid || [],
-            amount: parseFloat(amount)
+            amount: parseFloat(amount),
           });
           toast.success("Successfully contributed to the pool!");
           break;
-  
+
         case "bid":
           if (!poolData) throw new Error("Pool data not found");
           await placeBidMutation.mutateAsync({
             amount: parseFloat(amount),
-            uuid: poolData.account.uuid
+            uuid: poolData.account.uuid,
           });
           toast.success("Successfully placed a bid!");
           break;
-  
+
         case "progress":
           if (!isPoolCreator) {
             throw new Error("Only the pool creator can progress the pool");
           }
-          await advanceCycleMutation.mutateAsync({ pool: poolData as PoolWithKey });
+          await advanceCycleMutation.mutateAsync({
+            pool: poolData as PoolWithKey,
+          });
           toast.success("Successfully progressed the pool to the next phase!");
           break;
+        case "claim":
+          if (!poolData) throw new Error("Pool data not found");
+          await claimPayoutMutation.mutateAsync({
+            amount: parseFloat(amount),
+            // uuid: poolData.account.uuid,
+          });
+          toast.success("Successfully claim payout!");
+          break;
+        case "withdraw":
+          break;
       }
-  
+
       // Refresh pool data after successful action
       const data = await fetchPoolDetails(poolPublicKey);
       setPoolData(data);
       if (activeAction === "progress") {
         setStatusString(getStatusString(data?.account.status));
       }
-  
     } catch (error) {
       console.log("Error caught:", error);
-      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
+      const errorMessage =
+        error instanceof Error ? error.message : "An unexpected error occurred";
       console.log("Error message:", errorMessage);
       // The error message will now come properly formatted from the hook
       // toast.error(error instanceof Error ? error.message : "An unexpected error occurred");
-          // Force toast with promise
+      // Force toast with promise
       toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
@@ -268,7 +317,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
       setActionAmount("");
     }
   };
-  
+
   // Action modal component
   const ActionModal = () => {
     const [localActionAmount, setLocalActionAmount] = useState<string>("");
@@ -278,6 +327,38 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
       setActionAmount(localActionAmount);
       console.log("localActionAmount: ", localActionAmount);
       await handleAction(localActionAmount);
+    };
+    const handleCollateralAction = async () => {
+      // Update parent state only when submitting
+      setActionAmount(localActionAmount);
+      // console.log("localActionAmount: ", localActionAmount);
+      //
+      try {
+        if (!poolData) throw new Error("Pool data not found");
+        if (!localActionAmount || parseFloat(localActionAmount) <= 0) {
+          throw new Error("Please enter a valid amount");
+        }
+        await depositSolCollateralMutation.mutateAsync({
+          amount: parseFloat(localActionAmount),
+          uuid: poolData.account.uuid,
+        });
+        toast.success("Successfully deposited collateral!");
+      } catch (error) {
+        console.log("Error caught:", error);
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "An unexpected error occurred";
+        console.log("Error message:", errorMessage);
+        // The error message will now come properly formatted from the hook
+        // toast.error(error instanceof Error ? error.message : "An unexpected error occurred");
+        // Force toast with promise
+        toast.error(errorMessage);
+      } finally {
+        setIsProcessing(false);
+        setActiveAction(null);
+        setActionAmount("");
+      }
     };
     // Use `data` (from props) instead of MOCK_POOL_DATA here
     const actionConfig: Record<string, ActionConfig> = {
@@ -292,9 +373,9 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
       contribute: {
         title: "Contribute to Pool",
         // description: `Contribution amount: ${data.financials.contributionAmount}`, // Use actual data
-        description: `Contribution amount: ${
-          lamportsToSol(new BN(poolData?.account.finalContributionAmount ?? 0)).toString()
-      }`,
+        description: `Contribution amount: ${lamportsToSol(
+          new BN(poolData?.account.finalContributionAmount ?? 0)
+        ).toString()}`,
         buttonText: "Contribute",
         // Assuming contribution amount is fixed based on data, min/max might not apply
         // min: data.financials.contributionAmount,
@@ -308,7 +389,11 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
       },
       claim: {
         title: "Claim Payout",
-        description: `Available to claim: `, // Use actual data
+        description: `Available to claim: ${lamportsToSol(
+          poolData.account.totalContributions
+        ).toString()}\nCollateral: ${lamportsToSol(
+          poolData.account.totalContributions.mul(multiplier).div(divisor)
+        ).toString()}`, // Use actual data
         buttonText: "Claim Payout",
       },
       progress: {
@@ -332,7 +417,9 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
             {config.description}
           </p>
 
-          {(activeAction === "bid" || activeAction === "contribute") && ( // Adjust condition if 'contribute' takes amount input
+          {(activeAction === "bid" ||
+            activeAction === "contribute" ||
+            activeAction === "claim") && ( // Adjust condition if 'contribute' takes amount input
             <div className="space-y-4 mb-4">
               <input
                 type="text"
@@ -341,14 +428,20 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                 onChange={(e) => {
                   const value = e.target.value;
                   // Allow empty string, numbers, and only one decimal point
-                  if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                  if (value === "" || /^\d*\.?\d*$/.test(value)) {
                     // Prevent multiple decimal points
-                    if (value.split('.').length <= 2) {
+                    if (value.split(".").length <= 2) {
                       setLocalActionAmount(value);
                     }
                   }
                 }}
-                placeholder={poolData.account.config.isNativeSol ? "Enter amount in SOL" : "Enter amount in USDC" }
+                placeholder={
+                  activeAction === "claim"
+                    ? "Enter Collateral To Claim"
+                    : poolData.account.config.isNativeSol
+                    ? "Enter amount in SOL"
+                    : "Enter amount in USDC"
+                }
                 className="w-full px-4 py-2 bg-[#010200] border-2 border-[#e6ce04]/30 rounded-lg text-[#e6ce04] focus:border-[#e6ce04] focus:ring-0"
               />
               {config.min && config.max && (
@@ -361,6 +454,17 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
           )}
 
           <div className="flex gap-3 mt-4">
+            {activeAction === "claim" ? (
+              <button
+                onClick={handleCollateralAction}
+                disabled={isProcessing}
+                className="flex-1 bg-[#e6ce04] text-[#010200] font-bold py-2 rounded-lg hover:bg-[#f8e555] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isProcessing ? "Processing..." : "Put Collateral"}
+              </button>
+            ) : (
+              <span></span>
+            )}
             <button
               onClick={handleLocalAction}
               disabled={
@@ -428,9 +532,22 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
           </div>
           <div className="hidden md:block">
             <div className="bg-[#1a1a18] px-4 py-2 rounded-lg border border-[#e6ce04]/20">
-              <span className="text-[#f8e555]/70 mr-2">Pool Status:</span>
-              {/* Use dynamic data */}
-              <span className="text-[#e6ce04] font-bold">{statusString.toUpperCase()}</span>
+              <p className="text-[#f8e555]/70 mr-2">
+                {" "}
+                Pool Status: 
+                {/* Use dynamic data */}
+                <span className="text-[#e6ce04] font-bold text-end">
+                  {statusString.toUpperCase()}
+                </span>
+              </p>
+              <p>
+                {" "}
+                <span className="text-[#f8e555]/70 mr-2">Current Phase:</span>
+                {/* Use dynamic data */}
+                <span className="text-[#e6ce04] font-bold">
+                  {currentPhase.toUpperCase()}
+                </span>
+              </p>
             </div>
           </div>
         </div>
@@ -446,7 +563,9 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                   Total Value
                 </p>
                 <p className="text-xl md:text-2xl font-bold text-[#e6ce04]">
-                  {lamportsToSol(poolData.account.totalContributions).toString()}
+                  {lamportsToSol(
+                    poolData.account.totalContributions
+                  ).toString()}
                 </p>
               </div>
               <div className="bg-[#1a1a18] p-4 rounded-xl border border-[#e6ce04]/20">
@@ -512,7 +631,9 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                         <div className="space-y-3 text-sm md:text-base">
                           <p className="flex justify-between">
                             <span className="text-[#f8e555]/70">Status</span>
-                            <span className="text-[#e6ce04]">{statusString.toUpperCase()}</span>
+                            <span className="text-[#e6ce04]">
+                              {statusString.toUpperCase()}
+                            </span>
                           </p>
                           <p className="flex justify-between">
                             <span className="text-[#f8e555]/70">Frequency</span>
@@ -525,7 +646,9 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                               Round Duration
                             </span>
                             <span className="text-[#e6ce04]">
-                              {formatDurationHours(poolData.account.config.cycleDurationSeconds)}
+                              {formatDurationHours(
+                                poolData.account.config.cycleDurationSeconds
+                              )}
                             </span>
                           </p>
                           <p className="flex justify-between">
@@ -548,7 +671,9 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                               Entry Amount
                             </span>
                             <span className="text-[#e6ce04]">
-                              {lamportsToSol(poolData.account.config.contributionAmount).toString()}
+                              {lamportsToSol(
+                                poolData.account.config.contributionAmount
+                              ).toString()}
                             </span>
                           </p>
                           <p className="flex justify-between">
@@ -556,23 +681,25 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                               Total Contributed
                             </span>
                             <span className="text-[#e6ce04]">
-                              {lamportsToSol(poolData.account.totalContributions).toString()}
+                              {lamportsToSol(
+                                poolData.account.totalContributions
+                              ).toString()}
                             </span>
                           </p>
                           <p className="flex justify-between">
                             <span className="text-[#f8e555]/70">
                               Yield Earned
                             </span>
-                            <span className="text-[#e6ce04]">
-                              {"0 SOL"}
-                            </span>
+                            <span className="text-[#e6ce04]">{"0 SOL"}</span>
                           </p>
                           <p className="flex justify-between">
                             <span className="text-[#f8e555]/70">
                               Early Withdraw Fee
                             </span>
                             <span className="text-[#e6ce04]">
-                            {bpsToPercentage(poolData.account.config.earlyWithdrawalFeeBps)}
+                              {bpsToPercentage(
+                                poolData.account.config.earlyWithdrawalFeeBps
+                              )}
                             </span>
                           </p>
                         </div>
@@ -622,36 +749,38 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                 {activeTab === "members" && (
                   <div className="space-y-4">
                     {/* Replace with actual member data iteration if available */}
-                    {Array.from({ length: poolData.account.memberAddresses.length }).map(
-                      (_, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center justify-between bg-[#010200] p-3 rounded-lg border border-[#e6ce04]/20"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-[#1a1a18] rounded-full flex items-center justify-center">
-                              <Users className="w-4 h-4 text-[#e6ce04]" />
-                            </div>
-                            <div>
-                              <p className="text-[#e6ce04]">
-                                Member #{index + 1}
-                              </p>
-                              <p className="text-xs text-[#f8e555]/70">
-                                {poolData.account.memberAddresses[index].toString()}
-                              </p>
-                            </div>
+                    {Array.from({
+                      length: poolData.account.memberAddresses.length,
+                    }).map((_, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between bg-[#010200] p-3 rounded-lg border border-[#e6ce04]/20"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-[#1a1a18] rounded-full flex items-center justify-center">
+                            <Users className="w-4 h-4 text-[#e6ce04]" />
                           </div>
-                          <div className="text-right">
+                          <div>
                             <p className="text-[#e6ce04]">
-                              {"data.financials.contributionAmount"}
+                              Member #{index + 1}
                             </p>
                             <p className="text-xs text-[#f8e555]/70">
-                              Contributed
+                              {poolData.account.memberAddresses[
+                                index
+                              ].toString()}
                             </p>
                           </div>
                         </div>
-                      )
-                    )}
+                        <div className="text-right">
+                          <p className="text-[#e6ce04]">
+                            {"data.financials.contributionAmount"}
+                          </p>
+                          <p className="text-xs text-[#f8e555]/70">
+                            Contributed
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                     {poolData.account.memberAddresses.length === 0 && (
                       <p className="text-[#f8e555]/70 text-center py-4">
                         No members have joined yet.
@@ -728,16 +857,15 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                           <p className="text-[#f8e555]/70 mb-1">
                             Average Yield
                           </p>
-                          <p className="text-[#e6ce04] font-medium">
-                            {}
-                          </p>
+                          <p className="text-[#e6ce04] font-medium">{}</p>
                         </div>
                         <div className="bg-[#010200] p-3 rounded-lg border border-[#e6ce04]/20">
                           <p className="text-[#f8e555]/70 mb-1">
                             Completed Rounds
                           </p>
                           <p className="text-[#e6ce04] font-medium">
-                            {poolData.account.currentCycle}/{poolData.account.totalCycles}
+                            {poolData.account.currentCycle}/
+                            {poolData.account.totalCycles}
                           </p>
                         </div>
                       </div>
@@ -765,15 +893,11 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                           </div>
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-[#f8e555]/70">Verified</span>
-                            <span className="text-[#e6ce04]">
-                              {"Yes"}
-                            </span>
+                            <span className="text-[#e6ce04]">{"Yes"}</span>
                           </div>
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-[#f8e555]/70">Audited</span>
-                            <span className="text-[#e6ce04]">
-                              {"Yes"}
-                            </span>
+                            <span className="text-[#e6ce04]">{"Yes"}</span>
                           </div>
                         </div>
                       </div>

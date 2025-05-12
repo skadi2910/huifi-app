@@ -1,4 +1,5 @@
 import { BN } from "@coral-xyz/anchor";
+import { LAMPORTS_PER_SOL } from "@solana/web3.js";
 // Define error codes enum or const
 const ERROR_CODES = {
   ACCOUNT_NOT_INITIALIZED: 'AccountNotInitialized',
@@ -6,6 +7,8 @@ const ERROR_CODES = {
   INSUFFICIENT_FUNDS: 'InsufficientFunds',
   INVALID_BID_AMOUNT: 'InvalidBidAmount',
   ALREADY_BID: 'AlreadyBid',
+  INVALID_PHASE: 'InvalidPhase',
+  NOT_POOL_WINNER: 'NotPoolWinner',
 } as const;
 
 // Define error messages separately
@@ -15,14 +18,18 @@ const ERROR_MESSAGES = {
   [ERROR_CODES.INSUFFICIENT_FUNDS]: "Insufficient funds for bid",
   [ERROR_CODES.INVALID_BID_AMOUNT]: "Invalid bid amount",
   [ERROR_CODES.ALREADY_BID]: "You have already bid for this cycle",
+  [ERROR_CODES.INVALID_PHASE]: "Invalid phase",
+  [ERROR_CODES.NOT_POOL_WINNER]: "You are not the pool winner this round",
 } as const;
 
 
 export const lamportsToSol = (lamports: BN): string => {
-    const sol = lamports.toNumber() / 1000000000; // 1 SOL = 1e9 LAMPORTS
+    const sol = lamports.toNumber() / LAMPORTS_PER_SOL; // 1 SOL = 1e9 LAMPORTS
     return `${sol} SOL`;
 };
-
+export const solToLamports = (sol: number): BN => {
+    return new BN(sol * LAMPORTS_PER_SOL);
+};
 export const formatDurationHours = (cycleDurationSeconds: BN): string => {
     const seconds = Number(cycleDurationSeconds.toString());
     const hours = seconds / 3600;
@@ -54,6 +61,22 @@ export const getStatusString = (status: any): string => {
       return 'Unknown';
     }
   };
+export const getPhaseString = (phase: any): string => {
+    // Check if phase exists
+    if (!phase) return 'Unknown';
+    
+    // Check which key exists in the phase object 
+    try {
+      if ('bidding' in phase) return 'Bidding';
+      if ('contributing' in phase) return 'Contributing';
+      if ('readyForPayout' in phase) return 'Ready For Payout';
+      return 'Unknown'; // fallback
+    } catch (error) {
+      console.error('Error parsing phase:', phase);
+      return 'Unknown';
+    }
+  };
+
 export const bpsToPercentage = (bps: number): string => {
   return `${(bps / 100).toFixed(1)}%`; // Will show one decimal place
 };

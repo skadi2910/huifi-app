@@ -19,10 +19,10 @@ pub struct DepositSolCollateral<'info> {
         bump = group_account.bump,
         constraint = group_account.config.is_native_sol @ HuiFiError::InvalidPoolType,
         // Add phase validation - collateral can be deposited during Contributing phase
-        constraint = matches!(
-            group_account.status,
-            PoolStatus::Active { phase: CyclePhase::ReadyForPayout }
-        ) @ HuiFiError::InvalidPhase,
+        // constraint = matches!(
+        //     group_account.status,
+        //     PoolStatus::Active { phase: CyclePhase::ReadyForPayout }
+        // ) @ HuiFiError::InvalidPhase,
     )]
     pub group_account: Account<'info, GroupAccount>,
 

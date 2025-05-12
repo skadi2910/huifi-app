@@ -4,6 +4,7 @@ import { Commitment, PublicKey, SystemProgram } from '@solana/web3.js';
 import { BN } from '@coral-xyz/anchor';
 import { useHuifiProgram } from './useHuifiProgram';
 import { useTransactions } from '@/contexts/TransactionContext';
+import { solToLamports } from '@/lib/utils';
 
 export interface ContributeSolParams {
   poolId: PublicKey;
@@ -29,7 +30,7 @@ export const useContributeSol = () => {
         const uuid = Array.from(params.uuid.slice(0, 6));
         
         // Convert SOL amount to lamports
-        const amountLamports = new BN(params.amount * 1_000_000_000); // 1 SOL = 10^9 lamports
+        const amountLamports =  solToLamports(params.amount); // 1 SOL = 10^9 lamports
         
         // Find the group account PDA using the UUID
         const [groupPda] = PublicKey.findProgramAddressSync(

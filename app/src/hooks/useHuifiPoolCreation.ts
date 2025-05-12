@@ -51,12 +51,28 @@ export const useHuifiPoolCreation = () => {
   // const { publicKey } = useWallet();
   // const { connection } = useConnection();
   const { activePublicKey,lazorError, lazorSignMessage } = useCustomWallet();
-  console.log("activePublicKey",activePublicKey);
+  // console.log("activePublicKey",activePublicKey);
+  // console.log("activePublicKey type check:", {
+  //   value: activePublicKey,
+  //   type: typeof activePublicKey,
+  //   isPublicKey: activePublicKey instanceof PublicKey,
+  //   hasToBase58: activePublicKey?.toBase58 ? 'yes' : 'no',
+  //   toString: activePublicKey?.toString(),
+  //   raw: activePublicKey
+  // });
   // const publicKey = new PublicKey(activePublicKey);
   const publicKey = activePublicKey;
+  // console.log("publicKey type check:", {
+  //   value: publicKey,
+  //   type: typeof publicKey,
+  //   isPublicKey: publicKey instanceof PublicKey,
+  //   hasToBase58: publicKey?.toBase58 ? 'yes' : 'no',
+  //   toString: publicKey?.toString(),
+  //   raw: publicKey
+  // });
   const { connection } = useCustomConnection();
   const { program } = useHuifiProgram();
-  console.log("program",program);
+  // console.log("program",program);
   const { addTransaction } = useTransactions();
 
   const protocolSettingsPda = useMemo(() => {
@@ -70,9 +86,21 @@ export const useHuifiPoolCreation = () => {
   const createPoolMutation = useMutation({
     mutationKey: ['create-pool'],
     mutationFn: async (params: CreatePoolParams): Promise<string> => {
+          // Debug log the incoming params
+    console.log('CreatePoolParams:', {
+      creator: params.creator?.toString(),
+      type: typeof params.creator,
+      isPublicKey: params.creator instanceof PublicKey
+    });
       if (!publicKey || !program || !protocolSettingsPda) {
         throw new Error('Wallet not connected or program not loaded');
       }
+    // Debug log all required public keys
+    console.log('Required public keys:', {
+      creator: publicKey?.toString(),
+      protocolSettings: protocolSettingsPda?.toString(),
+      programId: program.programId.toString()
+    });
 
       // Generate a 6-byte UUID for the pool
       const uuid = generateRandomUUID(6);  // Keep as Uint8Array
@@ -96,7 +124,11 @@ export const useHuifiPoolCreation = () => {
         [Buffer.from('huifi-vault-sol'), groupPda.toBuffer()],
         program.programId
       )[0];
-
+   // Debug log PDAs
+   console.log('Derived PDAs:', {
+    groupPda: groupPda.toString(),
+    vaultSolPda: vaultSolPda.toString()
+  });
       const contributionAmount = new BN(params.entryFee * 1_000_000_000); // Convert to lamports
       const cycleDuration = getFrequencyInSeconds(params.frequency);
 
@@ -126,23 +158,52 @@ export const useHuifiPoolCreation = () => {
 
       try {
         // Create the SOL pool using the new create_sol_pool instruction
-        const signature = await program.methods
+        const tx = await program.methods
           .createSolPool(poolConfig, uuidArray, whitelist)  
           .accounts({
-            creator: publicKey,
+            creator: params.creator,
             groupAccount: groupPda,
             vaultSol: vaultSolPda,
             protocolSettings: protocolSettingsPda,
             systemProgram: SystemProgram.programId,
             rent: SYSVAR_RENT_PUBKEY,
           })
-          .rpc();
-        console.log("signature",signature);
-        await lazorSignMessage(signature);
-        await connection.confirmTransaction(signature);
-        addTransaction(signature, 'Create SOL Pool');
+          // .rpc();
+          .transaction();
+           // Set the fee payer explicitly
+      tx.feePayer = params.creator;
+      // Debug log transaction details
+      console.log('Transaction details:', {
+        feePayer: tx.feePayer?.toString(),
+        instructions: tx.instructions.map((ix: any) => ({
+          programId: ix.programId.toString(),
+          keys: ix.keys.map((k: any) => ({
+            pubkey: k.pubkey?.toString(),
+            isSigner: k.isSigner,
+            isWritable: k.isWritable
+          }))
+        }))
+      });
+        // await lazorSignMessage(signature);
+        // await connection.confirmTransaction(signature);
+        // addTransaction(signature, 'Create SOL Pool');
+     // Sign the transaction
+     if (!lazorSignMessage) {
+      throw new Error('No signer available');
+    }
 
-        return signature;
+    const signedTx = await lazorSignMessage(tx);
+    
+    // Send the signed transaction
+    const signature = await connection.sendRawTransaction(signedTx.serialize());
+    console.log("Transaction sent with signature:", signature);
+
+    // Wait for confirmation
+    await connection.confirmTransaction(signature);
+    addTransaction(signature, 'Create SOL Pool');
+
+      return signature;
+      // return "";
       } catch (error) {
         console.error('Error creating SOL pool:', error);
         console.error("error",lazorError);
