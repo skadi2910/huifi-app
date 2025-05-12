@@ -62,7 +62,7 @@ pub struct ProcessPayout<'info> {
     pub system_program: Program<'info, System>,
 }
 
-pub fn process_payout(ctx: Context<ProcessPayout>) -> Result<()> {
+pub fn process_payout(ctx: Context<ProcessPayout>, _uuid: [u8; 6]) -> Result<()> {
     let group_account = &mut ctx.accounts.group_account;
     let recipient_account = &mut ctx.accounts.recipient_account;
     let current_timestamp = Clock::get()?.unix_timestamp;

@@ -107,8 +107,9 @@ pub mod contracts_hui {
     }
     pub fn process_payout(
         ctx: Context<ProcessPayout>,
+        uuid: [u8; 6]
     ) -> Result<()> {
-        instructions::payout::process_payout(ctx)
+        instructions::payout::process_payout(ctx, uuid)
     }
     pub fn submit_bid(
         ctx: Context<SubmitBid>,

@@ -23,7 +23,7 @@ export const useClaimPayout = (poolAddress: PublicKey) => {
           [Buffer.from('huifi-pool'), new Uint8Array(params.uuid)],
           program.programId
         );
-        const [memberPda] = PublicKey.findProgramAddressSync(
+        const [recipientPda] = PublicKey.findProgramAddressSync(
           [Buffer.from('huifi-member'), groupPda.toBuffer(), publicKey.toBuffer()],
           program.programId
         );
@@ -39,12 +39,20 @@ export const useClaimPayout = (poolAddress: PublicKey) => {
           [Buffer.from('huifi-vault-sol'), groupPda.toBuffer()],
           program.programId
         );
+        console.log("Debug account addresses:", {
+          user: publicKey.toString(),
+          groupAccount: groupPda.toString(),
+          recipientAccount: recipientPda.toString(),
+          protocolSettings: protocolPda.toString(),
+          protocolTreasury: treasuryPda.toString(),
+          vaultSol: vaultSolPda.toString(),
+        });
         const signature = await program.methods
-          .processPayout()
+          .processPayout(new Uint8Array(params.uuid))
           .accounts({
             user: publicKey,
             groupAccount: groupPda,
-            memberAccount: memberPda,
+            recipientAccount: recipientPda,
             protocolSettings: protocolPda,
             protocolTreasury: treasuryPda,
             vaultSol: vaultSolPda,
