@@ -4,6 +4,7 @@ use anchor_lang::solana_program::native_token::LAMPORTS_PER_SOL;
 use crate::state::*;
 use crate::constants::*;
 use crate::errors::*;
+use anchor_lang::system_program::{self};
 
 #[derive(Accounts)]
 #[instruction(uuid: [u8; 6])]
@@ -123,13 +124,17 @@ pub fn process_payout(ctx: Context<ProcessPayout>, _uuid: [u8; 6]) -> Result<()>
 
     // Transfer fee if applicable
     if fee_amount > 0 {
-        **ctx.accounts.vault_sol.try_borrow_mut_lamports()? = ctx.accounts.vault_sol.lamports()
-            .checked_sub(fee_amount)
-            .ok_or(HuiFiError::InsufficientVaultFunds)?;
-        
-        **ctx.accounts.protocol_treasury.try_borrow_mut_lamports()? = ctx.accounts.protocol_treasury.lamports()
-            .checked_add(fee_amount)
-            .ok_or(HuiFiError::Overflow)?;
+    // Transfer fee using system program
+    system_program::transfer(
+        CpiContext::new(    
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: ctx.accounts.vault_sol.to_account_info(),
+                to: ctx.accounts.protocol_treasury.to_account_info(),
+            },
+        ),
+        fee_amount,
+    )?;
     }
 
     // Update accounts
