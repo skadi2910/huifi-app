@@ -126,10 +126,10 @@ pub fn advance_cycle(ctx: Context<AdvanceCycle>) -> Result<()> {
         },
         _ => return Err(HuiFiError::InvalidPoolStatus.into()),
     }
-    if group_account.is_completed() {
-        group_account.status = PoolStatus::Completed;
-        msg!("🎉 Pool completed! All cycles finished.");
-    }
+    // if group_account.is_completed() {
+    //     group_account.status = PoolStatus::Completed;
+    //     msg!("🎉 Pool completed! All cycles finished.");
+    // }
     Ok(())
 }
 
