@@ -124,17 +124,24 @@ pub fn process_payout(ctx: Context<ProcessPayout>, _uuid: [u8; 6]) -> Result<()>
 
     // Transfer fee if applicable
     if fee_amount > 0 {
-    // Transfer fee using system program
-    system_program::transfer(
-        CpiContext::new(    
-            ctx.accounts.system_program.to_account_info(),
-            system_program::Transfer {
-                from: ctx.accounts.vault_sol.to_account_info(),
-                to: ctx.accounts.protocol_treasury.to_account_info(),
-            },
-        ),
-        fee_amount,
-    )?;
+        let group_key = group_account.to_account_info().key();
+        let vault_seeds = &[
+            VAULT_SOL_SEED,
+            group_key.as_ref(),
+            &[ctx.bumps.vault_sol],
+        ];
+        
+        system_program::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.system_program.to_account_info(),
+                system_program::Transfer {  // This is now the correct Transfer struct
+                    from: ctx.accounts.vault_sol.to_account_info(),
+                    to: ctx.accounts.protocol_treasury.to_account_info(),
+                },
+                &[vault_seeds]
+            ),
+            fee_amount,
+        )?;
     }
 
     // Update accounts
