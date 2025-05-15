@@ -447,11 +447,25 @@ pub struct CreateSolPool<'info> {
     )]
     pub collateral_vault: AccountInfo<'info>,
 
+
     /// Current bid state account
     #[account(
         init,
         payer = creator,
-        space = 8 + std::mem::size_of::<BidState>(),
+        // Calculate space for:
+        // - 8 bytes for discriminator
+        // - size of pool pubkey
+        // - size of cycle (u64)
+        // - size of winner (Option<Pubkey>)
+        // - size of bump (u8)
+        // - size of bids vector (vec length + max_bids * size_of_bid_entry)
+        space = 8 
+            + 32  // pool: Pubkey
+            + 8   // cycle: u64
+            + (32 + 1)  // winner: Option<Pubkey>
+            + 1   // bump: u8
+            + 4   // vec length prefix
+            + (32 + 8) * pool_config.max_participants as usize, // bidder: Pubkey + amount: u64 for each bid
         seeds = [BID_STATE_SEED, group_account.key().as_ref()],
         bump,
     )]
@@ -534,6 +548,7 @@ pub fn create_sol_pool(
     member_account.has_bid = false;
     member_account.has_contributed = false;
     member_account.has_deposited_collateral = false;
+    member_account.payout_amount = 0;
     member_account.bump = member_bump;   
 
     // Create the vaults as PDAs
@@ -729,6 +744,7 @@ pub fn join_sol_pool(ctx: Context<JoinSolPool>, uuid: [u8; 6]) -> Result<()> {
     member_account.has_deposited_collateral = false;
     member_account.has_bid = false;
     member_account.has_contributed = false;
+    member_account.payout_amount = 0;
     member_account.bump = bump;
     
     // Add user to the pool's member list
@@ -823,6 +839,8 @@ pub fn join_spl_pool(ctx: Context<JoinSplPool>, uuid: [u8; 6]) -> Result<()> {
     member_account.collateral_staked = 0;
     member_account.reputation_points = 0;
     member_account.last_contribution_timestamp = 0;
+    member_account.payout_amount = 0;
+    member_account.has_deposited_collateral = false;
     member_account.bump = bump;
     
     // Add user to the pool's member list

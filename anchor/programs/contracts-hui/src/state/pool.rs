@@ -119,7 +119,7 @@ impl GroupAccount {
             .count() as u8 == self.total_cycles
     }
     pub fn is_completed(&self) -> bool {
-        self.current_cycle >= self.total_cycles - 1
+        self.current_cycle >= self.total_cycles
     }
     // Helper to check if member has contributed
     fn get_member_contributions(&self, member: Pubkey) -> u8 {

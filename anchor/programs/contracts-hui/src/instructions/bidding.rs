@@ -2,11 +2,41 @@ use anchor_lang::prelude::*;
 use crate::state::*;
 use crate::constants::*;
 use crate::errors::*;
+#[derive(Accounts)]
+pub struct SubmitBid<'info> {
+    #[account(mut)]
+    pub bidder: Signer<'info>,
 
+    #[account(
+        mut,
+        seeds = [BID_STATE_SEED, group_account.key().as_ref()],
+        bump = bid_state.bump
+    )]
+    pub bid_state: Account<'info, BidState>,
+
+    #[account(
+        seeds = [POOL_SEED, group_account.uuid.as_ref()],
+        bump = group_account.bump,
+        // Add validation for bid amount and check if pool is in bidding phase
+        constraint = matches!(
+            group_account.status,
+            PoolStatus::Active { phase: CyclePhase::Bidding }
+        ) @ HuiFiError::InvalidPhase,        
+        // constraint = group_account.status == PoolStatus::Active @ HuiFiError::InvalidPoolStatus,
+    )]
+    pub group_account: Account<'info, GroupAccount>,
+
+    #[account(
+        mut,
+        seeds = [MEMBER_SEED, group_account.key().as_ref(), bidder.key().as_ref()],
+        bump = member_account.bump,
+    )]
+    pub member_account: Account<'info, MemberAccount>,
+}
 pub fn submit_bid(ctx: Context<SubmitBid>, bid_amount: u64) -> Result<()> {
     let bid_state = &mut ctx.accounts.bid_state;
     let group_account = &ctx.accounts.group_account;
-    let member_account = &mut ctx.accounts.member;
+    let member_account = &mut ctx.accounts.member_account;
     // Basic validations    
     require!(bid_amount > 0, HuiFiError::InvalidBidAmount);
 
@@ -89,36 +119,7 @@ pub fn finalize_bidding(ctx: Context<FinalizeBidding>) -> Result<()> {
     Ok(())
 }
 
-#[derive(Accounts)]
-pub struct SubmitBid<'info> {
-    #[account(mut)]
-    pub bidder: Signer<'info>,
 
-    #[account(
-        mut,
-        seeds = [BID_STATE_SEED, group_account.key().as_ref()],
-        bump = bid_state.bump
-    )]
-    pub bid_state: Account<'info, BidState>,
-
-    #[account(
-        seeds = [POOL_SEED, group_account.uuid.as_ref()],
-        bump = group_account.bump,
-        // Add validation for bid amount and check if pool is in bidding phase
-        constraint = matches!(
-            group_account.status,
-            PoolStatus::Active { phase: CyclePhase::Bidding }
-        ) @ HuiFiError::InvalidPhase,        
-        // constraint = group_account.status == PoolStatus::Active @ HuiFiError::InvalidPoolStatus,
-    )]
-    pub group_account: Account<'info, GroupAccount>,
-
-    #[account(
-        seeds = [MEMBER_SEED, group_account.key().as_ref(), bidder.key().as_ref()],
-        bump = member.bump,
-    )]
-    pub member: Account<'info, MemberAccount>,
-}
 
 #[derive(Accounts)]
 pub struct FinalizeBidding<'info> {

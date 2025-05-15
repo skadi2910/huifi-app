@@ -1,9 +1,10 @@
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { useMutation } from '@tanstack/react-query';
-import { PublicKey, SystemProgram } from '@solana/web3.js';
+import { Commitment, PublicKey, SystemProgram } from '@solana/web3.js';
 import { BN } from '@coral-xyz/anchor';
 import { useHuifiProgram } from './useHuifiProgram';
 import { useTransactions } from '@/contexts/TransactionContext';
+import { solToLamports } from '@/lib/utils';
 
 export interface ContributeSolParams {
   poolId: PublicKey;
@@ -29,7 +30,7 @@ export const useContributeSol = () => {
         const uuid = Array.from(params.uuid.slice(0, 6));
         
         // Convert SOL amount to lamports
-        const amountLamports = new BN(params.amount * 1_000_000_000); // 1 SOL = 10^9 lamports
+        const amountLamports =  solToLamports(params.amount); // 1 SOL = 10^9 lamports
         
         // Find the group account PDA using the UUID
         const [groupPda] = PublicKey.findProgramAddressSync(
@@ -52,7 +53,7 @@ export const useContributeSol = () => {
         // Find the price update account
         // Note: In a real implementation, you would need to fetch this from Pyth or another oracle
         // This is just a placeholder - you'll need to implement the actual price feed logic
-        const priceFeedAccount = new PublicKey('BmA9Z6FjioHJPpjT39QazZyhDRUdZy2ezwx4GiDdE2u2'); // Placeholder
+        const priceFeedAccount = new PublicKey('J83w4HKfqxwcq3BEMMkPFSppX3gqekLyLJBexebFVkix'); // Placeholder
 
         console.log('Contributing SOL to pool:', {
           contributor: publicKey.toString(),
@@ -63,7 +64,13 @@ export const useContributeSol = () => {
           uuid
         });
 
-        // Call the contribute_sol instruction
+        // Add preflight commitment option
+        const options = {
+          commitment: 'confirmed' as Commitment,
+          preflightCommitment: 'confirmed' as Commitment,
+        };
+        
+        // Call the contribute_sol instruction with options
         const signature = await program.methods
           .contributeSol(uuid, amountLamports)
           .accounts({
@@ -74,10 +81,10 @@ export const useContributeSol = () => {
             priceUpdate: priceFeedAccount,
             systemProgram: SystemProgram.programId,
           })
-          .rpc();
-
-        console.log('SOL contribution successful:', signature);
-        await connection.confirmTransaction(signature);
+          .rpc(options);
+        
+        // Wait for confirmation with longer timeout
+        await connection.confirmTransaction(signature, 'confirmed');
         addTransaction(signature, 'Contribute SOL to Pool');
         
         return signature;

@@ -9,7 +9,7 @@ pub mod instructions;
 pub mod state;
 // use anchor_spl::token::{Token, TokenAccount};
 // declare_id!("3EpcS5dv1G71CDER3d77L7jAh7dn9zKpJNo7wSSwn7kA");
-declare_id!("96b1pKm21J4ouL2kUD6YeLAhxNZyj1HC82t5VCeEmTsP");
+declare_id!("Cr1e81Bq9VFb1eUusvid7UtNY25QPrugHdbxWBQpRJx1");
 
 // use crate::instructions::protocol::InitializeProtocol;
 // use crate::instructions::protocol::initialize_protocol as initialize_protocol_handler;
@@ -105,12 +105,18 @@ pub mod contracts_hui {
     ) -> Result<()> {
         instructions::collateral::slash_collateral(ctx, uuid, payout_amount)
     }
+    pub fn withdraw_sol_collateral(
+        ctx: Context<WithdrawSolCollateral>,
+        uuid: [u8; 6]
+    ) -> Result<()> {
+        instructions::collateral::withdraw_sol_collateral(ctx, uuid)
+    }
+    
     pub fn process_payout(
         ctx: Context<ProcessPayout>,
-        uuid: [u8; 6],  
-        required_collateral: Option<u64>
+        uuid: [u8; 6]
     ) -> Result<()> {
-        instructions::payout::process_payout(ctx, uuid, required_collateral)
+        instructions::payout::process_payout(ctx, uuid)
     }
     pub fn submit_bid(
         ctx: Context<SubmitBid>,

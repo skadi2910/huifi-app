@@ -1,13 +1,14 @@
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { PublicKey, SystemProgram } from '@solana/web3.js';
+import { Connection, PublicKey, SystemProgram } from '@solana/web3.js';
 import { useHuifiProgram } from './useHuifiProgram';
 import { useTransactions } from '@/contexts/TransactionContext';
 import { useEffect, useState, useCallback } from 'react';
 import { BN,Program,Idl } from '@coral-xyz/anchor';
 import bs58 from 'bs58';
 import { HuifiPool as HuifiPoolType } from '@/lib/types/program-types';
-
+import { useWallet as useLazorWallet } from '@lazorkit/wallet';
+import useCustomConnection  from '@/hooks/useCustomConnection';
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 10000;
@@ -30,6 +31,7 @@ export type MemberAccountData = {
   collateralStaked: BN;
   reputationPoints: BN;
   lastContributionTimestamp: BN;
+  totalContributions: BN;
   bump: number;
 };
 export type PoolWithKey = {
@@ -65,8 +67,10 @@ type HuifiProgram = Program<Idl> & {
 };
 export const useHuifiPools = () => {
   
-  const { connection } = useConnection();
+  // const { connection } = useConnection();
+  const { connection } = useCustomConnection();
   const { publicKey } = useWallet();
+  const { publicKey: lazorPublicKey, isConnected: lazorIsConnected } = useLazorWallet();
   // Update the program type here
   const { program } = useHuifiProgram() as { program: HuifiProgram | null };
   const { addTransaction } = useTransactions();
@@ -79,7 +83,7 @@ export const useHuifiPools = () => {
       if (!program) {
         throw new Error('Program not loaded');
       }
-      
+      console.log("program:",program);
       let attempt = 0;
       const MAX_ATTEMPTS = 5;
       
@@ -102,6 +106,7 @@ export const useHuifiPools = () => {
             }
             
             if (anchorAccount) {
+              // console
               const anchorPools = await anchorAccount.all();
               console.log("Anchor pools fetched:", anchorPools.length);
               
@@ -122,7 +127,7 @@ export const useHuifiPools = () => {
                 throw new Error("Program IDL or accounts not available");
               }
               
-              console.log("IDL accounts:", program.idl.accounts.map(a => a.name));
+              // console.log("IDL accounts:", program.idl.accounts.map(a => a.name));
               
               const poolAccount = program.idl.accounts.find(a => 
                 a.name === 'groupAccount'
@@ -133,8 +138,8 @@ export const useHuifiPools = () => {
                 throw new Error("Could not find GroupAccount in IDL");
               }
               
-              console.log("Found pool account in IDL:", poolAccount.name);
-              console.log("Discriminator:", poolAccount.discriminator);
+              // console.log("Found pool account in IDL:", poolAccount.name);
+              // console.log("Discriminator:", poolAccount.discriminator);
               
               const discriminator = poolAccount.discriminator 
                 ? Buffer.from(poolAccount.discriminator) 
@@ -142,7 +147,7 @@ export const useHuifiPools = () => {
                 
               const base58Discriminator = bs58.encode(discriminator);
               
-              console.log("Using discriminator:", base58Discriminator);
+              // console.log("Using discriminator:", base58Discriminator);
               
               const accounts = await connection.getProgramAccounts(program.programId, {
                 filters: [
@@ -155,7 +160,7 @@ export const useHuifiPools = () => {
                 ],
               });
               
-              console.log("Raw getProgramAccounts result:", accounts.length);
+              // console.log("Raw getProgramAccounts result:", accounts.length);
               
               poolsData = await Promise.all(
                 accounts.map(async ({ pubkey, account }) => {
@@ -297,7 +302,7 @@ export const useHuifiPools = () => {
  
   const MEMBER_SEED = "huifi-member";
 
-  const fetchMemberAccountDetail = async (poolData: PoolWithKey, userWallet: PublicKey): Promise<MemberAccountData | null> => {
+  const fetchMemberAccountDetail = useCallback(async (poolData: PoolWithKey, userWallet: PublicKey): Promise<MemberAccountData | null> => {
     const maxRetries = 3;
     const baseDelay = 1000;
   
@@ -313,12 +318,12 @@ export const useHuifiPools = () => {
         }
   
         // Debug: Log available accounts
-        console.log("Available accounts:", Object.keys(program.account));
-        if (program.idl && program.idl.accounts) {
-          console.log("Program IDL accounts:", program.idl.accounts.map(a => a.name));
-        } else {
-          console.log("Program IDL accounts not available");
-        }
+        // console.log("Available accounts:", Object.keys(program.account));
+        // if (program.idl && program.idl.accounts) {
+        //   console.log("Program IDL accounts:", program.idl.accounts.map(a => a.name));
+        // } else {
+        //   console.log("Program IDL accounts not available");
+        // }
   
         const [memberPda] = PublicKey.findProgramAddressSync(
           [
@@ -329,12 +334,12 @@ export const useHuifiPools = () => {
           program.programId
         );
   
-        console.log('Attempting to fetch member account:', {
-          memberPda: memberPda.toString(),
-          pool: poolData.publicKey.toString(),
-          user: userWallet.toString(),
-          attempt: attempt + 1
-        });
+        // console.log('Attempting to fetch member account:', {
+        //   memberPda: memberPda.toString(),
+        //   pool: poolData.publicKey.toString(),
+        //   user: userWallet.toString(),
+        //   attempt: attempt + 1
+        // });
   
         if (attempt > 0) {
           const retryDelay = baseDelay * Math.pow(2, attempt);
@@ -350,15 +355,15 @@ export const useHuifiPools = () => {
           return null;
         }
   
-        console.log('Member account found:', {
-          owner: memberAccount.owner.toString(),
-          pool: memberAccount.pool.toString(),
-          contributionsMade: memberAccount.contributionsMade,
-          hasReceivedPayout: memberAccount.hasReceivedPayout,
-          eligibleForPayout: memberAccount.eligibleForPayout,
-          collateralStaked: memberAccount.collateralStaked.toString(),
-          status: memberAccount.status
-        });
+        // console.log('Member account found:', {
+        //   owner: memberAccount.owner.toString(),
+        //   pool: memberAccount.pool.toString(),
+        //   contributionsMade: memberAccount.contributionsMade,
+        //   hasReceivedPayout: memberAccount.hasReceivedPayout,
+        //   eligibleForPayout: memberAccount.eligibleForPayout,
+        //   collateralStaked: memberAccount.collateralStaked.toString(),
+        //   status: memberAccount.status
+        // });
   
         return memberAccount as MemberAccountData;
   
@@ -381,7 +386,7 @@ export const useHuifiPools = () => {
     }
   
     return null;
-  };
+  }, [program]);
   
   const refreshPools = useCallback(async () => {
     console.log("Refreshing pools...");

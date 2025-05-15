@@ -4,6 +4,7 @@ use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 use crate::constants::*;
 use crate::state::*;
 use crate::errors::*;
+use anchor_lang::system_program::{self};
 
 // ========== SOL Collateral ==========
 
@@ -18,7 +19,7 @@ pub struct DepositSolCollateral<'info> {
         seeds = [POOL_SEED, uuid.as_ref()],
         bump = group_account.bump,
         constraint = group_account.config.is_native_sol @ HuiFiError::InvalidPoolType,
-        // Add phase validation - collateral can be deposited during Contributing phase
+        // Add phase validation - collateral can be deposited during Ready  phase
         constraint = matches!(
             group_account.status,
             PoolStatus::Active { phase: CyclePhase::ReadyForPayout }
@@ -51,16 +52,17 @@ pub fn deposit_sol_collateral(
     _uuid: [u8; 6],
     amount: u64  // already in lamports from frontend
 ) -> Result<()> {
-    let group = &ctx.accounts.group_account;
-    let member = &mut ctx.accounts.member_account;
+    let group_account = &ctx.accounts.group_account;
+    let member_account = &mut ctx.accounts.member_account;
 
     // Calculate required collateral (130% of total contributions)
-    let min_required = group.total_contributions
+    let min_required = group_account.total_contributions
+        .saturating_sub(member_account.contributions_made.into())
         .saturating_mul(130)
         .saturating_div(100);
 
     require!(amount >= min_required, HuiFiError::InsufficientCollateral);
-    require!(member.has_deposited_collateral == false, HuiFiError::AlreadyDepositedCollateral);
+    require!(member_account.has_deposited_collateral == false, HuiFiError::AlreadyDepositedCollateral);
 
     // Log amounts in SOL for better readability
     msg!("🛡️ Collateral status - Required: {} SOL (130% of total contributions), Provided: {} SOL", 
@@ -85,8 +87,8 @@ pub fn deposit_sol_collateral(
     )?;
 
     // Store amount in lamports
-    member.collateral_staked += amount;
-    member.has_deposited_collateral = true;
+    member_account.collateral_staked += amount;
+    member_account.has_deposited_collateral = true;
 
     // Log in SOL for better readability
     msg!("✅ Deposited {} SOL as collateral", 
@@ -96,6 +98,80 @@ pub fn deposit_sol_collateral(
     Ok(())
 }
 
+#[derive(Accounts)]
+#[instruction(uuid: [u8; 6])]
+pub struct WithdrawSolCollateral<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [POOL_SEED, uuid.as_ref()],
+        bump = group_account.bump,
+        constraint = group_account.config.is_native_sol @ HuiFiError::InvalidPoolType,
+    )]
+    pub group_account: Account<'info, GroupAccount>,
+
+    #[account(
+        mut,
+        seeds = [MEMBER_SEED, group_account.key().as_ref(), user.key().as_ref()],
+        bump = member_account.bump,
+    )]
+    pub member_account: Account<'info, MemberAccount>,
+
+    #[account(
+        mut,
+        seeds = [COLLATERAL_VAULT_SOL_SEED, group_account.key().as_ref()],
+        bump,
+    )]
+    /// CHECK: Native SOL vault PDA
+    pub collateral_vault_sol: UncheckedAccount<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+pub fn withdraw_sol_collateral(
+    ctx: Context<WithdrawSolCollateral>,
+    _uuid: [u8; 6],
+) -> Result<()> {
+    let group_account = &mut ctx.accounts.group_account;
+    let member_account = &mut ctx.accounts.member_account;
+    let collateral_vault_sol = &mut ctx.accounts.collateral_vault_sol;
+    // Add check to ensure user is the owner of the member account
+    require!(ctx.accounts.user.key() == member_account.owner, HuiFiError::UnauthorizedAccess);
+    // Validate member has deposited collateral
+    require!(member_account.has_deposited_collateral, HuiFiError::NoCollateralDeposited);
+    // require!(member_account.status != MemberStatus::Defaulted, HuiFiError::MemberNotDefaulted);
+    // Validate member has not already withdrawn
+    require!(member_account.status != MemberStatus::Withdrawed, HuiFiError::MemberAlreadyWithdrawed);
+    // Validate cycle is completed
+    require!(group_account.status == PoolStatus::Completed, HuiFiError::CycleNotCompleted);
+    // Validate vault has enough funds
+    require!(collateral_vault_sol.lamports() >= member_account.collateral_staked, HuiFiError::InsufficientVaultFunds);
+    // Calculate required collateral (130% of total contributions)
+    let amount = member_account.collateral_staked;
+
+    // Transfer SOL to member's wallet
+    system_program::transfer(
+        CpiContext::new_with_signer(
+            ctx.accounts.system_program.to_account_info(),
+            system_program::Transfer {
+                from: ctx.accounts.collateral_vault_sol.to_account_info(),
+                to: ctx.accounts.user.to_account_info(),
+            },
+            &[&[COLLATERAL_VAULT_SOL_SEED, group_account.key().as_ref(), &[ctx.bumps.collateral_vault_sol]]],
+        ),
+        amount,
+    )?;
+
+    // member_account.has_deposited_collateral = false;
+    member_account.collateral_staked = 0;
+    member_account.status = MemberStatus::Withdrawed;
+    // Add logging for better tracking
+    msg!("✅ Withdrawn {} SOL collateral", 
+    amount as f64 / LAMPORTS_PER_SOL as f64
+    );
+    Ok(())
+}
 // ========== SPL Collateral ==========
 
 // #[derive(Accounts)]

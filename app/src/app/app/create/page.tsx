@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Coins, Trophy, Calendar, Users, Zap, ChevronRight, InfoIcon, ArrowLeftIcon, CheckCircleIcon, Loader2 } from 'lucide-react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { LAMPORTS_PER_SOL } from '@solana/web3.js';
@@ -10,12 +10,23 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { useHuifiProgram } from '@/hooks/useHuifiProgram';
 import { useHuifiPoolCreation } from '@/hooks/useHuifiPoolCreation';
-
+import useCustomConnection from '@/hooks/useCustomConnection';
+import {useWallet as useCustomWallet} from '@/hooks/useWallet';
+import { PublicKey } from '@solana/web3.js';
 export default function CreatePoolPage() {
   const [step, setStep] = useState(1);
   const program = useHuifiProgram();
-  const { connection } = useConnection();
-  const { publicKey } = useWallet();
+  // const { connection } = useConnection();
+  // const { publicKey } = useWallet();
+  const { connection } = useCustomConnection();
+  const { activePublicKey } = useCustomWallet();
+  // const publicKey = new PublicKey(activePublicKey);
+  // const publicKey = activePublicKey;
+  // Wrap publicKey initialization in useMemo
+  const publicKey = useMemo(() => {
+    return activePublicKey ? new PublicKey(activePublicKey) : null;
+  }, [activePublicKey]); 
+  // console.log("publicKey",publicKey);
   const transactionToast = useTransactionToast();
   const router = useRouter();
   const { createPoolMutation } = useHuifiPoolCreation();
@@ -103,6 +114,11 @@ export default function CreatePoolPage() {
       toast.error('Please connect your wallet first.');
       return;
     }
+    console.log('Creating pool with public key:', {
+      publicKey: publicKey.toString(),
+      type: typeof publicKey,
+      isPublicKey: publicKey instanceof PublicKey
+    });
     if (!program) {
       toast.error('Program not loaded. Please refresh the page.');
       return;
@@ -127,19 +143,19 @@ export default function CreatePoolPage() {
         return;
       }
   
-      console.log("Starting pool creation with data:", {
-        name: formData.name,
-        description: formData.description,
-        maxPlayers: parseInt(formData.maxPlayers),
-        frequency: formData.frequency,
-        entryFee: parseFloat(formData.entryFee),
-        currency: formData.currency,
-        payoutMethod: formData.payoutMethod,
-        latePenalty: formData.latePenalty,
-        privacy: formData.privacy,
-        creator: publicKey.toString(),
-        program: program ? "Program loaded" : "Program not loaded"
-      });
+      // console.log("Starting pool creation with data:", {
+      //   name: formData.name,
+      //   description: formData.description,
+      //   maxPlayers: parseInt(formData.maxPlayers),
+      //   frequency: formData.frequency,
+      //   entryFee: parseFloat(formData.entryFee),
+      //   currency: formData.currency,
+      //   payoutMethod: formData.payoutMethod,
+      //   latePenalty: formData.latePenalty,
+      //   privacy: formData.privacy,
+      //   creator: publicKey.toString(),
+      //   program: program ? "Program loaded" : "Program not loaded"
+      // });
       
       const signature = await createPoolMutation.mutateAsync({
         name: formData.name,

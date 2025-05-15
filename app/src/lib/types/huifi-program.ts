@@ -1,18 +1,26 @@
 import { Idl, Program } from '@coral-xyz/anchor';
 import idl from '@/lib/idl/contracts_hui.json';
-import { UserAccount, HuifiPool, RoundResult, ProtocolSettings, Bid, Vault, PoolConfig } from './program-types';
+import { UserAccount, HuifiPool, RoundResult, ProtocolSettings, Bid, Vault, PoolConfig, MemberAccount, BidState, GroupAccount } from './program-types';
 import { PublicKey } from '@solana/web3.js';
 import { BN } from '@coral-xyz/anchor';
 // Define account methods structure to match Anchor-generated types
 export interface HuifiAccounts {
-  GroupAccount: {  // Changed from HuifiPool to GroupAccount
-    fetch(address: PublicKey): Promise<HuifiPool>;
-    all(): Promise<{ publicKey: PublicKey; account: HuifiPool }[]>;
-  };
+  // GroupAccount: {  // Changed from HuifiPool to GroupAccount
+  //   fetch(address: PublicKey): Promise<HuifiPool>;
+  //   all(): Promise<{ publicKey: PublicKey; account: HuifiPool }[]>;
+  // };
   UserAccount: {
     fetch(address: PublicKey): Promise<UserAccount>;
     all(): Promise<{ publicKey: PublicKey; account: UserAccount }[]>;
     // Add other methods if needed
+  };
+  bidState: {
+    fetch(address: PublicKey): Promise<BidState>;
+    all(): Promise<{ publicKey: PublicKey; account: BidState }[]>;
+  };
+  memberAccount: {
+    fetch(address: PublicKey): Promise<MemberAccount>;
+    all(): Promise<{ publicKey: PublicKey; account: MemberAccount }[]>;
   };
   HuifiPool: {
     fetch(address: PublicKey): Promise<HuifiPool>;
@@ -29,6 +37,10 @@ export interface HuifiAccounts {
   };
   Vault: {
     fetch(address: PublicKey): Promise<Vault>;
+  };
+  groupAccount: {
+    fetch(address: PublicKey): Promise<GroupAccount>;
+    all(): Promise<{ publicKey: PublicKey; account: GroupAccount }[]>;
   };
 }
 

@@ -14,7 +14,9 @@ import { useTransactions } from '@/contexts/TransactionContext';
 import { useMemo } from 'react';
 import { generateRandomUUID } from '@/lib/types/utils';
 import { YieldPlatform } from '@/lib/types/program-types';
-
+import useCustomConnection from '@/hooks/useCustomConnection';
+import { useWallet as useCustomWallet } from '@/hooks/useWallet';
+// import {useConnection as useCustomConnection} from '@solana/web3.js'
 // Define USDC addresses for different networks
 const USDC_ADDRESSES = {
   mainnet: '',
@@ -50,6 +52,7 @@ export const useHuifiPoolCreation = () => {
   const { publicKey } = useWallet();
   const { connection } = useConnection();
   const { program } = useHuifiProgram();
+  // console.log("program",program);
   const { addTransaction } = useTransactions();
 
   const protocolSettingsPda = useMemo(() => {
@@ -63,9 +66,21 @@ export const useHuifiPoolCreation = () => {
   const createPoolMutation = useMutation({
     mutationKey: ['create-pool'],
     mutationFn: async (params: CreatePoolParams): Promise<string> => {
+          // Debug log the incoming params
+    console.log('CreatePoolParams:', {
+      creator: params.creator?.toString(),
+      type: typeof params.creator,
+      isPublicKey: params.creator instanceof PublicKey
+    });
       if (!publicKey || !program || !protocolSettingsPda) {
         throw new Error('Wallet not connected or program not loaded');
       }
+    // Debug log all required public keys
+    console.log('Required public keys:', {
+      creator: publicKey?.toString(),
+      protocolSettings: protocolSettingsPda?.toString(),
+      programId: program.programId.toString()
+    });
 
       // Generate a 6-byte UUID for the pool
       const uuid = generateRandomUUID(6);  // Keep as Uint8Array
@@ -89,7 +104,11 @@ export const useHuifiPoolCreation = () => {
         [Buffer.from('huifi-vault-sol'), groupPda.toBuffer()],
         program.programId
       )[0];
-
+   // Debug log PDAs
+   console.log('Derived PDAs:', {
+    groupPda: groupPda.toString(),
+    vaultSolPda: vaultSolPda.toString()
+  });
       const contributionAmount = new BN(params.entryFee * 1_000_000_000); // Convert to lamports
       const cycleDuration = getFrequencyInSeconds(params.frequency);
 
@@ -103,6 +122,8 @@ export const useHuifiPoolCreation = () => {
         collateralRequirementBps: 10000, // 100%
         yieldStrategy: { none: {} },
         isNativeSol: true,
+        isPrivate: params.privacy === 'private',
+        // feedId: ,
         status: 0 // This is PoolStatus.Initializing
       };
 
@@ -120,7 +141,7 @@ export const useHuifiPoolCreation = () => {
         const signature = await program.methods
           .createSolPool(poolConfig, uuidArray, whitelist)  
           .accounts({
-            creator: publicKey,
+            creator: params.creator,
             groupAccount: groupPda,
             vaultSol: vaultSolPda,
             protocolSettings: protocolSettingsPda,
@@ -128,11 +149,13 @@ export const useHuifiPoolCreation = () => {
             rent: SYSVAR_RENT_PUBKEY,
           })
           .rpc();
-          
-        await connection.confirmTransaction(signature);
-        addTransaction(signature, 'Create SOL Pool');
 
-        return signature;
+    // Wait for confirmation
+    await connection.confirmTransaction(signature, 'confirmed');
+    addTransaction(signature, 'Create SOL Pool');
+
+      return signature;
+      // return "";
       } catch (error) {
         console.error('Error creating SOL pool:', error);
         throw error;

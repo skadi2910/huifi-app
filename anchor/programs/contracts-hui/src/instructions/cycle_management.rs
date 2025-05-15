@@ -29,7 +29,7 @@ pub struct AdvanceCycle<'info> {
     // Optional: Include winner's member account for eligibility update
     #[account(
         mut,
-        seeds = [MEMBER_SEED, group_account.key().as_ref(), winner_member_account.owner.as_ref()],
+        seeds = [MEMBER_SEED, group_account.key().as_ref(), authority.owner.as_ref()],
         bump = winner_member_account.bump,
     )]
     pub winner_member_account: Option<Account<'info, MemberAccount>>,
@@ -126,10 +126,10 @@ pub fn advance_cycle(ctx: Context<AdvanceCycle>) -> Result<()> {
         },
         _ => return Err(HuiFiError::InvalidPoolStatus.into()),
     }
-    if group_account.is_completed() {
-        group_account.status = PoolStatus::Completed;
-        msg!("🎉 Pool completed! All cycles finished.");
-    }
+    // if group_account.is_completed() {
+    //     group_account.status = PoolStatus::Completed;
+    //     msg!("🎉 Pool completed! All cycles finished.");
+    // }
     Ok(())
 }
 
@@ -217,7 +217,8 @@ pub struct ForceAdvanceCycle<'info> {
         seeds = [
             MEMBER_SEED, 
             group_account.key().as_ref(), 
-            bid_state.winner.unwrap_or_default().as_ref()
+            // bid_state.winner.unwrap_or_default().as_ref()
+            bid_state.winner.unwrap_or(group_account.creator).as_ref()
         ],
         bump,
     )]
@@ -234,7 +235,7 @@ pub fn force_advance_cycle(ctx: Context<ForceAdvanceCycle>) -> Result<()> {
         PoolStatus::Initializing => {
             msg!("📊 Force advancing from initializing state");
             // Move to cycle 1
-            group_account.current_cycle += 1; // Set directly to 1 instead of incrementing      
+            group_account.current_cycle += 1; // Set directly to 1 instead of incrementing
             group_account.status = PoolStatus::Active {
                 phase: CyclePhase::Bidding
             };
@@ -250,6 +251,7 @@ pub fn force_advance_cycle(ctx: Context<ForceAdvanceCycle>) -> Result<()> {
                     bid_state.winner = Some(group_account.creator);
                     group_account.current_winner = bid_state.winner;
                     group_account.current_bid_amount = Some(0);
+                    group_account.final_contribution_amount = Some(group_account.config.contribution_amount);
                     msg!("ℹ️ No bids in this cycle, Creator wins");
                 } else if bid_state.bids.len() == 1 {
                     // If only one bid, they automatically win
@@ -257,7 +259,8 @@ pub fn force_advance_cycle(ctx: Context<ForceAdvanceCycle>) -> Result<()> {
                     bid_state.winner = Some(winning_bid.bidder);
                     group_account.current_winner = Some(winning_bid.bidder);
                     group_account.current_bid_amount = Some(winning_bid.amount);
-                    
+                    group_account.final_contribution_amount = group_account.current_bid_amount
+                    .map(|bid_amount| group_account.config.contribution_amount - bid_amount);
                     if let Some(winner_account) = &mut ctx.accounts.winner_member_account {
                         winner_account.eligible_for_payout = true;
                     }
@@ -270,7 +273,8 @@ pub fn force_advance_cycle(ctx: Context<ForceAdvanceCycle>) -> Result<()> {
                     bid_state.winner = Some(winning_bid.bidder);
                     group_account.current_winner = Some(winning_bid.bidder);
                     group_account.current_bid_amount = Some(winning_bid.amount);
-                
+                    group_account.final_contribution_amount = group_account.current_bid_amount
+                    .map(|bid_amount| group_account.config.contribution_amount - bid_amount);
                     if let Some(winner_account) = &mut ctx.accounts.winner_member_account {
                         winner_account.eligible_for_payout = true;
                     }
@@ -284,7 +288,9 @@ pub fn force_advance_cycle(ctx: Context<ForceAdvanceCycle>) -> Result<()> {
             },
             CyclePhase::Contributing => {
                 msg!("💫 Force advancing from contribution phase");
-                
+                if let Some(winner_account) = &mut ctx.accounts.winner_member_account {
+                    winner_account.payout_amount = group_account.total_contributions;
+                }
                 group_account.status = PoolStatus::Active {
                     phase: CyclePhase::ReadyForPayout
                 };
@@ -303,7 +309,8 @@ pub fn force_advance_cycle(ctx: Context<ForceAdvanceCycle>) -> Result<()> {
                     group_account.last_cycle_timestamp = current_timestamp;
 
                     bid_state.bids = Vec::new();
-                    bid_state.winner = None;                       
+                    bid_state.winner = None;
+                    group_account.current_cycle += 1;
                     group_account.status = PoolStatus::Active {
                         phase: CyclePhase::Bidding
                     };

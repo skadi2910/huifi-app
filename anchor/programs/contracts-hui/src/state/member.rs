@@ -31,5 +31,6 @@ pub struct MemberAccount {
     pub last_contribution_timestamp: i64, // Timestamp of last contribution
     pub total_contributions: u64,        // Total contributions made
     pub has_deposited_collateral: bool, // Whether the member has deposited collateral
+    pub payout_amount: u64,            // Amount of payout received
     pub bump: u8,                      // PDA bump
 }

@@ -27,8 +27,6 @@ pub struct ContributeSol<'info> {
             group_account.status,
             PoolStatus::Active { phase: CyclePhase::Contributing }
         ) @ HuiFiError::InvalidPhase,
-        constraint = group_account.config.is_native_sol @ HuiFiError::InvalidPoolType,
-        // constraint = group_account.status == PoolStatus::Active @ HuiFiError::InvalidPoolStatus,
         // constraint = group_account.config.is_native_sol @ HuiFiError::InvalidPoolType,
     )]
     pub group_account: Account<'info, GroupAccount>,
@@ -39,7 +37,7 @@ pub struct ContributeSol<'info> {
         bump = member_account.bump,
         constraint = member_account.owner == contributor.key() @ HuiFiError::Unauthorized,
         constraint = member_account.pool == group_account.key() @ HuiFiError::MemberNotFound,
-        constraint = member_account.contributions_made < group_account.current_cycle + 1 @ HuiFiError::AlreadyContributed,
+        // constraint = member_account.contributions_made < group_account.current_cycle + 1 @ HuiFiError::AlreadyContributed,
     )]
     pub member_account: Account<'info, MemberAccount>,
     
@@ -51,7 +49,7 @@ pub struct ContributeSol<'info> {
     )]
     pub vault_sol: AccountInfo<'info>,
     ///CHECK: This is a PDA that holds the price update
-    pub price_update: Account<'info, PriceUpdateV2>,
+    // pub price_update: Account<'info, PriceUpdateV2>,
     pub system_program: Program<'info, System>,
 }
 
@@ -66,30 +64,31 @@ pub fn contribute_sol(ctx: Context<ContributeSol>, uuid: [u8; 6], amount: u64) -
         HuiFiError::InvalidPoolUUID
     );    
     require!(
-        member_account.has_contributed == true,
+        !member_account.has_contributed,  // must be false to proceed
         HuiFiError::HasAlreadyContributed
     );
     require!(
-        member_account.status == MemberStatus::Defaulted,
+        member_account.status != MemberStatus::Defaulted,
         HuiFiError::MemberHadDefaulted
     );
 
+    // let discount_in_lamports = if Some(ctx.accounts.contributor.key()) == group_account.current_winner {
+    //     group_account.current_bid_amount
+    //         .unwrap_or(0)
+    //         .checked_mul(LAMPORTS_PER_SOL)  // Convert bid discount to lamports
+    //         .unwrap()
+    // } else {
+    //     0
+    // };
     
-    let discount_in_lamports = if Some(ctx.accounts.contributor.key()) == group_account.current_winner {
-        group_account.current_bid_amount
-            .unwrap_or(0)
-            .checked_mul(LAMPORTS_PER_SOL)  // Convert bid discount to lamports
-            .unwrap()
-    } else {
-        0
-    };
-    
-    let required_contribution = group_account
-        .config
-        .contribution_amount
-        .checked_mul(LAMPORTS_PER_SOL)  // Convert contribution amount to lamports
-        .unwrap()
-        .saturating_sub(discount_in_lamports);  // Subtract discount (already in lamports)
+    // let required_contribution = group_account
+    //     .config
+    //     .contribution_amount
+    //     .checked_mul(LAMPORTS_PER_SOL)  // Convert contribution amount to lamports
+    //     .unwrap()
+    //     .saturating_sub(discount_in_lamports);  // Subtract discount (already in lamports)
+
+    let required_contribution = group_account.final_contribution_amount.unwrap_or(0);
 
     // Validate the contribution amount in lamports
     require!(
@@ -99,12 +98,12 @@ pub fn contribute_sol(ctx: Context<ContributeSol>, uuid: [u8; 6], amount: u64) -
 
     
     let current_timestamp = Clock::get()?.unix_timestamp;
-    let price_update = &mut ctx.accounts.price_update;
-    let price = price_update.get_price_no_older_than(
-        &Clock::get()?,
-        MAXIMUM_AGE,
-        &group_account.price_feed_id,
-    )?;
+    // let price_update = &mut ctx.accounts.price_update;
+    // let price = price_update.get_price_no_older_than(
+    //     &Clock::get()?,
+    //     MAXIMUM_AGE,
+    //     &group_account.price_feed_id,
+    // )?;
 
     // let amount_in_lamports = LAMPORTS_PER_SOL
     //     .checked_mul(10_u64.pow(price.exponent.abs().try_into().unwrap()))

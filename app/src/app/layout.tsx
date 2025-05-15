@@ -4,6 +4,8 @@ import { SolanaProvider } from '@/components/solana/solana-provider'
 import { UiLayout } from '@/components/ui/ui-layout'
 import { ReactQueryProvider } from './react-query-provider'
 import { TransactionProvider } from '@/contexts/TransactionContext'
+import ToasterProvider from './ToasterProvider'
+import { LazorKitProvider } from '@/components/solana/LazorKitProvider'
 
 export const metadata = {
   title: 'HuiFi - Solana Rotating Savings',
@@ -19,14 +21,17 @@ const links: { label: string; path: string }[] = [
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body>
         <ReactQueryProvider>
           <ClusterProvider>
             <SolanaProvider>
-              <TransactionProvider>
-                <UiLayout links={links}>{children}</UiLayout>
-              </TransactionProvider>
+              <LazorKitProvider>
+                <TransactionProvider>
+                  <ToasterProvider />
+                  <UiLayout links={links}>{children}</UiLayout>
+                </TransactionProvider>
+              </LazorKitProvider>
             </SolanaProvider>
           </ClusterProvider>
         </ReactQueryProvider>
