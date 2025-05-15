@@ -1,144 +1,159 @@
-# Lazor Kit Wallet Integration for dApps
+# 💸 Huifi Protocol — Monorepo
 
-Lazor Kit Wallet provides a seamless way to integrate Solana smart wallets with Passkey support into your decentralized application (dApp). This guide explains how to set up and use the wallet in your dApp.
+A decentralized Hụi (Rotating Savings and Credit Association) protocol built on **Solana**, using **Anchor** for smart contracts and **Next.js** for the frontend.
 
----
+This monorepo is structured to support collaborative development across:
 
-## Features
-
-- **Connect/Disconnect** Solana smart wallets with Passkey support.
-- **Sign Messages and Transactions** seamlessly.
-- **React Integration**: Works with Vite, Next.js, Create React App, and more.
-- **Customizable UI Components** for wallet interactions.
-- **Browser Compatibility**: Works in browser environments.
+- ✨ A web-based frontend
+- 🔐 A smart contract deployed to the Solana blockchain
+- 🧩 Shared TypeScript utilities and type definitions
 
 ---
 
-## Installation
+## 📁 Folder Structure
 
-Install the package using npm or yarn:
+```
+huifi-app/ 
+├── app/ # Frontend (Next.js, TailwindCSS, Solana Wallet Adapter) 
+├── programs/ # Anchor programs directory at root 
+├── shared/ # Shared TS types or IDLs (imported by app and tests) 
+├── tests/ # Anchor integration tests 
+├── Cargo.toml # Rust workspace config for Anchor programs 
+├── Anchor.toml # Anchor configuration 
+├── pnpm-workspace.yaml # pnpm monorepo setup 
+├── .gitignore
+```
+---
+
+## 🚀 Project Goals
+
+This project aims to:
+
+- Empower underbanked communities to save, borrow, and lend with transparency.
+- Encode traditional Vietnamese “Hụi” savings logic into secure on-chain rules.
+- Enable decentralized, trustless early payouts with fair slashing and credit incentives.
+
+---
+
+## 🛠️ Setup Instructions
+
+### 1. Prerequisites
+
+Make sure you have these installed:
+
+- [Rust](https://www.rust-lang.org/tools/install) — for smart contract compilation
+- [Anchor CLI](https://book.anchor-lang.com/getting_started/installation.html) — Solana dev framework
+- [Solana CLI](https://docs.solana.com/cli) — for local validator and wallet
+- Solana wallet file at `~/.config/solana/id.json`
+
+---
+
+### 2. Install Dependencies
 
 ```bash
-npm install @lazorkit/wallet
-# or
-yarn add @lazorkit/wallet
+pnpm install   # or yarn install / npm install / bun install
+```
+
+This installs dependencies for all packages (`app`, `contracts-hui`, and `shared`) thanks to workspace support.
+
+---
+
+### 3. Run the Frontend
+
+```bash
+pnpm dev -F app
+```
+
+This starts the Next.js app locally.
+
+➡️ All code formatting (`Prettier`) and linting (`ESLint`) tools are configured **locally inside the `app/` folder**.
+
+```bash
+cd app
+pnpm lint
+pnpm format
 ```
 
 ---
 
-## Polyfill Notice
+### 4. Compile and Test Smart Contract
 
-If your project runs in a browser environment, ensure that `Buffer` is available globally. Lazor Kit Wallet relies on `Buffer` for certain cryptographic operations. You can add the polyfill if needed
+```bash
+anchor build
+anchor test
+```
 
-This setup ensures compatibility with modern bundlers like Vite, Webpack, or Rollup.
+This compiles and runs tests against the local Solana validator.
 
 ---
 
-## Usage
+### 5. Sync Contract IDL to Frontend
 
-### 1. `useWallet` Hook
+After building the contract, you’ll get an IDL file here:
 
-The `useWallet` hook for interacting with the wallet. It provides state properties and methods for wallet management.
+```bash
+/target/idl/contracts_hui.json
+```
 
-#### Example:
+To use this in the frontend, copy it into the shared folder:
 
-```tsx
-import { useWallet } from '@lazorkit/wallet';
-
-const {
-  isConnected,    // boolean: wallet connection status
-  publicKey,      // string | null: publickey of passkey 
-  connect,        // () => Promise<void>: connect wallet
-  disconnect,     // () => void: disconnect wallet
-  signMessage,    // (instruction: TransactionInstruction) => Promise<string>: sign a message
-  smartWalletAuthorityPubkey // string | null: publickey of smart wallet on solana 
-  error,          // string | null: error message if any
-} = useWallet();
-
+```bash
+cp target/idl/contracts_hui.json shared/idl/contracts_hui.json
 ```
 
 ---
 
-## Example
+## 🧰 Tooling
 
-Here’s a more advanced example with full wallet functionality:
+This repo is compatible with multiple package managers. You may use:
 
-```tsx
-import React from 'react';
-import { useWallet } from '@lazorkit/wallet';
+- [pnpm](https://pnpm.io/)
+- [yarn](https://classic.yarnpkg.com/lang/en/)
+- [npm](https://www.npmjs.com/)
+- [bun](https://bun.sh/)
 
-const DApp = () => {
-  const {
-    credentialId,
-    publicKey,
-    isConnected,
-    isLoading,
-    error,
-    smartWalletAuthorityPubkey,
-    connect,
-    disconnect,
-    signMessage,
-  } = useWallet();
+We recommend `pnpm` for performance and workspace management, but the monorepo is **not locked** to it.
 
-  const handleConnect = async () => {
-    try {
-      await connect();
-      console.log('Wallet connected:', smartWalletAuthorityPubkey);
-    } catch (err) {
-      console.error('Failed to connect wallet:', err);
-    }
-  };
+### Install dependencies using:
 
-  const handleDisconnect = () => {
-    disconnect();
-    console.log('Wallet disconnected');
-  };
+```bash
+# pnpm (recommended)
+pnpm install
 
-  const handleSignMessage = async () => {
-    try {
-      const instruction = {}; // Replace with a valid TransactionInstruction
-      const txid = await signMessage(instruction);
-      console.log('Transaction ID:', txid);
-    } catch (err) {
-      console.error('Failed to sign message:', err);
-    }
-  };
+# OR yarn
+yarn install
 
-  return (
-    <div>
-      <h1>Lazor Kit Wallet Integration</h1>
-      {isConnected ? (
-        <div>
-          <p>Connected Wallet: {smartWalletAuthorityPubkey}</p>
-          <button onClick={handleDisconnect}>Disconnect</button>
-          <button onClick={handleSignMessage}>Sign Message</button>
-        </div>
-      ) : (
-        <div>
-          <button onClick={handleConnect} disabled={isLoading}>
-            {isLoading ? 'Connecting...' : 'Connect Wallet'}
-          </button>
-        </div>
-      )}
-      {error && <p style={{ color: 'red' }}>Error: {error}</p>}
-    </div>
-  );
-};
+# OR npm
+npm install
 
-export default DApp;
+# OR bun
+bun install
 ```
 
----
-
-## Notes
-
-1. **Popup Blocking**: Ensure your browser allows popups for wallet connection and signing processes.
-2. **Local Storage**: The hook uses `localStorage` to persist wallet credentials (`CREDENTIAL_ID` and `PUBLIC_KEY`).
-3. **Error Handling**: Always handle errors gracefully, as wallet operations may fail due to user actions or network issues.
-4. **Transaction Instruction**: When using `signMessage`, ensure you pass a valid `TransactionInstruction` object.
+✅ Each subproject (app/, shared/, root-level contracts) works independently as well.
 
 ---
 
-## License
+## 👥 Team Workflow
 
-This project is licensed under the MIT License.
+- All shared logic (e.g., constants, TS types, IDLs) should go in `shared/`
+- Avoid committing `.env*`, `.anchor`, `node_modules`, `target`, etc.
+- Run `pnpm install` (or your tool of choice) after pulling in case dependencies changed
+
+---
+
+## 🧠 About Hụi
+
+Hụi is a traditional Vietnamese savings circle where a group of people contribute funds in cycles, and each member gets a chance to receive the pot. This protocol digitizes that system in a fair, decentralized, and permissionless way.
+
+---
+
+## 📄 License
+
+MIT — feel free to contribute, fork, or adapt this protocol for your community.
+
+---
+
+## 👋 Want to Help?
+
+Open a PR, suggest an improvement, or just star the repo to show support 💜
