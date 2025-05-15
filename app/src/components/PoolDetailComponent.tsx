@@ -391,7 +391,9 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
       withdraw: {
         title: "Withdraw Funds",
         // description: `Available for withdrawal: ${poolData.account.user.contributed}\nEarly withdrawal fee: ${poolData.account.financials.earlyWithdrawalFee}`, // Use actual data
-        description: `Available for withdrawal: `, // Use actual data
+        description: `Available for withdrawal: ${lamportsToSol(
+          memberDetails?.collateralStaked || new BN(0)
+        )}`, // Use actual data
         buttonText: "Withdraw",
       },
       claim: {

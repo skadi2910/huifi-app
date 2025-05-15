@@ -45,10 +45,10 @@ export const useWithdrawSolCollateral = (poolAddress: PublicKey) => {
           })
           .rpc();
         // // Wait for confirmation with longer timeout
-        // await connection.confirmTransaction(signature, 'confirmed');
-        // addTransaction(signature, 'Withdraw Sol Collateral');
-        // return signature;
-        return "Withdraw Sol Collateral";
+        await connection.confirmTransaction(signature, 'confirmed');
+        addTransaction(signature, 'Withdraw Sol Collateral');
+        return signature;
+        // return "Withdraw Sol Collateral";
     }
     catch (error) {
       console.error("Error withdrawing SOL collateral:", error);

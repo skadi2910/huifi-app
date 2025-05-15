@@ -4,6 +4,7 @@ use anchor_spl::token::{self, Token, TokenAccount, Transfer, Mint};
 use crate::constants::*;
 use crate::state::*;
 use crate::errors::*;
+use anchor_lang::system_program::{self};
 
 // ========== SOL Collateral ==========
 
@@ -143,25 +144,23 @@ pub fn withdraw_sol_collateral(
     // Validate member has not already withdrawn
     require!(member_account.status != MemberStatus::Withdrawed, HuiFiError::MemberAlreadyWithdrawed);
     // Validate cycle is completed
-    require!(group_account.is_completed(), HuiFiError::CycleNotCompleted);
+    require!(group_account.status == PoolStatus::Completed, HuiFiError::CycleNotCompleted);
     // Validate vault has enough funds
     require!(collateral_vault_sol.lamports() >= member_account.collateral_staked, HuiFiError::InsufficientVaultFunds);
     // Calculate required collateral (130% of total contributions)
     let amount = member_account.collateral_staked;
 
     // Transfer SOL to member's wallet
-    let ix = system_instruction::transfer(
-        &collateral_vault_sol.key(),
-        &member_account.owner,
-        amount,
-    );
-    invoke(
-        &ix,
-        &[
-            collateral_vault_sol.to_account_info(),
-            member_account.to_account_info(),
+    system_program::transfer(
+        CpiContext::new_with_signer(
             ctx.accounts.system_program.to_account_info(),
-        ],
+            system_program::Transfer {
+                from: ctx.accounts.collateral_vault_sol.to_account_info(),
+                to: ctx.accounts.user.to_account_info(),
+            },
+            &[&[COLLATERAL_VAULT_SOL_SEED, group_account.key().as_ref(), &[ctx.bumps.collateral_vault_sol]]],
+        ),
+        amount,
     )?;
 
     // member_account.has_deposited_collateral = false;
