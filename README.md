@@ -1,159 +1,125 @@
-# 💸 Huifi Protocol
+# HuiFi - Decentralized ROSCA Platform on Solana
 
-A decentralized Hụi (Rotating Savings and Credit Association) protocol built on **Solana**, using **Anchor** for smart contracts and **Next.js** for the frontend.
-![GitHub last commit](https://img.shields.io/github/last-commit/:user/:repo)
-This monorepo is structured to support collaborative development across:
+[![Next.js](https://img.shields.io/badge/Next.js-14.2-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![Solana](https://img.shields.io/badge/Solana-1.98-blue?style=flat-square&logo=solana)](https://solana.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react)](https://reactjs.org/)
+[![Anchor](https://img.shields.io/badge/Anchor-0.30.1-yellow?style=flat-square)](https://project-serum.github.io/anchor/)
+[![License: ISC](https://img.shields.io/badge/License-ISC-green.svg?style=flat-square)](https://opensource.org/licenses/ISC)
 
-- ✨ A web-based frontend
-- 🔐 A smart contract deployed to the Solana blockchain
-- 🧩 Shared TypeScript utilities and type definitions
+HuiFi is a decentralized Rotating Savings and Credit Association (ROSCA) platform built on the Solana blockchain. It enables users to participate in transparent, secure, and efficient group savings and credit cycles.
 
----
+## 🌟 Features
 
-## 📁 Folder Structure
+- **Decentralized ROSCA Management**: Create and participate in ROSCA groups on Solana
+- **Smart Contract Security**: Powered by Anchor framework for secure fund management
+- **Web3 Integration**: Seamless connection with Solana wallets
+- **Modern UI/UX**: Built with Next.js and TailwindCSS for a responsive experience
+- **Real-time Updates**: Live tracking of ROSCA cycles and contributions
+- **Multi-wallet Support**: Compatible with popular Solana wallets
 
-```
-huifi-app/ 
-├── app/ # Frontend (Next.js, TailwindCSS, Solana Wallet Adapter) 
-├── programs/ # Anchor programs directory at root 
-├── shared/ # Shared TS types or IDLs (imported by app and tests) 
-├── tests/ # Anchor integration tests 
-├── Cargo.toml # Rust workspace config for Anchor programs 
-├── Anchor.toml # Anchor configuration 
-├── pnpm-workspace.yaml # pnpm monorepo setup 
-├── .gitignore
-```
----
+## 🚀 Getting Started
 
-## 🚀 Project Goals
+### Prerequisites
 
-This project aims to:
+- Node.js v18.18.0 or higher
+- Solana CLI tools
+- Anchor Framework
+- A Solana wallet (Phantom, Solflare, etc.)
 
-- Empower underbanked communities to save, borrow, and lend with transparency.
-- Encode traditional Vietnamese “Hụi” savings logic into secure on-chain rules.
-- Enable decentralized, trustless early payouts with fair slashing and credit incentives.
+### Installation
 
----
-
-## 🛠️ Setup Instructions
-
-### 1. Prerequisites
-
-Make sure you have these installed:
-
-- [Rust](https://www.rust-lang.org/tools/install) — for smart contract compilation
-- [Anchor CLI](https://book.anchor-lang.com/getting_started/installation.html) — Solana dev framework
-- [Solana CLI](https://docs.solana.com/cli) — for local validator and wallet
-- Solana wallet file at `~/.config/solana/id.json`
-
----
-
-### 2. Install Dependencies
-
+1. Clone the repository:
 ```bash
-pnpm install   # or yarn install / npm install / bun install
+git clone https://github.com/yourusername/huifi.git
+cd huifi
 ```
 
-This installs dependencies for all packages (`app`, `contracts-hui`, and `shared`) thanks to workspace support.
-
----
-
-### 3. Run the Frontend
-
+2. Install dependencies:
 ```bash
-pnpm dev -F app
-```
-
-This starts the Next.js app locally.
-
-➡️ All code formatting (`Prettier`) and linting (`ESLint`) tools are configured **locally inside the `app/` folder**.
-
-```bash
-cd app
-pnpm lint
-pnpm format
-```
-
----
-
-### 4. Compile and Test Smart Contract
-
-```bash
-anchor build
-anchor test
-```
-
-This compiles and runs tests against the local Solana validator.
-
----
-
-### 5. Sync Contract IDL to Frontend
-
-After building the contract, you’ll get an IDL file here:
-
-```bash
-/target/idl/contracts_hui.json
-```
-
-To use this in the frontend, copy it into the shared folder:
-
-```bash
-cp target/idl/contracts_hui.json shared/idl/contracts_hui.json
-```
-
----
-
-## 🧰 Tooling
-
-This repo is compatible with multiple package managers. You may use:
-
-- [pnpm](https://pnpm.io/)
-- [yarn](https://classic.yarnpkg.com/lang/en/)
-- [npm](https://www.npmjs.com/)
-- [bun](https://bun.sh/)
-
-We recommend `pnpm` for performance and workspace management, but the monorepo is **not locked** to it.
-
-### Install dependencies using:
-
-```bash
-# pnpm (recommended)
-pnpm install
-
-# OR yarn
-yarn install
-
-# OR npm
+# Install root dependencies
 npm install
 
-# OR bun
-bun install
+# Install app dependencies
+cd app
+npm install
 ```
 
-✅ Each subproject (app/, shared/, root-level contracts) works independently as well.
+3. Set up your environment:
+```bash
+# Configure your Solana wallet and network
+solana config set --url localhost
+```
 
----
+4. Start the development environment:
+```bash
+# Start the local Solana validator
+npm run anchor-localnet
 
-## 👥 Team Workflow
+# In a new terminal, start the Next.js development server
+cd app
+npm run dev
+```
 
-- All shared logic (e.g., constants, TS types, IDLs) should go in `shared/`
-- Avoid committing `.env*`, `.anchor`, `node_modules`, `target`, etc.
-- Run `pnpm install` (or your tool of choice) after pulling in case dependencies changed
+## 🛠 Development Scripts
 
----
+- `npm run dev` - Start the Next.js development server
+- `npm run build` - Build the production application
+- `npm run start` - Start the production server
+- `npm run anchor` - Run Anchor CLI commands
+- `npm run anchor-build` - Build Anchor programs
+- `npm run anchor-test` - Run Anchor tests
+- `npm run update-idl` - Update IDL files
 
-## 🧠 About Hụi
+## 🏗 Tech Stack
 
-Hụi is a traditional Vietnamese savings circle where a group of people contribute funds in cycles, and each member gets a chance to receive the pot. This protocol digitizes that system in a fair, decentralized, and permissionless way.
+### Frontend
+- Next.js 14.2
+- React 18
+- TypeScript 5.4
+- TailwindCSS 4.1
+- DaisyUI
+- Framer Motion
+- React Query
 
----
+### Blockchain
+- Solana Web3.js
+- Anchor Framework
+- SPL Token
+- Wallet Adapter
+
+### Development Tools
+- ESLint
+- Jest
+- TypeScript
+- Postcss
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## 📄 License
 
-MIT — feel free to contribute, fork, or adapt this protocol for your community.
+This project is licensed under the ISC License - see the [LICENSE](LICENSE) file for details.
+
+## 🔗 Links
+
+- [Documentation](#)
+- [Live Demo](#)
+- [Issue Tracker](#)
+- [Project Board](#)
+
+## 📞 Support
+
+For support, please open an issue in the GitHub repository or contact the maintainers.
 
 ---
 
-## 👋 Want to Help?
-
-Open a PR, suggest an improvement, or just star the repo to show support 💜
+Made with ❤️ by the HuiFi Team
