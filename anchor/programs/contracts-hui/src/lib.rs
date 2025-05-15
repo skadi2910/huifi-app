@@ -105,6 +105,13 @@ pub mod contracts_hui {
     ) -> Result<()> {
         instructions::collateral::slash_collateral(ctx, uuid, payout_amount)
     }
+    pub fn withdraw_sol_collateral(
+        ctx: Context<WithdrawSolCollateral>,
+        uuid: [u8; 6]
+    ) -> Result<()> {
+        instructions::collateral::withdraw_sol_collateral(ctx, uuid)
+    }
+    
     pub fn process_payout(
         ctx: Context<ProcessPayout>,
         uuid: [u8; 6]

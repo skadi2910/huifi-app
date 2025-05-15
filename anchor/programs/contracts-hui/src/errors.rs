@@ -150,4 +150,12 @@ pub enum HuiFiError {
     AlreadyDepositedCollateral,
     #[msg("Has not deposited collateral")]
     CollateralNotDeposited,
+    #[msg("Member already withdrawed")]
+    MemberAlreadyWithdrawed,
+    #[msg("No collateral deposited")]
+    NoCollateralDeposited,
+    #[msg("Cycle not completed")]
+    CycleNotCompleted,
+    #[msg("Unauthorized access")]
+    UnauthorizedAccess,
 }

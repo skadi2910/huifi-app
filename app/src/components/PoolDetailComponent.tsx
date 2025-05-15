@@ -40,6 +40,7 @@ import { usePoolBidding } from "@/hooks/usePoolBidding";
 import { useClaimPayout } from "@/hooks/useClaimPayout";
 import { PoolStatusWithPhase } from "@/lib/types/program-types";
 import { useDepositCollateral } from "@/hooks/useDepositCollateral";
+import { useWithdrawSolCollateral } from "@/hooks/useWithdrawSolCollateral";
 // Assuming MOCK_POOL_DATA is either passed in or replaced by actual data structure
 // If MOCK_POOL_DATA is truly static, you might keep its definition here or import it.
 // If it represents the *structure* of the fetched data, use the actual data passed in props.
@@ -159,6 +160,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
   const { placeBidMutation } = usePoolBidding(poolPublicKey);
   const { claimPayoutMutation } = useClaimPayout(poolPublicKey);
   const { depositSolCollateralMutation } = useDepositCollateral(poolPublicKey);
+  const { withdrawSolCollateralMutation } = useWithdrawSolCollateral(poolPublicKey);
   // To multiply by 1.3:
   const multiplier = new BN(13);
   const divisor = new BN(10);
@@ -288,11 +290,16 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
           if (!poolData) throw new Error("Pool data not found");
           await claimPayoutMutation.mutateAsync({
             // amount: parseFloat(amount),
-            uuid: poolData.account.uuid,
+            uuid: poolData.account.uuid,  
           });
           toast.success("Successfully claim payout!");
           break;
         case "withdraw":
+          if (!poolData) throw new Error("Pool data not found");
+          await withdrawSolCollateralMutation.mutateAsync({
+            uuid: poolData.account.uuid,
+          });
+          toast.success("Successfully withdrew collateral!");
           break;
       }
 
