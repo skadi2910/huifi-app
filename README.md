@@ -1,7 +1,7 @@
 # 💸 Huifi Protocol
 
 A decentralized Hụi (Rotating Savings and Credit Association) protocol built on **Solana**, using **Anchor** for smart contracts and **Next.js** for the frontend.
-
+![GitHub last commit](https://img.shields.io/github/last-commit/:user/:repo)
 This monorepo is structured to support collaborative development across:
 
 - ✨ A web-based frontend
