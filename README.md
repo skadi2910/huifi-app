@@ -32,7 +32,7 @@ HuiFi is a decentralized Rotating Savings and Credit Association (ROSCA) platfor
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/huifi.git
+git clone https://github.com/skadi2910/huifi-app.git
 cd huifi
 ```
 
