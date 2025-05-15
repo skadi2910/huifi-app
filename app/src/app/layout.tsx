@@ -5,7 +5,6 @@ import { UiLayout } from '@/components/ui/ui-layout'
 import { ReactQueryProvider } from './react-query-provider'
 import { TransactionProvider } from '@/contexts/TransactionContext'
 import ToasterProvider from './ToasterProvider'
-import { LazorKitProvider } from '@/components/solana/LazorKitProvider'
 
 export const metadata = {
   title: 'HuiFi - Solana Rotating Savings',
@@ -26,12 +25,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ReactQueryProvider>
           <ClusterProvider>
             <SolanaProvider>
-              <LazorKitProvider>
                 <TransactionProvider>
                   <ToasterProvider />
                   <UiLayout links={links}>{children}</UiLayout>
                 </TransactionProvider>
-              </LazorKitProvider>
             </SolanaProvider>
           </ClusterProvider>
         </ReactQueryProvider>

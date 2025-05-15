@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { AnchorProvider, Program } from '@coral-xyz/anchor';
 import { useCluster } from '@/components/cluster/cluster-data-access';
 import { HuifiProgram, IDL, PROGRAM_ID } from '@/lib/types/huifi-program';
-import useCustomConnection from '@/hooks/useCustomConnection';
+// import useCustomConnection from '@/hooks/useCustomConnection';
 // import { useWallet } from '@/hooks/useWallet';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { Connection } from '@solana/web3.js';

@@ -14,8 +14,8 @@ import { useTransactions } from '@/contexts/TransactionContext';
 import { useMemo } from 'react';
 import { generateRandomUUID } from '@/lib/types/utils';
 import { YieldPlatform } from '@/lib/types/program-types';
-import useCustomConnection from '@/hooks/useCustomConnection';
-import { useWallet as useCustomWallet } from '@/hooks/useWallet';
+// import useCustomConnection from '@/hooks/useCustomConnection';
+// import { useWallet as useCustomWallet } from '@/hooks/useWallet';
 // import {useConnection as useCustomConnection} from '@solana/web3.js'
 // Define USDC addresses for different networks
 const USDC_ADDRESSES = {

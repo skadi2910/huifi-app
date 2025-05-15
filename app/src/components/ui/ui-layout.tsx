@@ -8,7 +8,6 @@ import { usePathname } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { Dialog } from '@headlessui/react'
 import { WalletButton } from '../solana/solana-provider'
-import { LazorKitButton } from '../solana/LazorKitButton'
 import { AccountChecker } from '../account/account-ui'
 import { useCallback } from 'react'
 
@@ -215,7 +214,6 @@ export function UiLayout({ links, children }: { links: { label: string; path: st
               transition={{ duration: 0.4 }}
             >
               <WalletButton />
-              <LazorKitButton />
               
               <motion.button
                 className="md:hidden ml-4 text-[#ffdd00] hover:text-[#ffdd00]/80 transition p-2 rounded-md"

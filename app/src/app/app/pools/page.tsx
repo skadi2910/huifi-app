@@ -9,11 +9,10 @@ import { useRouter } from 'next/navigation';
 import { useHuifiPools } from '@/hooks/useHuifiPools';
 import { useJoinPool } from '@/hooks/useJoinPool';
 import toast, { Toaster } from 'react-hot-toast';
-// import { useWallet } from '@solana/wallet-adapter-react';
-import { useWallet } from '@/hooks/useWallet';
+import { useWallet } from '@solana/wallet-adapter-react';
 import dynamic from 'next/dynamic';
 import { AlertTriangle, XCircle, CheckCircle, Info } from 'lucide-react';
-import { useWallet as useLazorWallet } from '@lazorkit/wallet';
+
 // Import WalletMultiButton with client-side only rendering
 // This prevents hydration errors
 const WalletMultiButton = dynamic(
@@ -113,22 +112,9 @@ const customToast = {
 export default function PoolsPage() {
   const [activeFilter, setActiveFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  // const { publicKey, connected } = useWallet();
-  const {solanaIsConnected,lazorIsConnected} = useWallet();
-  console.log("solanaIsConnected",solanaIsConnected);
-  console.log("lazorIsConnected",lazorIsConnected); 
+  const { publicKey, connected } = useWallet();
   const router = useRouter();
-  // const {
-  //   credentialId: lazorCredentialId,
-  //   publicKey: lazorPublicKey,
-  //   isConnected: lazorIsConnected,
-  //   isLoading: lazorIsLoading,
-  //   error: lazorError,
-  //   smartWalletAuthorityPubkey: lazorSmartWalletAuthorityPubkey,
-  //   connect: lazorConnect,
-  //   disconnect: lazorDisconnect,
-  //   signMessage: lazorSignMessage,
-  // } = useLazorWallet();
+  
   const { pools, isLoading, error, refreshPools } = useHuifiPools();
   const { joinPoolMutation } = useJoinPool();
   
@@ -155,7 +141,7 @@ export default function PoolsPage() {
   }, [pools, activeFilter, searchQuery]);
 
   const handleJoinPool = async (poolId: PublicKey, uuid: number[], poolName?: string) => {
-    if (!solanaIsConnected && !lazorIsConnected) {
+    if (!connected) {
       customToast.error('Please connect your wallet first');
       return;
     }
@@ -221,7 +207,7 @@ export default function PoolsPage() {
           <p className="text-[#f8e555]/70">Join an active pool or create your own to start earning</p>
         </div>
         
-        {!solanaIsConnected && !lazorIsConnected && (
+        {!connected && (
           <div className="mb-8 p-6 bg-[#1a1a18] rounded-xl border border-[#e6ce04]/20 text-center">
             <p className="text-[#f8e555] mb-4">Connect your wallet to join pools</p>
             <div className="flex justify-center">

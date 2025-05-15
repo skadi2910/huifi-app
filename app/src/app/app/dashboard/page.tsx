@@ -6,21 +6,19 @@ import { Wallet, TrendingUp, Trophy, Calendar, Coins, ChevronRight, Zap, Star } 
 import Link from 'next/link';
 import { useWallet } from '@solana/wallet-adapter-react'; // Import useWallet
 import { WalletButton } from '@/components/solana/solana-provider'; // Import WalletButton
-import { useWallet as useLazorWallet } from '@lazorkit/wallet';
 // Import necessary hooks for fetching user data (replace with your actual hooks)
 // import { useUserDashboardData } from '@/components/huifi/huifi-data-access';
 // import { useGetBalance } from '@/components/account/account-data-access'; // For SOL balance if needed
 
 export default function DashboardPage() {
   const { publicKey } = useWallet();
-  const { publicKey: lazorPublicKey } = useLazorWallet();
   // Placeholder for fetching data - replace with actual hook usage
   // const { data: dashboardData, isLoading, error } = useUserDashboardData(publicKey);
   // const { data: solBalance } = useGetBalance(publicKey); // Example for SOL balance
 
   // Mock data structure (replace with actual data from hooks)
   const isLoading = false; // Set to true while loading
-  const dashboardData = (publicKey || lazorPublicKey) ? {
+  const dashboardData = publicKey ? {
       totalEarnings: 1250, // USDC
       currentYield: 10.8,
       activeGamesCount: 3,
@@ -55,7 +53,7 @@ export default function DashboardPage() {
       ]
   } : null;
 
-  if (!publicKey && !lazorPublicKey) {
+  if (!publicKey) {
     return (
       <div className="min-h-screen pt-24 pb-16 bg-[#010200] flex flex-col items-center justify-center">
          <h2 className="text-2xl text-[#e6ce04] mb-4">Connect Your Wallet</h2>

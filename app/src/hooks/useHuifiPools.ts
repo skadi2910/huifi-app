@@ -7,8 +7,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { BN,Program,Idl } from '@coral-xyz/anchor';
 import bs58 from 'bs58';
 import { HuifiPool as HuifiPoolType } from '@/lib/types/program-types';
-import { useWallet as useLazorWallet } from '@lazorkit/wallet';
-import useCustomConnection  from '@/hooks/useCustomConnection';
+// import { useWallet as useLazorWallet } from '@lazorkit/wallet';
+// import useCustomConnection  from '@/hooks/useCustomConnection';
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 10000;
@@ -67,10 +67,10 @@ type HuifiProgram = Program<Idl> & {
 };
 export const useHuifiPools = () => {
   
-  // const { connection } = useConnection();
-  const { connection } = useCustomConnection();
+  const { connection } = useConnection();
+  // const { connection } = useCustomConnection();
   const { publicKey } = useWallet();
-  const { publicKey: lazorPublicKey, isConnected: lazorIsConnected } = useLazorWallet();
+  // const { publicKey: lazorPublicKey, isConnected: lazorIsConnected } = useLazorWallet();
   // Update the program type here
   const { program } = useHuifiProgram() as { program: HuifiProgram | null };
   const { addTransaction } = useTransactions();
