@@ -61,6 +61,22 @@ export const getStatusString = (status: any): string => {
       return 'Unknown';
     }
   };
+  export const getMemberStatusString = (status: any): string => {
+    // Check if status exists
+    if (!status) return 'Unknown';
+    
+    // Check which key exists in the status object
+    try {
+      if ('active' in status) return 'Active';
+      if ('late' in status) return 'Late';
+      if ('defaulted' in status) return 'Defaulted';
+      if ('withdrawed' in status) return 'Withdrawed';
+      return 'Unknown'; // fallback
+    } catch (error) {
+      console.error('Error parsing member status:', status);
+      return 'Unknown';
+    }
+  };
 export const getPhaseString = (phase: any): string => {
     // Check if phase exists
     if (!phase) return 'Unknown';

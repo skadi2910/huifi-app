@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -31,6 +31,7 @@ import {
   lamportsToSol,
   bpsToPercentage,
   getPhaseString,
+  getMemberStatusString,
 } from "@/lib/utils";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { useContributeSol } from "@/hooks/useContributeSol";
@@ -150,6 +151,9 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
     null
   );
   const { fetchPoolDetails, fetchMemberAccountDetail } = useHuifiPools();
+  const [allMemberDetails, setAllMemberDetails] = useState<
+    (MemberAccountData | null)[]
+  >([]);
   const poolPublicKey = useMemo(() => new PublicKey(publicKey), [publicKey]);
   const [statusString, setStatusString] = useState<string>("Unknown");
   const [currentPhase, setCurrentPhase] = useState<string>("Unknown");
@@ -160,10 +164,76 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
   const { placeBidMutation } = usePoolBidding(poolPublicKey);
   const { claimPayoutMutation } = useClaimPayout(poolPublicKey);
   const { depositSolCollateralMutation } = useDepositCollateral(poolPublicKey);
-  const { withdrawSolCollateralMutation } = useWithdrawSolCollateral(poolPublicKey);
+  const { withdrawSolCollateralMutation } =
+    useWithdrawSolCollateral(poolPublicKey);
   // To multiply by 1.3:
   const multiplier = new BN(13);
   const divisor = new BN(10);
+  // Add this function inside PoolDetailComponent
+  const fetchAllMemberDetails = useCallback(async (poolData: PoolWithKey) => {
+    if (!poolData?.account.memberAddresses.length) return;
+    
+    try {
+      const memberDetailsPromises = poolData.account.memberAddresses.map(memberAddress => 
+        fetchMemberAccountDetail(poolData, memberAddress)
+      );
+  
+      const details = await Promise.all(memberDetailsPromises);
+      setAllMemberDetails(details);
+    } catch (error) {
+      console.error('Error fetching all member details:', error);
+      toast.error('Failed to fetch member details');
+    }
+  }, [fetchMemberAccountDetail]);
+
+
+  const MemberList = useMemo(() => {
+    if (!poolData?.account.memberAddresses) return null;
+  
+    return (
+      <div className="space-y-4">
+        {poolData.account.memberAddresses.map((memberAddress, index) => {
+          const memberDetail = allMemberDetails[index];
+          return (
+            <div
+              key={memberAddress.toString()}
+              className="flex items-center justify-between bg-[#010200] p-3 rounded-lg border border-[#e6ce04]/20"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-[#1a1a18] rounded-full flex items-center justify-center">
+                  <Users className="w-4 h-4 text-[#e6ce04]" />
+                </div>
+                <div>
+                  <p className="text-[#e6ce04]">
+                    Member #{index + 1}
+                  </p>
+                  <p className="text-xs text-[#f8e555]/70">
+                    {memberAddress.toString()}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-[#e6ce04]">
+                  {memberDetail ? lamportsToSol(memberDetail.totalContributions).toString() : '0'}
+                </p>
+                <p className="text-xs text-[#f8e555]/70">
+                  Status: {memberDetail ? getMemberStatusString(memberDetail.status) : 'Unknown'}
+                </p>
+                <p className="text-xs text-[#f8e555]/70">
+                  Collateral: {memberDetail ? lamportsToSol(memberDetail.collateralStaked).toString() : '0'}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+        {poolData.account.memberAddresses.length === 0 && (
+          <p className="text-[#f8e555]/70 text-center py-4">
+            No members have joined yet.
+          </p>
+        )}
+      </div>
+    );
+  }, [poolData?.account.memberAddresses, allMemberDetails]);
   useEffect(() => {
     const loadPoolData = async () => {
       try {
@@ -180,6 +250,10 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
           console.log("Current phase:", currentPhase);
           setCurrentPhase(getPhaseString(currentPhase));
         }
+      // Only fetch member details if we're on the members tab
+      if (data && activeTab === 'members') {
+        await fetchAllMemberDetails(data);
+      }
         // setCurrentPhase(phase);
       } catch (error) {
         console.error("Error fetching pool details:", error);
@@ -187,18 +261,23 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
         setCurrentPhase("Unknown");
       }
     };
-  
+
     loadPoolData();
-  }, [poolPublicKey, fetchPoolDetails]);
+  }, [poolPublicKey, fetchPoolDetails, activeTab, fetchAllMemberDetails]);
+  useEffect(() => {
+    if (activeTab === 'members' && poolData) {
+      fetchAllMemberDetails(poolData);
+    }
+  }, [activeTab, poolData, fetchAllMemberDetails]);
   useEffect(() => {
     // Extract the check into a variable to satisfy the static checker
     const isReady = poolData && userWallet;
     const checkMembership = async () => {
       if (!isReady) {
-        console.log("Missing required data for membership check:", {
-          hasPoolData: !!poolData,
-          hasUserWallet: !!userWallet,
-        });
+        // console.log("Missing required data for membership check:", {
+        //   hasPoolData: !!poolData,
+        //   hasUserWallet: !!userWallet,
+        // });
         return;
       }
 
@@ -227,7 +306,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
           // });
           setMemberDetails(memberDetails);
         } else {
-          console.log("User is not a member of this pool");
+          // console.log("User is not a member of this pool");
           toast.error("User is not a member of this pool");
           setMemberDetails(null);
         }
@@ -290,7 +369,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
           if (!poolData) throw new Error("Pool data not found");
           await claimPayoutMutation.mutateAsync({
             // amount: parseFloat(amount),
-            uuid: poolData.account.uuid,  
+            uuid: poolData.account.uuid,
           });
           toast.success("Successfully claim payout!");
           break;
@@ -543,7 +622,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
             <div className="bg-[#1a1a18] px-4 py-2 rounded-lg border border-[#e6ce04]/20">
               <p className="text-[#f8e555]/70 mr-2">
                 {" "}
-                Pool Status: 
+                Pool Status:
                 {/* Use dynamic data */}
                 <span className="text-[#e6ce04] font-bold text-end">
                   {statusString.toUpperCase()}
@@ -755,48 +834,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                   </div>
                 )}
 
-                {activeTab === "members" && (
-                  <div className="space-y-4">
-                    {/* Replace with actual member data iteration if available */}
-                    {Array.from({
-                      length: poolData.account.memberAddresses.length,
-                    }).map((_, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between bg-[#010200] p-3 rounded-lg border border-[#e6ce04]/20"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-[#1a1a18] rounded-full flex items-center justify-center">
-                            <Users className="w-4 h-4 text-[#e6ce04]" />
-                          </div>
-                          <div>
-                            <p className="text-[#e6ce04]">
-                              Member #{index + 1}
-                            </p>
-                            <p className="text-xs text-[#f8e555]/70">
-                              {poolData.account.memberAddresses[
-                                index
-                              ].toString()}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[#e6ce04]">
-                            {"data.financials.contributionAmount"}
-                          </p>
-                          <p className="text-xs text-[#f8e555]/70">
-                            Contributed
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                    {poolData.account.memberAddresses.length === 0 && (
-                      <p className="text-[#f8e555]/70 text-center py-4">
-                        No members have joined yet.
-                      </p>
-                    )}
-                  </div>
-                )}
+                {activeTab === "members" && MemberList}
 
                 {activeTab === "history" && (
                   <div className="space-y-4">
@@ -940,13 +978,17 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
                 <div className="flex justify-between items-center text-sm md:text-base">
                   <span className="text-[#f8e555]/70">Contributed</span>
                   <span className="text-[#e6ce04] font-bold text-base md:text-lg">
-                    {lamportsToSol(memberDetails?.totalContributions || new BN(0))}
+                    {lamportsToSol(
+                      memberDetails?.totalContributions || new BN(0)
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-sm md:text-base">
                   <span className="text-[#f8e555]/70">Collateral Staked</span>
                   <span className="text-[#e6ce04] font-bold text-base md:text-lg">
-                    {(lamportsToSol(memberDetails?.collateralStaked || new BN(0)))}
+                    {lamportsToSol(
+                      memberDetails?.collateralStaked || new BN(0)
+                    )}
                   </span>
                 </div>
                 <div className="flex justify-between items-center text-sm md:text-base">

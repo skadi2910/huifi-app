@@ -12,6 +12,7 @@ import {
 import { PublicKey } from '@solana/web3.js';
 import { HuifiPool } from '@/lib/types/program-types';
 import BN from 'bn.js';
+import { getStatusString } from '@/lib/utils';
 
 export interface PoolCardProps {
   publicKey: PublicKey;
@@ -24,10 +25,12 @@ export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account, onJoinPo
     config,
     memberAddresses,
     totalContributions,
-    status: rawStatus,
+    status,
     nextPayoutTimestamp,
-    uuid
+    uuid,
+    frequency
   } = account;
+  console.log("Account", account);
 
   const maxParticipants = config?.maxParticipants || 0;
   const contributionAmount = config?.contributionAmount || new BN(0);
@@ -37,30 +40,30 @@ export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account, onJoinPo
   const totalValue = contributionAmount.mul(new BN(maxParticipants)) || new BN(0);
 
   const frequencyInSeconds = cycleDurationSeconds.toNumber();
-  const frequency = 
-  frequencyInSeconds <= 86400 ? 'daily' :
-  frequencyInSeconds <= 604800 ? 'weekly' :
-  frequencyInSeconds <= 1209600 ? 'biweekly' : 'monthly';
+  // const frequency = 
+  // frequencyInSeconds <= 86400 ? 'daily' :
+  // frequencyInSeconds <= 604800 ? 'weekly' :
+  // frequencyInSeconds <= 1209600 ? 'biweekly' : 'monthly';
 
 // Use default yield if not available in the data
   const yieldBasisPoints = 500;
 
   const name =
-    `HuiFi Pool ${Array.from(uuid).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 6)}`;
+    `HuiFi Pool #${Array.from(uuid).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 6)}`;
 
-  const getStatusString = (): 'Active' | 'Filling' | 'Completed' => {
-    switch (rawStatus) {
-      case 1:
-        return 'Active';
-      case 2:
-        return 'Completed';
-      case 0:
-      default:
-        return 'Filling';
-    }
-  };
+  // const getStatusString = (): 'Active' | 'Filling' | 'Completed' => {
+  //   switch (status) {
+  //     case 1:
+  //       return 'Active';
+  //     case 2:
+  //       return 'Completed';
+  //     case 0:
+  //     default:
+  //       return 'Filling';
+  //   }
+  // };
 
-  const statusString = getStatusString();
+  const statusString = getStatusString(status);
 
   const formatTimeRemaining = () => {
     // if (!nextPayoutTimestamp) return 'N/A';
@@ -85,7 +88,7 @@ export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account, onJoinPo
       case 'Filling':
         return 'bg-[#ffef80] text-black border-black';
       case 'Completed':
-        return 'bg-white text-black border-black';
+        return 'text-black border-black';
       default:
         return 'bg-white text-black border-black';
     }
@@ -105,7 +108,7 @@ export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account, onJoinPo
 
   // Add a handler for the join button click
   const handleJoinClick = async (e: React.MouseEvent) => {
-    if (statusString === 'Filling' && onJoinPool) {
+    if (statusString === "Initializing" && onJoinPool) {
       e.preventDefault();
       try {
         await onJoinPool(publicKey, Array.from(uuid));
@@ -151,7 +154,7 @@ export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account, onJoinPo
           </div>
           <div className="flex items-center">
             <Calendar className="w-5 h-5 mr-2" />
-            <span className="font-medium">Every {frequency} days Rounds</span>
+            <span className="font-medium capitalize">{frequency} Rounds</span>
           </div>
           <div className="flex items-center">
             <Clock className="w-5 h-5 mr-2" />
@@ -188,8 +191,8 @@ export const PoolCard: React.FC<PoolCardProps> = ({ publicKey, account, onJoinPo
             <span>{"// VIEW GAME_"}</span>
           </Link>
 
-          {statusString !== 'Completed' &&
-            (statusString === 'Filling' ? (
+          {statusString !== 'Completed' && statusString !== 'Active' && (
+            statusString === 'Initializing' ? (
               <button
                 onClick={handleJoinClick}
                 className="flex justify-center items-center btn-glitch px-3 py-2 text-sm sm:text-base text-center"
