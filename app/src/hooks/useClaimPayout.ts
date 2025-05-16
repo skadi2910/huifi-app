@@ -4,11 +4,12 @@ import { PublicKey, SystemProgram } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from '@solana/spl-token';
 import { useHuifiProgram } from './useHuifiProgram';
 import { useTransactions } from '@/contexts/TransactionContext';
-
+import { useTransactionToast } from '@/components/ui/ui-layout';
 export const useClaimPayout = (poolAddress: PublicKey) => {
   const { publicKey } = useWallet();
   const { program, connection } = useHuifiProgram();
   const { addTransaction } = useTransactions();
+  const transactionToast = useTransactionToast();
   
   // Mutation for claiming a jackpot
   const claimPayoutMutation = useMutation({
@@ -61,6 +62,7 @@ export const useClaimPayout = (poolAddress: PublicKey) => {
           .rpc();
         await connection.confirmTransaction(signature, 'confirmed');
         addTransaction(signature, 'Claim Payout');
+        transactionToast(signature);
         return signature;
         // return "Claim Payout"; 
       } catch (error) {

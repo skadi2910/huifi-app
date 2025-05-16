@@ -5,7 +5,7 @@ import { BN } from '@coral-xyz/anchor';
 import { useHuifiProgram } from './useHuifiProgram';
 import { useTransactions } from '@/contexts/TransactionContext';
 import { solToLamports } from '@/lib/utils';
-
+import { useTransactionToast } from '@/components/ui/ui-layout';
 export interface ContributeSolParams {
   poolId: PublicKey;
   uuid: number[];
@@ -17,7 +17,7 @@ export const useContributeSol = () => {
   const { publicKey } = useWallet();
   const { program } = useHuifiProgram();
   const { addTransaction } = useTransactions();
-
+  const transactionToast = useTransactionToast();
   const contributeSolMutation = useMutation({
     mutationKey: ['contribute-sol'],
     mutationFn: async (params: ContributeSolParams): Promise<string> => {
@@ -86,7 +86,7 @@ export const useContributeSol = () => {
         // Wait for confirmation with longer timeout
         await connection.confirmTransaction(signature, 'confirmed');
         addTransaction(signature, 'Contribute SOL to Pool');
-        
+        transactionToast(signature);
         return signature;
       } catch (error) {
         console.error('Error contributing SOL to pool:', error);

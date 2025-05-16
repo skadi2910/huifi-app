@@ -92,7 +92,7 @@ export const usePoolBidding = (poolAddress: PublicKey) => {
         addTransaction(signature, `Place Bid`);
         transactionToast(signature);
         return signature;
-        return "";
+        // return "";
       } catch (error: any) {
         // console.error('Error placing bid:', error);
         // throw error;

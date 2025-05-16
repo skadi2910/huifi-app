@@ -5,7 +5,7 @@ import { BN } from "@coral-xyz/anchor";
 import { useHuifiProgram } from "./useHuifiProgram";
 import { useTransactions } from "@/contexts/TransactionContext";
 import { solToLamports } from "@/lib/utils";
-
+import { useTransactionToast } from "@/components/ui/ui-layout";
 interface DepositCollateralProps {
   amount: number;
   uuid: number[];
@@ -15,7 +15,7 @@ export const useDepositCollateral = (poolAddress: PublicKey) => {
   //   const { connection } = useConnection();
   const { connection, program } = useHuifiProgram();
   const { addTransaction } = useTransactions();
-
+  const transactionToast = useTransactionToast();
   const depositSolCollateralMutation = useMutation({
     mutationKey: ["deposit-sol-collateral", { pool: poolAddress.toString() }],
     mutationFn: async (params: DepositCollateralProps): Promise<string> => {
@@ -53,7 +53,7 @@ export const useDepositCollateral = (poolAddress: PublicKey) => {
         // Wait for confirmation with longer timeout
         await connection.confirmTransaction(signature, 'confirmed');
         addTransaction(signature, 'Collateral Deposit');
-        
+        transactionToast(signature);
         return signature;
         // return "Deposit Sol Collateral";
       } catch (error) {

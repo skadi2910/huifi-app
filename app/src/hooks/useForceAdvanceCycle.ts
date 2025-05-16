@@ -4,7 +4,7 @@ import { PublicKey } from '@solana/web3.js';
 import { useHuifiProgram } from './useHuifiProgram';
 import { useTransactions } from '@/contexts/TransactionContext';
 import { PoolWithKey } from './useHuifiPools';
-
+import { useTransactionToast } from '@/components/ui/ui-layout';
 export interface AdvanceCycleParams {
   pool: PoolWithKey;
 }
@@ -14,7 +14,7 @@ export const useAdvanceCycle = () => {
   const { publicKey } = useWallet();
   const { program } = useHuifiProgram();
   const { addTransaction } = useTransactions();
-
+  const transactionToast = useTransactionToast();
   const advanceCycleMutation = useMutation({
     mutationKey: ['advance-cycle'],
     mutationFn: async (params: AdvanceCycleParams): Promise<string> => {
@@ -53,7 +53,7 @@ export const useAdvanceCycle = () => {
         console.log('Cycle advanced successfully:', signature);
         await connection.confirmTransaction(signature);
         addTransaction(signature, 'Advance Pool Cycle');
-        
+        transactionToast(signature);
         return signature;
       } catch (error) {
         console.error('Error advancing cycle:', error);

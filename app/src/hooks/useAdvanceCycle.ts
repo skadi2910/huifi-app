@@ -10,6 +10,7 @@ import {
   MemberAccount,
 } from "@/lib/types/program-types";
 import { AnchorError, BN } from "@coral-xyz/anchor";
+import { useTransactionToast } from "@/components/ui/ui-layout";
 export interface AdvanceCycleParams {
   pool: PoolWithKey;
 }
@@ -19,7 +20,7 @@ export const useAdvanceCycle = ({ pool }: { pool: PoolWithKey }) => {
   const { publicKey } = useWallet();
   const { program } = useHuifiProgram();
   const { addTransaction } = useTransactions();
-
+  const transactionToast = useTransactionToast();
   const advanceCycleMutation = useMutation({
     mutationKey: ["advance-cycle"],
     mutationFn: async (params: AdvanceCycleParams): Promise<string> => {
@@ -140,7 +141,7 @@ export const useAdvanceCycle = ({ pool }: { pool: PoolWithKey }) => {
         console.log("Cycle advanced successfully:", signature);
         await connection.confirmTransaction(signature);
         addTransaction(signature, "Advance Pool Cycle");
-
+        transactionToast(signature);
         return signature;
         // Type-safe account access
         // const accounts = {

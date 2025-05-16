@@ -4,7 +4,8 @@ import { PublicKey, SystemProgram } from "@solana/web3.js";
 // import { BN } from "@coral-xyz/anchor";
 import { useHuifiProgram } from "./useHuifiProgram";
 import { useTransactions } from "@/contexts/TransactionContext";
-// import { solToLamports } from "@/lib/utils";
+import { useTransactionToast } from "@/components/ui/ui-layout";
+  // import { solToLamports } from "@/lib/utils";
 
 interface WithdrawSolCollateralProps {
   uuid: number[];
@@ -14,7 +15,7 @@ export const useWithdrawSolCollateral = (poolAddress: PublicKey) => {
   const { publicKey } = useWallet();
   const { connection, program } = useHuifiProgram();
   const { addTransaction } = useTransactions();
-
+  const transactionToast = useTransactionToast();
   const withdrawSolCollateralMutation = useMutation({
     mutationKey: ["withdraw-sol-collateral", { pool: poolAddress.toString() }],
     mutationFn: async (params: WithdrawSolCollateralProps): Promise<string> => {
@@ -47,6 +48,7 @@ export const useWithdrawSolCollateral = (poolAddress: PublicKey) => {
         // // Wait for confirmation with longer timeout
         await connection.confirmTransaction(signature, 'confirmed');
         addTransaction(signature, 'Withdraw Sol Collateral');
+        transactionToast(signature);
         return signature;
         // return "Withdraw Sol Collateral";
     }
