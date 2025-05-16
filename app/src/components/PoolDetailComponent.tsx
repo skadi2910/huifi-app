@@ -240,7 +240,8 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
       try {
         const data = await fetchPoolDetails(poolPublicKey);
         setPoolData(data);
-        console.log("Pool data:", data);
+        // console.log("Pool data:", data);
+        // console.log("pool current winner", data?.account.currentWinner.toString());
         // Handle status and phase
         const status = data?.account.status as unknown as PoolStatusWithPhase;
         const statusString = getStatusString(status);

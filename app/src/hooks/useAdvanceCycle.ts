@@ -9,7 +9,7 @@ import {
   BidState,
   MemberAccount,
 } from "@/lib/types/program-types";
-import { AnchorError } from "@coral-xyz/anchor";
+import { AnchorError, BN } from "@coral-xyz/anchor";
 export interface AdvanceCycleParams {
   pool: PoolWithKey;
 }
@@ -78,9 +78,27 @@ export const useAdvanceCycle = ({ pool }: { pool: PoolWithKey }) => {
           bidState: bidStatePda.toBase58(),
           currentWinner: bidStateInfo.winner?.toBase58(),
           creator: groupAccountInfo.creator.toBase58(),
+          bids: bidStateInfo.bids.map((bid) => ({
+            bidder: bid.bidder.toBase58(),
+            amount: bid.amount.toString(),
+          })),
         });
         // Determine which key to use for the member account
-        const memberOwnerKey = bidStateInfo.winner || groupAccountInfo.creator;
+        // First determine who will be the winner
+let memberOwnerKey;
+if (bidStateInfo.bids.length === 0) {
+  // If no bids, creator wins
+  memberOwnerKey = groupAccountInfo.creator;
+} else {
+        // Sort bids and get highest bidder
+        const sortedBids = [...bidStateInfo.bids].sort((a, b) => {
+          // Ensure we're working with BN objects
+          const amountA = new BN(a.amount.toString());
+          const amountB = new BN(b.amount.toString());
+          return amountB.sub(amountA).toNumber();
+        });
+        memberOwnerKey = sortedBids[0].bidder;
+}
         console.log("Keys being used:", {
           winner: bidStateInfo.winner?.toBase58() || "No winner",
           defaultKey: groupAccountInfo.creator.toBase58(),

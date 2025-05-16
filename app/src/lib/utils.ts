@@ -119,3 +119,7 @@ export const getProgramErrorMessage = (error: any): string => {
   
   return 'An unexpected error occurred';
 };
+// utils.ts
+export const getExplorerUrl = (signature: string, cluster: 'devnet' | 'mainnet-beta' = 'devnet') => {
+  return `https://solscan.io/tx/${signature}${cluster === 'devnet' ? '?cluster=devnet' : ''}`;
+};
