@@ -5,7 +5,7 @@ import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from '@solana/spl-tok
 import { BN } from '@coral-xyz/anchor';
 import { useHuifiProgram } from './useHuifiProgram';
 import { useTransactions } from '@/contexts/TransactionContext';
-import { getProgramErrorMessage } from '@/lib/utils';
+import { getProgramErrorMessage, solToLamports } from '@/lib/utils';
 export const usePoolBidding = (poolAddress: PublicKey) => {
   const { publicKey } = useWallet();
   const { program } = useHuifiProgram();
@@ -77,7 +77,8 @@ export const usePoolBidding = (poolAddress: PublicKey) => {
         const memberAccountInfo = await program.account.memberAccount.fetch(memberAccountPda);
         console.log("memberAccountInfo: ", memberAccountInfo);
         // Convert amount to lamports (assuming 6 decimals for the token)
-        const amountLamports = new BN(amount * 1_000_000);
+        // const amountLamports = new BN(amount * 1_000_000);
+        const amountLamports = solToLamports(amount);
 
         const signature = await program.methods.submitBid(amountLamports).accounts({
           bidder: publicKey,

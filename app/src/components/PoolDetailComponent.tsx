@@ -179,6 +179,7 @@ export const PoolDetailComponent: React.FC<PoolDetailComponentProps> = ({
       );
   
       const details = await Promise.all(memberDetailsPromises);
+      console.log("Member Details", details);  
       setAllMemberDetails(details);
     } catch (error) {
       console.error('Error fetching all member details:', error);

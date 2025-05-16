@@ -246,46 +246,49 @@ pub fn force_advance_cycle(ctx: Context<ForceAdvanceCycle>) -> Result<()> {
             CyclePhase::Bidding => {
                 msg!("📊 Force advancing from bidding phase");
                 
-                if bid_state.bids.is_empty() {
-                    // If no bids, just move to Contributing phase, Creator Win, Bid amount = 0
-                    bid_state.winner = Some(group_account.creator);
-                    group_account.current_winner = bid_state.winner;
-                    group_account.current_bid_amount = Some(0);
-                    group_account.final_contribution_amount = Some(group_account.config.contribution_amount);
-                    msg!("ℹ️ No bids in this cycle, Creator wins");
-                } else if bid_state.bids.len() == 1 {
-                    // If only one bid, they automatically win
-                    let winning_bid = bid_state.bids.first().cloned().unwrap();
-                    bid_state.winner = Some(winning_bid.bidder);
-                    group_account.current_winner = Some(winning_bid.bidder);
-                    group_account.current_bid_amount = Some(winning_bid.amount);
-                    group_account.final_contribution_amount = group_account.current_bid_amount
-                    .map(|bid_amount| group_account.config.contribution_amount - bid_amount);
-                    if let Some(winner_account) = &mut ctx.accounts.winner_member_account {
-                        winner_account.eligible_for_payout = true;
-                    }
-                    msg!("🏆 Single bidder wins automatically");
+                let (winning_bid, message) = if bid_state.bids.is_empty() {
+                    // If no bids, creator wins with 0 bid
+                    (
+                        (group_account.creator, 0),
+                        "ℹ️ No bids in this cycle, Creator wins"
+                    )
                 } else {
-                    // Multiple bids - sort and pick highest
+                    // Sort bids for both single and multiple bid cases
                     bid_state.bids.sort_by(|a, b| b.amount.cmp(&a.amount));
-                    let winning_bid = bid_state.bids.first().cloned().unwrap();
-                    
-                    bid_state.winner = Some(winning_bid.bidder);
-                    group_account.current_winner = Some(winning_bid.bidder);
-                    group_account.current_bid_amount = Some(winning_bid.amount);
-                    group_account.final_contribution_amount = group_account.current_bid_amount
-                    .map(|bid_amount| group_account.config.contribution_amount - bid_amount);
+                    let top_bid = bid_state.bids.first().cloned().unwrap();
+                    (
+                        (top_bid.bidder, top_bid.amount),
+                        if bid_state.bids.len() == 1 {
+                            "🏆 Single bidder wins automatically"
+                        } else {
+                            "🏆 Highest bidder wins"
+                        }
+                    )
+                };
+            
+                // Update bid state and group account
+                bid_state.winner = Some(winning_bid.0);
+                group_account.current_winner = Some(winning_bid.0);
+                group_account.current_bid_amount = Some(winning_bid.1);
+                group_account.final_contribution_amount = Some(
+                    group_account.config.contribution_amount - winning_bid.1
+                );
+            
+                // Set winner eligible for payout if not creator
+                if !bid_state.bids.is_empty() {
                     if let Some(winner_account) = &mut ctx.accounts.winner_member_account {
                         winner_account.eligible_for_payout = true;
                     }
-                    msg!("🏆 Highest bidder wins");
                 }
-
+            
+                msg!("{}", message);
+            
+                // Advance to Contributing phase
                 group_account.status = PoolStatus::Active {
                     phase: CyclePhase::Contributing
                 };
                 msg!("➡️ Forced to Contributing phase");
-            },
+            }
             CyclePhase::Contributing => {
                 msg!("💫 Force advancing from contribution phase");
                 if let Some(winner_account) = &mut ctx.accounts.winner_member_account {
@@ -316,7 +319,7 @@ pub fn force_advance_cycle(ctx: Context<ForceAdvanceCycle>) -> Result<()> {
                     };
                     msg!("➡️ Forced to cycle {} - Bidding phase", group_account.current_cycle);
                 }
-            },            // ... rest of the existing match cases ...
+            },
         },
         _ => return Err(HuiFiError::InvalidPoolStatus.into()),
     }
