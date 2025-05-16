@@ -4,13 +4,13 @@ import { useMutation } from '@tanstack/react-query';
 import { PublicKey, SystemProgram, SYSVAR_RENT_PUBKEY } from '@solana/web3.js';
 import { useHuifiProgram } from './useHuifiProgram';
 import { useTransactions } from '@/contexts/TransactionContext';
-
+import { useTransactionToast } from '@/components/ui/ui-layout';
 export const useJoinPool = () => {
   const { connection } = useConnection();
   const { publicKey } = useWallet();
   const { program } = useHuifiProgram();
   const { addTransaction } = useTransactions();
-
+  const transactionToast = useTransactionToast();
   const joinPoolMutation = useMutation({
     mutationKey: ['join-sol-pool'],
     mutationFn: async (params: { poolId: PublicKey; uuid: number[] }): Promise<string> => {
@@ -56,7 +56,7 @@ export const useJoinPool = () => {
         console.log('Pool joined successfully:', signature);
         await connection.confirmTransaction(signature);
         addTransaction(signature, 'Join Pool');
-        
+        transactionToast(signature);
         return signature;
         // return "uoooo";
       } catch (error) {

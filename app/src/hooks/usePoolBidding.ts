@@ -6,11 +6,13 @@ import { BN } from '@coral-xyz/anchor';
 import { useHuifiProgram } from './useHuifiProgram';
 import { useTransactions } from '@/contexts/TransactionContext';
 import { getProgramErrorMessage, solToLamports } from '@/lib/utils';
+import { useTransactionToast } from '@/components/ui/ui-layout';
 export const usePoolBidding = (poolAddress: PublicKey) => {
   const { publicKey } = useWallet();
   const { program } = useHuifiProgram();
   const { addTransaction } = useTransactions();
   const { connection } = useConnection();
+  const transactionToast = useTransactionToast();
   // Mutation for placing a bid
   const placeBidMutation = useMutation({
     mutationKey: ['place-bid', { pool: poolAddress.toString() }],
@@ -88,6 +90,7 @@ export const usePoolBidding = (poolAddress: PublicKey) => {
         }).rpc();
         console.log("signature: ", signature);
         addTransaction(signature, `Place Bid`);
+        transactionToast(signature);
         return signature;
         return "";
       } catch (error: any) {
